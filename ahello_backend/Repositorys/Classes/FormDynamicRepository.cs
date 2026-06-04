@@ -654,7 +654,7 @@ namespace ahello_backend.Repositorys.Classes
                 throw;
             }
         }
-        public async Task<FormDynamicGetResponse> GetSubmittedFormAsync(int formId)
+        public async Task<FormDynamicGetResponse?> GetSubmittedFormAsync(int formId)
         {
             using var connection = _db.GetConnection();
 
@@ -668,26 +668,40 @@ namespace ahello_backend.Repositorys.Classes
                 return null;
 
             var fields = (await connection.QueryAsync<FormDynamicFieldResponse>(
-                @" SELECT
-        ff.FormFieldId,
-        ff.FieldName,
-        ff.FieldCode,
-         ff.Placeholder,
-           ff.Description,
-            ff.IsRequired,
-            ff.DataTypeId,
-        ffv.FieldValue
-    FROM formfields ff
-    LEFT JOIN formfieldvalues ffv
-        ON ff.FormFieldId = ffv.FormFieldId
-    WHERE ff.FormId = @FormId
-    ORDER BY ff.FormFieldId
-    ",
+                @"SELECT
+              ff.FormFieldId,
+              ff.FieldName,
+              ff.FieldCode,
+              ff.Placeholder,
+              ff.Description,
+              ff.IsRequired,
+              ff.DataTypeId,
+              MAX(ffv.FieldValue) AS FieldValue
+          FROM formfields ff
+          LEFT JOIN formfieldvalues ffv
+                 ON ff.FormFieldId = ffv.FormFieldId
+                AND ffv.FormId = @FormId
+          WHERE ff.FormId = @FormId
+          GROUP BY
+              ff.FormFieldId,
+              ff.FieldName,
+              ff.FieldCode,
+              ff.Placeholder,
+              ff.Description,
+              ff.IsRequired,
+              ff.DataTypeId
+          ORDER BY ff.FormFieldId",
                 new { FormId = formId }))
                 .ToList();
 
             var dropdowns = (await connection.QueryAsync<FormDropdownOptionResponse>(
-                @"SELECT *
+                @"SELECT
+              FormDropDownId,
+              FormFieldId,
+              FormId,
+              OptionValue,
+              OptionLabel,
+              IsActive
           FROM formdropdownoptions
           WHERE FormId = @FormId",
                 new { FormId = formId }))
