@@ -1,0 +1,25 @@
+﻿namespace ahello_backend.Models.Service
+{
+    public class ServiceFieldValue
+    {
+        public int ServiceFieldValueId { get; set; }
+
+        public int ServiceId { get; set; }
+
+        public string FieldCode { get; set; }
+
+        public int ServiceFieldId { get; set; }
+
+        public string? FieldValue { get; set; }
+
+        public DateTime CreatedDate { get; set; }
+
+        public string CreatedBy { get; set; }
+
+        public DateTime CreatedAt { get; set; }
+
+        public string ModifiedBy { get; set; }
+
+        public DateTime? ModifiedAt { get; set; }
+    }
+}
