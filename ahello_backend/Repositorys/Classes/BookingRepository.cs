@@ -4,6 +4,7 @@ using ahello_backend.Models.Meeting;
 using ahello_backend.Models.Pagination;
 using ahello_backend.Repositorys.Interfaces;
 using Dapper;
+using System.Globalization;
 
 namespace ahello_backend.Repositorys.Classes
 {
@@ -70,8 +71,8 @@ namespace ahello_backend.Repositorys.Classes
                 var bookingId = await connection.ExecuteScalarAsync<int>(bookingSql, model, tx);
 
                 var meetingLink = GenerateMiroTalkLink(bookingId);
-                var meetingStartTime = model.ScheduleDate.Add(model.StartTime);
-                var meetingEndTime = model.ScheduleDate.Add(model.EndTime);
+                var meetingStartTime = model.ScheduleDate.Date.Add(model.StartTime);
+                var meetingEndTime = model.ScheduleDate.Date.Add(model.EndTime);
 
                 await connection.ExecuteAsync(@"
             INSERT INTO meetings
@@ -110,7 +111,9 @@ namespace ahello_backend.Repositorys.Classes
 
                 string serviceName = service?.ServiceTitle ?? "the service";
                 string formattedDate = model.ScheduleDate.ToString("dddd, MMMM dd yyyy");
-                string formattedTime = meetingStartTime.ToString("hh:mm tt");
+                string formattedTime = meetingStartTime.ToString(
+                "hh:mm tt",
+                CultureInfo.InvariantCulture);
 
                 await _emailRepository.SendBookingConfirmationEmailAsync(
                     client.Email, client.FullName, serviceName, formattedDate, formattedTime);
