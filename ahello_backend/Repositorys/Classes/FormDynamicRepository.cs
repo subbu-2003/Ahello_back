@@ -78,11 +78,16 @@ namespace ahello_backend.Repositorys.Classes
             ff.FormFieldId,
             ff.FieldName,
             ff.FieldCode,
+            ff.Placeholder,
+            ff.Description,
+            ff.IsRequired,
+            ff.DataTypeId,
             ffv.FieldValue
           FROM formfields ff
           LEFT JOIN formfieldvalues ffv
                 ON ff.FormFieldId = ffv.FormFieldId
                AND ffv.FormId = @FormId
+             WHERE ff.FormId = @FormId
           ORDER BY ff.FormFieldId",
                 new { FormId = formId }))
                 .ToList();
@@ -667,6 +672,10 @@ namespace ahello_backend.Repositorys.Classes
         ff.FormFieldId,
         ff.FieldName,
         ff.FieldCode,
+         ff.Placeholder,
+           ff.Description,
+            ff.IsRequired,
+            ff.DataTypeId,
         ffv.FieldValue
     FROM formfields ff
     LEFT JOIN formfieldvalues ffv
