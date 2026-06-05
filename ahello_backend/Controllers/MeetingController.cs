@@ -18,22 +18,56 @@ namespace ahello_backend.Controllers
             _bookingService = bookingService;
         }
 
+
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            return Ok(await _service.GetAllAsync());
+            try
+            {
+                return Ok(await _service.GetAllAsync());
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
         }
 
         [HttpGet("{meetingId}")]
         public async Task<IActionResult> GetById(int meetingId)
         {
-            return Ok(await _service.GetByIdAsync(meetingId));
+            try
+            {
+                return Ok(await _service.GetByIdAsync(meetingId));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
         }
 
         [HttpGet("booking/{bookingId}")]
         public async Task<IActionResult> GetByBookingId(int bookingId)
         {
-            return Ok(await _service.GetByBookingIdAsync(bookingId));
+            try
+            {
+                return Ok(await _service.GetByBookingIdAsync(bookingId));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
         }
 
         [HttpGet("verify/{roomName}")]
@@ -65,43 +99,144 @@ namespace ahello_backend.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
             }
         }
 
         [HttpGet("user/{userId}")]
         public async Task<IActionResult> GetByUserId(
-     int userId,
-     int pageNumber = 1,
-     int pageSize = 10)
+            int userId,
+            int pageNumber = 1,
+            int pageSize = 10)
         {
-            var result =
-                await _service.GetByUserIdAsync(
-                    userId,
-                    pageNumber,
-                    pageSize);
+            try
+            {
+                var result =
+                    await _service.GetByUserIdAsync(
+                        userId,
+                        pageNumber,
+                        pageSize);
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
         }
 
         [HttpPost]
         public async Task<IActionResult> Create(MeetingPost model)
         {
-            var id = await _service.CreateAsync(model);
+            try
+            {
+                var id = await _service.CreateAsync(model);
 
-            return Ok(id);
+                return Ok(new
+                {
+                    Success = true,
+                    MeetingId = id
+                });
+            }
+            catch (Exception ex)
+            {
+                string errorMessage = ex.Message;
+
+                // Foreign Key Error
+                if (ex.Message.Contains("FOREIGN KEY"))
+                {
+                    errorMessage = "Invalid BookingId. Booking does not exist.";
+                }
+
+                // Duplicate Error
+                else if (ex.Message.Contains("Duplicate"))
+                {
+                    errorMessage = "Duplicate data already exists.";
+                }
+
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = errorMessage
+                });
+            }
         }
 
         [HttpPut]
         public async Task<IActionResult> Update(MeetingPut model)
         {
-            return Ok(await _service.UpdateAsync(model));
+            try
+            {
+                var result =
+                    await _service.UpdateAsync(model);
+
+                return Ok(new
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                string errorMessage = ex.Message;
+
+                // Foreign Key Error
+                if (ex.Message.Contains("FOREIGN KEY"))
+                {
+                    errorMessage = "Invalid BookingId. Booking does not exist.";
+                }
+
+                // Duplicate Error
+                else if (ex.Message.Contains("Duplicate"))
+                {
+                    errorMessage = "Duplicate data already exists.";
+                }
+
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = errorMessage
+                });
+            }
         }
 
         [HttpDelete("{meetingId}")]
         public async Task<IActionResult> Delete(int meetingId)
         {
-            return Ok(await _service.DeleteAsync(meetingId));
+            try
+            {
+                var result =
+                    await _service.DeleteAsync(meetingId);
+
+                return Ok(new
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                string errorMessage = ex.Message;
+
+                if (ex.Message.Contains("FOREIGN KEY"))
+                {
+                    errorMessage = "This meeting is already in use.";
+                }
+
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = errorMessage
+                });
+            }
         }
     }
 }

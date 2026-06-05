@@ -18,48 +18,125 @@ namespace ahello_backend.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var result = await _service.GetAllAsync();
+            try
+            {
+                var result = await _service.GetAllAsync();
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
         }
 
         [HttpGet("{reviewId}")]
         public async Task<IActionResult> GetById(int reviewId)
         {
-            var result = await _service.GetByIdAsync(reviewId);
+            try
+            {
+                var result = await _service.GetByIdAsync(reviewId);
 
-            if (result == null)
-                return NotFound("Review not found");
+                if (result == null)
+                {
+                    return NotFound(new
+                    {
+                        Success = false,
+                        Message = "Review not found"
+                    });
+                }
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
         }
 
         [HttpGet("booking/{bookingId}")]
         public async Task<IActionResult> GetByBookingId(int bookingId)
         {
-            var result = await _service.GetByBookingIdAsync(bookingId);
+            try
+            {
+                var result = await _service.GetByBookingIdAsync(bookingId);
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
         }
 
         [HttpGet("user/{userId}")]
         public async Task<IActionResult> GetByUserId(int userId)
         {
-            var result = await _service.GetByUserIdAsync(userId);
-            return Ok(result);
+            try
+            {
+                var result = await _service.GetByUserIdAsync(userId);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
         }
 
         [HttpPost]
         public async Task<IActionResult> Create(
-            [FromBody] ReviewRequest request)
+             [FromBody] ReviewRequest request)
         {
-            var result = await _service.CreateAsync(request);
-
-            return Ok(new
+            try
             {
-                Message = "Review created successfully",
-                Result = result
-            });
+                var result = await _service.CreateAsync(request);
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Review created successfully",
+                    Result = result
+                });
+            }
+            catch (Exception ex)
+            {
+                string errorMessage = ex.Message;
+
+                // Foreign Key Error
+                if (ex.Message.Contains("FOREIGN KEY"))
+                {
+                    errorMessage = "Invalid BookingId or UserId.";
+                }
+
+                // Duplicate Error
+                else if (ex.Message.Contains("Duplicate"))
+                {
+                    errorMessage = "Review already exists.";
+                }
+
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = errorMessage
+                });
+            }
         }
 
         [HttpPut("{reviewId}")]
@@ -67,29 +144,85 @@ namespace ahello_backend.Controllers
             int reviewId,
             [FromBody] ReviewUpdateRequest request)
         {
-            var result = await _service.UpdateAsync(reviewId, request);
-
-            if (result == 0)
-                return NotFound("Review not found");
-
-            return Ok(new
+            try
             {
-                Message = "Review updated successfully"
-            });
+                var result =
+                    await _service.UpdateAsync(reviewId, request);
+
+                if (result == 0)
+                {
+                    return NotFound(new
+                    {
+                        Success = false,
+                        Message = "Review not found"
+                    });
+                }
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Review updated successfully"
+                });
+            }
+            catch (Exception ex)
+            {
+                string errorMessage = ex.Message;
+
+                if (ex.Message.Contains("FOREIGN KEY"))
+                {
+                    errorMessage = "Invalid reference data.";
+                }
+                else if (ex.Message.Contains("Duplicate"))
+                {
+                    errorMessage = "Duplicate data already exists.";
+                }
+
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = errorMessage
+                });
+            }
         }
+
 
         [HttpDelete("{reviewId}")]
         public async Task<IActionResult> Delete(int reviewId)
         {
-            var result = await _service.DeleteAsync(reviewId);
-
-            if (result == 0)
-                return NotFound("Review not found");
-
-            return Ok(new
+            try
             {
-                Message = "Review deleted successfully"
-            });
+                var result = await _service.DeleteAsync(reviewId);
+
+                if (result == 0)
+                {
+                    return NotFound(new
+                    {
+                        Success = false,
+                        Message = "Review not found"
+                    });
+                }
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Review deleted successfully"
+                });
+            }
+            catch (Exception ex)
+            {
+                string errorMessage = ex.Message;
+
+                if (ex.Message.Contains("FOREIGN KEY"))
+                {
+                    errorMessage = "This review is already in use.";
+                }
+
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = errorMessage
+                });
+            }
         }
     }
 }
