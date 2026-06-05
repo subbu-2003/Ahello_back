@@ -10,9 +10,9 @@
 
         public string? ProfileUrl { get; set; }
         public IFormFile? ProfileFile { get; set; }
-        public string MobileNumber { get; set; }
+        public string? MobileNumber { get; set; }
 
-        public string WhatsAppNumber { get; set; }
+        public string? WhatsAppNumber { get; set; }
 
         public string? Gender { get; set; }
 
