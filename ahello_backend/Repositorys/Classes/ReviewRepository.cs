@@ -81,7 +81,6 @@ namespace ahello_backend.Repositorys.Implementations
         INNER JOIN bookings b
             ON r.BookingId = b.BookingId
         WHERE b.UserId = @UserId
-           OR b.ClientId = @UserId
         ORDER BY r.ReviewId DESC";
 
             using var connection = _db.GetConnection();
