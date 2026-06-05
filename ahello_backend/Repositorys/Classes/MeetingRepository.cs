@@ -227,12 +227,19 @@ namespace ahello_backend.Repositorys.Classes
             using var connection = _db.GetConnection();
 
             var sql = @"
-        SELECT * FROM meetings
-        WHERE MeetingLink LIKE @RoomName";
+        SELECT *
+        FROM meetings
+        WHERE MeetingLink LIKE @RoomName
+          AND NOW() >= DATE_SUB(StartTime, INTERVAL 10 MINUTE)
+          AND NOW() <= EndTime
+          AND Status = 'Scheduled'";
 
             return await connection.QueryFirstOrDefaultAsync<Meeting>(
                 sql,
-                new { RoomName = $"%{roomName}%" });
+                new
+                {
+                    RoomName = $"%{roomName}%"
+                });
         }
 
 
