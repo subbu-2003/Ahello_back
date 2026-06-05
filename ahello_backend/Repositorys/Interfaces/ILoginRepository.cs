@@ -5,6 +5,7 @@ namespace ahello_backend.Repositorys.Interfaces
     public interface ILoginRepository
     {
         Task<LoginResponseDto> LoginAsync(string email);
+        Task<LoginResponseDto> GoogleLoginAsync(string idToken);
         Task<bool> SendOtpAsync(string email);
         Task<LoginResponseDto> ValidateOtpAsync(
     string email,

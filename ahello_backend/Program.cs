@@ -48,10 +48,6 @@ builder.Services.AddHttpClient();
 
 builder.Services.AddSingleton(new EmailCon());
 
-//builder.Services.Configure<EmailCon>(
-//    builder.Configuration.GetSection("EmailCon"));
-
-//builder.Services.AddScoped<EmailCon>();
 
 
 // =====================================================

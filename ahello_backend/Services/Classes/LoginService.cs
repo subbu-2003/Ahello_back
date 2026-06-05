@@ -28,6 +28,22 @@ namespace ahello_backend.Services.Classes
 
             return (user, token);
         }
+
+
+        public async Task<(LoginResponseDto User, string Token)?>
+    GoogleLoginAsync(string idToken)
+        {
+            var user =
+                await _loginRepository.GoogleLoginAsync(idToken);
+
+            if (user == null)
+                return null;
+
+            var token =
+                _loginRepository.GenerateJwtToken(user);
+
+            return (user, token);
+        }
         public async Task<bool> SendOtpAsync(
     LoginOtpRequestDto model)
         {
