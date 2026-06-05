@@ -42,6 +42,13 @@ namespace ahello_backend.Controllers
             return Ok(result);
         }
 
+        [HttpGet("user/{userId}")]
+        public async Task<IActionResult> GetByUserId(int userId)
+        {
+            var result = await _service.GetByUserIdAsync(userId);
+            return Ok(result);
+        }
+
         [HttpPost]
         public async Task<IActionResult> Create(
             [FromBody] ReviewRequest request)

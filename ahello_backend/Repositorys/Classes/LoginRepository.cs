@@ -2,10 +2,13 @@
 using ahello_backend.Models.Login;
 using ahello_backend.Repositorys.Interfaces;
 using Dapper;
+using Google.Protobuf.WellKnownTypes;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net.NetworkInformation;
 using System.Security.Claims;
 using System.Text;
+using Google.Apis.Auth;
 
 namespace ahello_backend.Repositorys.Classes
 {
@@ -81,6 +84,28 @@ namespace ahello_backend.Repositorys.Classes
             return user;
         }
         // Repositorys/Classes/LoginRepository.cs
+
+
+        public async Task<LoginResponseDto> GoogleLoginAsync(string idToken)
+        {
+            var settings = new GoogleJsonWebSignature.ValidationSettings
+            {
+                Audience = new[]
+                {
+            _config["Google:ClientId"]
+        }
+            };
+
+            var payload =
+                await GoogleJsonWebSignature.ValidateAsync(
+                    idToken,
+                    settings);
+
+            if (!payload.EmailVerified)
+                return null;
+
+            return await LoginAsync(payload.Email);
+        }
 
         public async Task<bool> SendOtpAsync(string email)
         {

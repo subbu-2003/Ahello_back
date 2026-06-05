@@ -28,6 +28,11 @@ namespace ahello_backend.Services.Implementations
             return await _repository.GetByBookingIdAsync(bookingId);
         }
 
+        public async Task<IEnumerable<Review>> GetByUserIdAsync(int userId)
+        {
+            return await _repository.GetByUserIdAsync(userId);
+        }
+
         public async Task<int> CreateAsync(ReviewRequest request)
         {
             return await _repository.CreateAsync(request);

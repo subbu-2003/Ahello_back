@@ -73,6 +73,23 @@ namespace ahello_backend.Repositorys.Implementations
             return await connection.ExecuteAsync(query, request);
         }
 
+        public async Task<IEnumerable<Review>> GetByUserIdAsync(int userId)
+        {
+            var query = @"
+        SELECT r.*
+        FROM reviews r
+        INNER JOIN bookings b
+            ON r.BookingId = b.BookingId
+        WHERE b.UserId = @UserId
+           OR b.ClientId = @UserId
+        ORDER BY r.ReviewId DESC";
+
+            using var connection = _db.GetConnection();
+            return await connection.QueryAsync<Review>(
+                query,
+                new { UserId = userId });
+        }
+
         public async Task<int> UpdateAsync(
             int reviewId,
             ReviewUpdateRequest request)

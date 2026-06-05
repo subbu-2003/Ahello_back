@@ -1,4 +1,5 @@
 ﻿using ahello_backend.Models.Login;
+using ahello_backend.Services.Classes;
 using ahello_backend.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -51,6 +52,41 @@ namespace ahello_backend.Controllers
             });
         }
         // Controllers/LoginController.cs
+
+
+        [HttpPost("google")]
+        public async Task<IActionResult> GoogleLogin(
+        [FromBody] GoogleLoginRequest request)
+        {
+            var result =
+                await _loginService.GoogleLoginAsync(
+                    request.IdToken);
+
+            if (result == null)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Invalid Google token"
+                });
+            }
+
+            return Ok(new
+            {
+                success = true,
+                message = "Login successful",
+                data = new
+                {
+                    token = result.Value.Token,
+                    user = new
+                    {
+                        result.Value.User.UserId,
+                        result.Value.User.Email,
+                        result.Value.User.UserName
+                    }
+                }
+            });
+        }
 
         [HttpPost("send-otp")]
         public async Task<IActionResult> SendOtp(
