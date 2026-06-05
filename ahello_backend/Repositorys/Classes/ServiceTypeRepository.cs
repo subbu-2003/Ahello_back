@@ -58,7 +58,23 @@ namespace ahello_backend.Repositorys.Classes
         public async Task<int> CreateAsync(ServiceTypePost model)
         {
             using var connection = _db.GetConnection();
+            // CHECK DUPLICATE SERVICETYPENAME
+            var duplicateSql = @"
+        SELECT COUNT(*)
+        FROM servicetypes
+        WHERE LOWER(ServiceTypeName) = LOWER(@ServiceTypeName)";
 
+            var exists = await connection.ExecuteScalarAsync<int>(
+                duplicateSql,
+                new
+                {
+                    model.ServiceTypeName
+                });
+
+            if (exists > 0)
+            {
+                throw new Exception("ServiceTypeName already exists.");
+            }
             var sql = @"
                 INSERT INTO servicetypes
                 (
@@ -85,7 +101,25 @@ namespace ahello_backend.Repositorys.Classes
             ServiceTypePut model)
         {
             using var connection = _db.GetConnection();
+            // CHECK DUPLICATE SERVICETYPENAME
+            var duplicateSql = @"
+            SELECT COUNT(*)
+            FROM servicetypes
+            WHERE LOWER(ServiceTypeName) = LOWER(@ServiceTypeName)
+            AND ServiceTypeId != @ServiceTypeId";
 
+            var exists = await connection.ExecuteScalarAsync<int>(
+                duplicateSql,
+                new
+                {
+                    model.ServiceTypeName,
+                    ServiceTypeId = serviceTypeId
+                });
+
+            if (exists > 0)
+            {
+                throw new Exception("ServiceTypeName already exists.");
+            }
             var sql = @"
                 UPDATE servicetypes
                 SET
