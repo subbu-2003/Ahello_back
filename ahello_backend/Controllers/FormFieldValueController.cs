@@ -60,5 +60,25 @@ namespace ahello_backend.Controllers
 
             return Ok(data);
         }
+        [HttpGet("user/{userId}")]
+        public async Task<IActionResult>
+    GetByUserId(int userId)
+        {
+            try
+            {
+                var result =
+                    await _service
+                        .GetByUserIdAsync(userId);
+
+                return Ok(result);
+            }
+            catch
+            {
+                return BadRequest(new
+                {
+                    Message = "Something went wrong"
+                });
+            }
+        }
     }
 }

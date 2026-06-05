@@ -11,5 +11,7 @@ namespace ahello_backend.Repositorys.Interfaces
         Task<IEnumerable<FormFieldValue>> GetByFormAsync(int formId);
 
         Task<FormFieldValue> GetByIdAsync(int formFieldValueId);
+        Task<IEnumerable<FormFieldValueUserResponse>>
+    GetByUserIdAsync(int userId);
     }
 }

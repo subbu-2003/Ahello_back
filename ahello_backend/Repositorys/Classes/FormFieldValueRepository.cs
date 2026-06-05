@@ -401,5 +401,129 @@ namespace ahello_backend.Repositorys.Classes
 
             return errors;
         }
+        public async Task<IEnumerable<FormFieldValueUserResponse>>
+    GetByUserIdAsync(int userId)
+        {
+            var sql = @"
+
+SELECT
+
+    f.FormId,
+    f.UserId,
+    f.Title,
+    f.Description,
+    f.IsActive,
+    f.CreatedAt,
+    f.CreatedBy,
+    f.ModifiedAt,
+    f.ModifiedBy,
+
+    ff.FormFieldId,
+    ff.FormId,
+    ff.FieldName,
+    ff.FieldCode,
+    ff.Placeholder,
+    ff.Description,
+    ff.IsRequired,
+    ff.IsActive,
+    ff.DataTypeId,
+    ff.CreatedBy,
+    ff.CreatedAt,
+    ff.ModifiedBy,
+    ff.ModifiedAt,
+
+    ffv.FormFieldValueId,
+    ffv.FormId,
+    ffv.FieldCode,
+    ffv.FormFieldId,
+    ffv.FieldValue,
+    ffv.CreatedDate,
+    ffv.CreatedBy,
+    ffv.CreatedAt,
+    ffv.ModifiedBy,
+    ffv.ModifiedAt
+
+FROM forms f
+
+LEFT JOIN formfields ff
+    ON f.FormId = ff.FormId
+
+LEFT JOIN formfieldvalues ffv
+    ON ff.FormFieldId = ffv.FormFieldId
+
+WHERE f.UserId = @UserId
+AND f.IsActive = 1
+
+ORDER BY f.FormId DESC,
+         ff.FormFieldId";
+
+            using var connection = _db.GetConnection();
+
+            var forms =
+                new Dictionary<int, FormFieldValueUserResponse>();
+
+            var fields =
+                new Dictionary<int, FormFieldDetailResponse>();
+
+            await connection.QueryAsync
+            <
+                FormFieldValueUserResponse,
+                FormFieldDetailResponse,
+                FormFieldValue,
+                FormFieldValueUserResponse
+            >
+            (
+                sql,
+                (form, field, value) =>
+                {
+                    if (!forms.TryGetValue(
+                        form.FormId,
+                        out var existingForm))
+                    {
+                        existingForm = form;
+
+                        existingForm.Fields =
+                            new List<FormFieldDetailResponse>();
+
+                        forms.Add(
+                            existingForm.FormId,
+                            existingForm);
+                    }
+
+                    if (field != null)
+                    {
+                        if (!fields.TryGetValue(
+                            field.FormFieldId,
+                            out var existingField))
+                        {
+                            existingField = field;
+
+                            existingField.FieldValues =
+                                new List<FormFieldValue>();
+
+                            fields.Add(
+                                existingField.FormFieldId,
+                                existingField);
+
+                            existingForm.Fields
+                                .Add(existingField);
+                        }
+
+                        if (value != null &&
+                            value.FormFieldValueId > 0)
+                        {
+                            existingField.FieldValues
+                                .Add(value);
+                        }
+                    }
+
+                    return existingForm;
+                },
+                new { UserId = userId },
+                splitOn: "FormFieldId,FormFieldValueId"
+            );
+
+            return forms.Values;
+        }
     }
 }

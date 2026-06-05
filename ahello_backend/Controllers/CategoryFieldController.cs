@@ -10,7 +10,8 @@ namespace ahello_backend.Controllers
     {
         private readonly ICategoryFieldService _service;
 
-        public CategoryFieldController(ICategoryFieldService service)
+        public CategoryFieldController(
+            ICategoryFieldService service)
         {
             _service = service;
         }
@@ -18,42 +19,98 @@ namespace ahello_backend.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(CreateCategoryField model)
         {
-            var id = await _service.CreateAsync(model);
-
-            return Ok(new
+            try
             {
-                Success = true,
-                Message = "Category field created successfully",
-                CategoryFieldId = id
-            });
+                var id = await _service.CreateAsync(model);
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Category field created successfully",
+                    CategoryFieldId = id
+                });
+            }
+            catch (Exception ex)
+            {
+                if (ex.Message == "Field Name already exists")
+                {
+                    return BadRequest(new
+                    {
+                        Message = ex.Message
+                    });
+                }
+
+                return BadRequest(new
+                {
+                    Message = "Invalid data"
+                });
+            }
         }
 
         [HttpPut]
         public async Task<IActionResult> Update(UpdateCategoryField model)
         {
-            var result = await _service.UpdateAsync(model);
-
-            return Ok(new
+            try
             {
-                Success = result,
-                Message = "Category field updated successfully"
-            });
+                var result = await _service.UpdateAsync(model);
+
+                return Ok(new
+                {
+                    Success = result,
+                    Message = "Category field updated successfully"
+                });
+            }
+            catch (Exception ex)
+            {
+                if (ex.Message == "Field Name already exists")
+                {
+                    return BadRequest(new
+                    {
+                        Message = ex.Message
+                    });
+                }
+
+                return BadRequest(new
+                {
+                    Message = "Invalid data"
+                });
+            }
         }
 
         [HttpGet("category/{categoryId}")]
         public async Task<IActionResult> GetByCategory(int categoryId)
         {
-            var data = await _service.GetByCategoryAsync(categoryId);
+            try
+            {
+                var data = await _service.GetByCategoryAsync(categoryId);
 
-            return Ok(data);
+                return Ok(data);
+            }
+            catch
+            {
+                return BadRequest(new
+                {
+                    Message = "Something went wrong"
+                });
+            }
         }
 
         [HttpGet("{categoryFieldId}")]
         public async Task<IActionResult> GetById(int categoryFieldId)
         {
-            var data = await _service.GetByIdAsync(categoryFieldId);
+            try
+            {
+                var data = await _service.GetByIdAsync(categoryFieldId);
 
-            return Ok(data);
+                return Ok(data);
+            }
+            catch
+            {
+                return BadRequest(new
+                {
+                    Message = "Something went wrong"
+                });
+            }
         }
 
         [HttpDelete("{categoryFieldId}")]
@@ -61,16 +118,25 @@ namespace ahello_backend.Controllers
             int categoryFieldId,
             [FromQuery] string modifiedBy)
         {
-            var result = await _service.DeleteAsync(
-                categoryFieldId,
-                modifiedBy
-            );
-
-            return Ok(new
+            try
             {
-                Success = result,
-                Message = "Category field deleted successfully"
-            });
+                var result = await _service.DeleteAsync(
+                    categoryFieldId,
+                    modifiedBy);
+
+                return Ok(new
+                {
+                    Success = result,
+                    Message = "Category field deleted successfully"
+                });
+            }
+            catch
+            {
+                return BadRequest(new
+                {
+                    Message = "Something went wrong"
+                });
+            }
         }
     }
 }

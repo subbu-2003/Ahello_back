@@ -18,26 +18,46 @@ namespace ahello_backend.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(CreateUserField model)
         {
-            var id = await _service.CreateAsync(model);
-
-            return Ok(new
+            try
             {
-                Success = true,
-                Message = "User field created successfully",
-                UserFieldId = id
-            });
+                var id = await _service.CreateAsync(model);
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "User field created successfully",
+                    UserFieldId = id
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    Message = ex.Message
+                });
+            }
         }
 
         [HttpPut]
         public async Task<IActionResult> Update(UpdateUserField model)
         {
-            var result = await _service.UpdateAsync(model);
-
-            return Ok(new
+            try
             {
-                Success = result,
-                Message = "User field updated successfully"
-            });
+                var result = await _service.UpdateAsync(model);
+
+                return Ok(new
+                {
+                    Success = result,
+                    Message = "User field updated successfully"
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    Message = ex.Message
+                });
+            }
         }
 
         [HttpGet("user/{userId}")]
