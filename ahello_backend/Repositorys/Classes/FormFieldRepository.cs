@@ -16,38 +16,58 @@ namespace ahello_backend.Repositorys.Classes
 
         public async Task<int> CreateAsync(CreateFormField model)
         {
-            var query = @"
-                INSERT INTO formfields
-                (
-                    FormId,
-                    FieldName,
-                    FieldCode,
-                    Placeholder,
-                    Description,
-                    IsRequired,
-                    IsActive,
-                    DataTypeId,
-                    CreatedBy,
-                    CreatedAt
-                )
-                VALUES
-                (
-                    @FormId,
-                    @FieldName,
-                    @FieldCode,
-                    @Placeholder,
-                    @Description,
-                    @IsRequired,
-                    @IsActive,
-                    @DataTypeId,
-                    @CreatedBy,
-                    NOW()
-                );
-
-                SELECT LAST_INSERT_ID();
-            ";
-
             using var connection = _db.GetConnection();
+
+            var duplicateSql = @"
+        SELECT COUNT(1)
+        FROM formfields
+        WHERE FormId = @FormId
+        AND IsActive = 1
+        AND LOWER(TRIM(FieldName)) = LOWER(TRIM(@FieldName))";
+
+            var isExists = await connection.ExecuteScalarAsync<int>(
+                duplicateSql,
+                new
+                {
+                    model.FormId,
+                    model.FieldName
+                });
+
+            if (isExists > 0)
+            {
+                throw new Exception("Field Name already exists");
+            }
+
+            var query = @"
+        INSERT INTO formfields
+        (
+            FormId,
+            FieldName,
+            FieldCode,
+            Placeholder,
+            Description,
+            IsRequired,
+            IsActive,
+            DataTypeId,
+            CreatedBy,
+            CreatedAt
+        )
+        VALUES
+        (
+            @FormId,
+            @FieldName,
+            @FieldCode,
+            @Placeholder,
+            @Description,
+            @IsRequired,
+            @IsActive,
+            @DataTypeId,
+            @CreatedBy,
+            NOW()
+        );
+
+        SELECT LAST_INSERT_ID();
+    ";
 
             return await connection.ExecuteScalarAsync<int>(
                 query,
@@ -57,23 +77,45 @@ namespace ahello_backend.Repositorys.Classes
 
         public async Task<bool> UpdateAsync(UpdateFormField model)
         {
-            var query = @"
-                UPDATE formfields
-                SET
-                    FormId = @FormId,
-                    FieldName = @FieldName,
-                    FieldCode = @FieldCode,
-                    Placeholder = @Placeholder,
-                    Description = @Description,
-                    IsRequired = @IsRequired,
-                    IsActive = @IsActive,
-                    DataTypeId = @DataTypeId,
-                    ModifiedBy = @ModifiedBy,
-                    ModifiedAt = NOW()
-                WHERE FormFieldId = @FormFieldId
-            ";
-
             using var connection = _db.GetConnection();
+
+            var duplicateSql = @"
+        SELECT COUNT(1)
+        FROM formfields
+        WHERE FormId = @FormId
+        AND IsActive = 1
+        AND FormFieldId <> @FormFieldId
+        AND LOWER(TRIM(FieldName)) = LOWER(TRIM(@FieldName))";
+
+            var isExists = await connection.ExecuteScalarAsync<int>(
+                duplicateSql,
+                new
+                {
+                    model.FormFieldId,
+                    model.FormId,
+                    model.FieldName
+                });
+
+            if (isExists > 0)
+            {
+                throw new Exception("Field Name already exists");
+            }
+
+            var query = @"
+        UPDATE formfields
+        SET
+            FormId = @FormId,
+            FieldName = @FieldName,
+            FieldCode = @FieldCode,
+            Placeholder = @Placeholder,
+            Description = @Description,
+            IsRequired = @IsRequired,
+            IsActive = @IsActive,
+            DataTypeId = @DataTypeId,
+            ModifiedBy = @ModifiedBy,
+            ModifiedAt = NOW()
+        WHERE FormFieldId = @FormFieldId
+    ";
 
             var result = await connection.ExecuteAsync(
                 query,

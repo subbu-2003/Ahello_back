@@ -16,51 +16,93 @@ namespace ahello_backend.Repositorys.Classes
 
         public async Task<int> CreateAsync(CreateCategoryField model)
         {
-            var sql = @"INSERT INTO CategoryFields
-                        (
-                            CategoryId,
-                            FieldName,
-                            FieldCode,
-                            Placeholder,
-                            IsRequired,
-                            IsActive,
-                            DataTypeId,
-                            CreatedBy
-                        )
-                        VALUES
-                        (
-                            @CategoryId,
-                            @FieldName,
-                            @FieldCode,
-                            @Placeholder,
-                            @IsRequired,
-                            1,
-                            @DataTypeId,
-                            @CreatedBy
-                        );
-
-                        SELECT LAST_INSERT_ID();";
-
             using var connection = _db.GetConnection();
+
+            var duplicateSql = @"
+        SELECT COUNT(1)
+        FROM CategoryFields
+        WHERE CategoryId = @CategoryId
+        AND IsActive = 1
+        AND LOWER(TRIM(FieldName)) = LOWER(TRIM(@FieldName))";
+
+            var isExists = await connection.ExecuteScalarAsync<int>(
+                duplicateSql,
+                new
+                {
+                    model.CategoryId,
+                    model.FieldName
+                });
+
+            if (isExists > 0)
+            {
+                throw new Exception("Field Name already exists");
+            }
+
+            var sql = @"INSERT INTO CategoryFields
+                (
+                    CategoryId,
+                    FieldName,
+                    FieldCode,
+                    Placeholder,
+                    IsRequired,
+                    IsActive,
+                    DataTypeId,
+                    CreatedBy
+                )
+                VALUES
+                (
+                    @CategoryId,
+                    @FieldName,
+                    @FieldCode,
+                    @Placeholder,
+                    @IsRequired,
+                    1,
+                    @DataTypeId,
+                    @CreatedBy
+                );
+
+                SELECT LAST_INSERT_ID();";
 
             return await connection.ExecuteScalarAsync<int>(sql, model);
         }
 
         public async Task<bool> UpdateAsync(UpdateCategoryField model)
         {
-            var sql = @"UPDATE CategoryFields
-                        SET
-                            CategoryId = @CategoryId,
-                            FieldName = @FieldName,
-                            FieldCode = @FieldCode,
-                            Placeholder = @Placeholder,
-                            IsRequired = @IsRequired,
-                            IsActive = @IsActive,
-                            DataTypeId = @DataTypeId,
-                            ModifiedBy = @ModifiedBy
-                        WHERE CategoryFieldId = @CategoryFieldId";
-
             using var connection = _db.GetConnection();
+
+            var duplicateSql = @"
+        SELECT COUNT(1)
+        FROM CategoryFields
+        WHERE CategoryId = @CategoryId
+        AND IsActive = 1
+        AND CategoryFieldId <> @CategoryFieldId
+        AND LOWER(TRIM(FieldName)) = LOWER(TRIM(@FieldName))";
+
+            var isExists = await connection.ExecuteScalarAsync<int>(
+                duplicateSql,
+                new
+                {
+                    model.CategoryFieldId,
+                    model.CategoryId,
+                    model.FieldName
+                });
+
+            if (isExists > 0)
+            {
+                throw new Exception("Field Name already exists");
+            }
+
+            var sql = @"UPDATE CategoryFields
+                SET
+                    CategoryId = @CategoryId,
+                    FieldName = @FieldName,
+                    FieldCode = @FieldCode,
+                    Placeholder = @Placeholder,
+                    IsRequired = @IsRequired,
+                    IsActive = @IsActive,
+                    DataTypeId = @DataTypeId,
+                    ModifiedBy = @ModifiedBy
+                WHERE CategoryFieldId = @CategoryFieldId";
 
             var rows = await connection.ExecuteAsync(sql, model);
 
