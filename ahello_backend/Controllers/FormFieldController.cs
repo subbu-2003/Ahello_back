@@ -18,42 +18,86 @@ namespace ahello_backend.Controllers
         [HttpPost]
         public async Task<IActionResult> Create(CreateFormField model)
         {
-            var id = await _service.CreateAsync(model);
-
-            return Ok(new
+            try
             {
-                Success = true,
-                Message = "Form field created successfully",
-                FormFieldId = id
-            });
+                var id = await _service.CreateAsync(model);
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Form field created successfully",
+                    FormFieldId = id
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    Message = ex.Message == "Field Name already exists"
+                        ? ex.Message
+                        : "Invalid data"
+                });
+            }
         }
 
         [HttpPut]
         public async Task<IActionResult> Update(UpdateFormField model)
         {
-            var result = await _service.UpdateAsync(model);
-
-            return Ok(new
+            try
             {
-                Success = result,
-                Message = "Form field updated successfully"
-            });
+                var result = await _service.UpdateAsync(model);
+
+                return Ok(new
+                {
+                    Success = result,
+                    Message = "Form field updated successfully"
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    Message = ex.Message == "Field Name already exists"
+                        ? ex.Message
+                        : "Invalid data"
+                });
+            }
         }
 
         [HttpGet("form/{formId}")]
         public async Task<IActionResult> GetByForm(int formId)
         {
-            var data = await _service.GetByFormAsync(formId);
+            try
+            {
+                var data = await _service.GetByFormAsync(formId);
 
-            return Ok(data);
+                return Ok(data);
+            }
+            catch
+            {
+                return BadRequest(new
+                {
+                    Message = "Something went wrong"
+                });
+            }
         }
 
         [HttpGet("{formFieldId}")]
         public async Task<IActionResult> GetById(int formFieldId)
         {
-            var data = await _service.GetByIdAsync(formFieldId);
+            try
+            {
+                var data = await _service.GetByIdAsync(formFieldId);
 
-            return Ok(data);
+                return Ok(data);
+            }
+            catch
+            {
+                return BadRequest(new
+                {
+                    Message = "Something went wrong"
+                });
+            }
         }
 
         [HttpDelete("{formFieldId}")]
@@ -61,16 +105,25 @@ namespace ahello_backend.Controllers
             int formFieldId,
             [FromQuery] string modifiedBy)
         {
-            var result = await _service.DeleteAsync(
-                formFieldId,
-                modifiedBy
-            );
-
-            return Ok(new
+            try
             {
-                Success = result,
-                Message = "Form field deleted successfully"
-            });
+                var result = await _service.DeleteAsync(
+                    formFieldId,
+                    modifiedBy);
+
+                return Ok(new
+                {
+                    Success = result,
+                    Message = "Form field deleted successfully"
+                });
+            }
+            catch
+            {
+                return BadRequest(new
+                {
+                    Message = "Something went wrong"
+                });
+            }
         }
     }
 }

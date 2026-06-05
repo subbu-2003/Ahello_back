@@ -32,5 +32,11 @@ namespace ahello_backend.Services.Classes
         {
             return await _repository.GetByIdAsync(formFieldValueId);
         }
+        public async Task<IEnumerable<FormFieldValueUserResponse>>
+    GetByUserIdAsync(int userId)
+        {
+            return await _repository
+                .GetByUserIdAsync(userId);
+        }
     }
 }

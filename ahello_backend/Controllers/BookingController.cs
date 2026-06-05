@@ -16,54 +16,105 @@ namespace ahello_backend.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create(
-            BookingPost model)
+        public async Task<IActionResult> Create(BookingPost model)
         {
-            var id = await _service.CreateAsync(model);
+            try
+            {
+                var id = await _service.CreateAsync(model);
 
-            return Ok(id);
+                return Ok(id);
+            }
+            catch
+            {
+                return BadRequest(new
+                {
+                    Message = "Invalid data"
+                });
+            }
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var result = await _service.GetAllAsync();
+            try
+            {
+                var result = await _service.GetAllAsync();
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch
+            {
+                return BadRequest(new
+                {
+                    Message = "Something went wrong"
+                });
+            }
         }
 
         [HttpGet("{bookingId}")]
-        public async Task<IActionResult> GetById(
-            int bookingId)
+        public async Task<IActionResult> GetById(int bookingId)
         {
-            var result =
-                await _service.GetByIdAsync(bookingId);
+            try
+            {
+                var result =
+                    await _service.GetByIdAsync(bookingId);
 
-            if (result == null)
-                return NotFound();
+                if (result == null)
+                {
+                    return NotFound(new
+                    {
+                        Message = "Booking not found"
+                    });
+                }
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch
+            {
+                return BadRequest(new
+                {
+                    Message = "Something went wrong"
+                });
+            }
         }
 
         [HttpPut]
-        public async Task<IActionResult> Update(
-            BookingPut model)
+        public async Task<IActionResult> Update(BookingPut model)
         {
-            var result = await _service.UpdateAsync(model);
+            try
+            {
+                var result = await _service.UpdateAsync(model);
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch
+            {
+                return BadRequest(new
+                {
+                    Message = "Invalid data"
+                });
+            }
         }
 
         [HttpDelete("{bookingId}")]
-        public async Task<IActionResult> Delete(
-            int bookingId)
+        public async Task<IActionResult> Delete(int bookingId)
         {
-            var result =
-                await _service.DeleteAsync(bookingId);
+            try
+            {
+                var result =
+                    await _service.DeleteAsync(bookingId);
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch
+            {
+                return BadRequest(new
+                {
+                    Message = "Something went wrong"
+                });
+            }
         }
-       
+
         [HttpGet("user/{userId}")]
         public async Task<IActionResult> GetByUserId(
             int userId,
@@ -71,15 +122,25 @@ namespace ahello_backend.Controllers
             int pageSize = 10,
             string? search = null)
         {
-            var result = await _service.GetByUserIdAsync(
-                userId,
-                pageNumber,
-                pageSize,
-                search);
+            try
+            {
+                var result =
+                    await _service.GetByUserIdAsync(
+                        userId,
+                        pageNumber,
+                        pageSize,
+                        search);
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch
+            {
+                return BadRequest(new
+                {
+                    Message = "Something went wrong"
+                });
+            }
         }
-        // BookingController.cs
 
         [HttpGet("client/{clientId}")]
         public async Task<IActionResult> GetByClientId(
@@ -88,38 +149,53 @@ namespace ahello_backend.Controllers
             int pageSize = 10,
             string? search = null)
         {
-            var result = await _service.GetByClientIdAsync(
-                clientId,
-                pageNumber,
-                pageSize,
-                search);
+            try
+            {
+                var result =
+                    await _service.GetByClientIdAsync(
+                        clientId,
+                        pageNumber,
+                        pageSize,
+                        search);
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch
+            {
+                return BadRequest(new
+                {
+                    Message = "Something went wrong"
+                });
+            }
         }
 
-        // GET:
-        // api/Booking/service/5
-
         [HttpGet("service/{serviceId}")]
-        public async Task<IActionResult>
-        GetBookingModal(
-            int serviceId
-        )
+        public async Task<IActionResult> GetBookingModal(
+            int serviceId)
         {
-            var result =
-    await _service
-        .GetBookingModal(
-            serviceId
-        );
-
-            if (result == null)
+            try
             {
-                return NotFound(
-                    "Service not found."
-                );
-            }
+                var result =
+                    await _service.GetBookingModal(
+                        serviceId);
 
-            return Ok(result);
+                if (result == null)
+                {
+                    return NotFound(new
+                    {
+                        Message = "Service not found"
+                    });
+                }
+
+                return Ok(result);
+            }
+            catch
+            {
+                return BadRequest(new
+                {
+                    Message = "Something went wrong"
+                });
+            }
         }
     }
 }
