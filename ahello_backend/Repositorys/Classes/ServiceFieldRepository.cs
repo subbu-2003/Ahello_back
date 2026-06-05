@@ -16,6 +16,28 @@ namespace ahello_backend.Repositorys.Classes
 
         public async Task<int> CreateAsync(CreateServiceField model)
         {
+            using var connection = _db.GetConnection();
+
+            // CHECK DUPLICATE FIELDNAME
+            var duplicateSql = @"SELECT COUNT(*)
+                                 FROM servicefields
+                                 WHERE ServiceId = @ServiceId
+                                 AND LOWER(FieldName) = LOWER(@FieldName)
+                                 AND IsActive = 1";
+
+            var exists = await connection.ExecuteScalarAsync<int>(
+                duplicateSql,
+                new
+                {
+                    model.ServiceId,
+                    model.FieldName
+                });
+
+            if (exists > 0)
+            {
+                throw new Exception("FieldName already exists for this service.");
+            }
+
             var sql = @"INSERT INTO servicefields
                         (
                             ServiceId,
@@ -41,13 +63,35 @@ namespace ahello_backend.Repositorys.Classes
 
                         SELECT LAST_INSERT_ID();";
 
-            using var connection = _db.GetConnection();
-
             return await connection.ExecuteScalarAsync<int>(sql, model);
         }
 
         public async Task<bool> UpdateAsync(UpdateServiceField model)
         {
+            using var connection = _db.GetConnection();
+
+            // CHECK DUPLICATE FIELDNAME
+            var duplicateSql = @"SELECT COUNT(*)
+                                 FROM servicefields
+                                 WHERE ServiceId = @ServiceId
+                                 AND LOWER(FieldName) = LOWER(@FieldName)
+                                 AND ServiceFieldId != @ServiceFieldId
+                                 AND IsActive = 1";
+
+            var exists = await connection.ExecuteScalarAsync<int>(
+                duplicateSql,
+                new
+                {
+                    model.ServiceId,
+                    model.FieldName,
+                    model.ServiceFieldId
+                });
+
+            if (exists > 0)
+            {
+                throw new Exception("FieldName already exists for this service.");
+            }
+
             var sql = @"UPDATE servicefields
                         SET
                             ServiceId = @ServiceId,
@@ -60,15 +104,12 @@ namespace ahello_backend.Repositorys.Classes
                             ModifiedBy = @ModifiedBy
                         WHERE ServiceFieldId = @ServiceFieldId";
 
-            using var connection = _db.GetConnection();
-
             var rows = await connection.ExecuteAsync(sql, model);
 
             return rows > 0;
         }
 
-        public async Task<IEnumerable<ServiceField>>
-    GetByServiceAsync(int serviceId)
+        public async Task<IEnumerable<ServiceField>> GetByServiceAsync(int serviceId)
         {
             var sql = @"
     SELECT 

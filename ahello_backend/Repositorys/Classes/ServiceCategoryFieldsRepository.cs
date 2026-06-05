@@ -18,7 +18,27 @@ namespace ahello_backend.Repositorys.Classes
         public async Task<int> AddAsync(ServiceCategoryFields model)
         {
             using var connection = _db.GetConnection();
+            // CHECK DUPLICATE FIELDNAME
+            string duplicateQuery = @"
+            SELECT COUNT(*)
+            FROM ServiceCategoryFields
+            WHERE ServiceCategoryId = @ServiceCategoryId
+            AND LOWER(FieldName) = LOWER(@FieldName)
+            AND IsActive = 1
+        ";
 
+            var exists = await connection.ExecuteScalarAsync<int>(
+                duplicateQuery,
+                new
+                {
+                    model.ServiceCategoryId,
+                    model.FieldName
+                });
+
+            if (exists > 0)
+            {
+                throw new Exception("FieldName already exists for this service category.");
+            }
             string query = @"
                 INSERT INTO ServiceCategoryFields
                 (
@@ -52,7 +72,29 @@ namespace ahello_backend.Repositorys.Classes
         public async Task<int> UpdateAsync(ServiceCategoryFields model)
         {
             using var connection = _db.GetConnection();
+            // CHECK DUPLICATE FIELDNAME
+            string duplicateQuery = @"
+        SELECT COUNT(*)
+        FROM ServiceCategoryFields
+        WHERE ServiceCategoryId = @ServiceCategoryId
+        AND LOWER(FieldName) = LOWER(@FieldName)
+        AND ServiceCategoryFieldId != @ServiceCategoryFieldId
+        AND IsActive = 1
+    ";
 
+            var exists = await connection.ExecuteScalarAsync<int>(
+                duplicateQuery,
+                new
+                {
+                    model.ServiceCategoryId,
+                    model.FieldName,
+                    model.ServiceCategoryFieldId
+                });
+
+            if (exists > 0)
+            {
+                throw new Exception("FieldName already exists for this service category.");
+            }
             string query = @"
                 UPDATE ServiceCategoryFields
                 SET
