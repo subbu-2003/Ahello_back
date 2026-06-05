@@ -22,26 +22,40 @@ namespace ahello_backend.Repositorys.Classes
             using var connection = _db.GetConnection();
 
             var sql = @"
-    SELECT
-        m.MeetingId,
-        m.UserId,
-        u.FullName AS UserName,
-        u.Email,
-        m.BookingId,
-        m.StartTime,
-        m.EndTime,
-        m.MeetingLink,
-        m.Status,
-        m.ReminderSent,
-        m.LastReminderSent,
-        m.CreatedAt,
-        m.CreatedBy,
-        m.ModifiedAt,
-        m.ModifiedBy
-    FROM meetings m
-    INNER JOIN users u
-        ON m.UserId = u.UserId
-    ORDER BY m.MeetingId DESC";
+        SELECT
+            m.MeetingId,
+            m.UserId,
+            u.FullName AS UserName,
+            u.Email,
+
+            b.ClientId,
+            cu.FullName AS ClientName,
+            cu.Email AS ClientEmail,
+
+            m.BookingId,
+            m.StartTime,
+            m.EndTime,
+            m.MeetingLink,
+            m.Status,
+            m.ReminderSent,
+            m.LastReminderSent,
+            m.CreatedAt,
+            m.CreatedBy,
+            m.ModifiedAt,
+            m.ModifiedBy
+
+        FROM meetings m
+
+        INNER JOIN users u
+            ON m.UserId = u.UserId
+
+        INNER JOIN bookings b
+            ON m.BookingId = b.BookingId
+
+        INNER JOIN users cu
+            ON b.ClientId = cu.UserId
+
+        ORDER BY m.MeetingId DESC";
 
             return await connection.QueryAsync<Meeting>(sql);
         }
@@ -105,9 +119,9 @@ namespace ahello_backend.Repositorys.Classes
         }
 
         public async Task<PagedResult<Meeting>> GetByUserIdAsync(
-    int userId,
-    int pageNumber,
-    int pageSize)
+        int userId,
+        int pageNumber,
+        int pageSize)
         {
             using var connection = _db.GetConnection();
 
@@ -213,12 +227,19 @@ namespace ahello_backend.Repositorys.Classes
             using var connection = _db.GetConnection();
 
             var sql = @"
-        SELECT * FROM meetings
-        WHERE MeetingLink LIKE @RoomName";
+        SELECT *
+        FROM meetings
+        WHERE MeetingLink LIKE @RoomName
+          AND NOW() >= DATE_SUB(StartTime, INTERVAL 10 MINUTE)
+          AND NOW() <= EndTime
+          AND Status = 'Scheduled'";
 
             return await connection.QueryFirstOrDefaultAsync<Meeting>(
                 sql,
-                new { RoomName = $"%{roomName}%" });
+                new
+                {
+                    RoomName = $"%{roomName}%"
+                });
         }
 
 
@@ -260,7 +281,7 @@ namespace ahello_backend.Repositorys.Classes
         public async Task<bool> SendMeetingReminderMailAsync(Meeting meeting)
         {
             if (meeting == null ||
-                string.IsNullOrWhiteSpace(meeting.Email))
+                string.IsNullOrWhiteSpace(meeting.ClientEmail))
                 return false;
 
             var subject = "Meeting Reminder - Ahello";
@@ -297,7 +318,7 @@ namespace ahello_backend.Repositorys.Classes
         <div style='padding:30px;'>
 
             <h2 style='color:#333;'>
-                Hello {meeting.UserName},
+                Hello {meeting.ClientName},
             </h2>
 
             <p style='font-size:16px;
@@ -383,7 +404,7 @@ namespace ahello_backend.Repositorys.Classes
             </html>";
 
             await _emailRepository.SendEmailAsync(
-                meeting.Email,
+                meeting.ClientEmail,
                 subject,
                 body);
 

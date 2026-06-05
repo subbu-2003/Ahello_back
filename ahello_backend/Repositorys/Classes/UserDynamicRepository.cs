@@ -613,7 +613,11 @@ namespace ahello_backend.Repositorys.Classes
                             {
                                 UserId = userId,
                                 UserFieldId = field.UserFieldId,
-                                FieldValue = field.FieldValue,
+                                FieldValue =
+                                string.IsNullOrWhiteSpace(field.FieldValue)
+                                ? (object)DBNull.Value
+                                : field.FieldValue,
+
                                 model.ModifiedBy
                             },
                             tx);

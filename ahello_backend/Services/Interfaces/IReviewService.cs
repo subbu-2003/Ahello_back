@@ -9,6 +9,7 @@ namespace ahello_backend.Services.Interfaces
         Task<Review> GetByIdAsync(int reviewId);
 
         Task<IEnumerable<Review>> GetByBookingIdAsync(int bookingId);
+        Task<IEnumerable<Review>> GetByUserIdAsync(int userId);
 
         Task<int> CreateAsync(ReviewRequest request);
 

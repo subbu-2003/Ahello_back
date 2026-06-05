@@ -1,4 +1,4 @@
-﻿using ahello_backend.Models.UserSlots;
+using ahello_backend.Models.UserSlots;
 using ahello_backend.Repositorys.Interfaces;
 using ahello_backend.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;

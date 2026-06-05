@@ -72,7 +72,6 @@ namespace ahello_backend.Repositorys.Classes
                 Join Meeting
             </a>
         </p>
-        <p>Meeting Link: {meetingLink}</p>
         <br/>
         <p>Regards,</p>
         <strong>Ahello Team</strong>

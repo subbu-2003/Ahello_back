@@ -20,73 +20,152 @@ namespace ahello_backend.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult>
-            GetAll()
+        public async Task<IActionResult> GetAll()
         {
-            var result =
-                await _service.GetAllAsync();
+            try
+            {
+                var result = await _service.GetAllAsync();
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message,
+                });
+            }
         }
 
         [HttpGet("meeting/{meetingId}")]
-        public async Task<IActionResult>
-            GetByMeetingId(int meetingId)
+        public async Task<IActionResult> GetByMeetingId(int meetingId)
         {
-            var result =
-                await _service
-                    .GetByMeetingIdAsync(
-                        meetingId);
+            try
+            {
+                var result =
+                    await _service.GetByMeetingIdAsync(meetingId);
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+                   
+                });
+            }
         }
 
         [HttpGet("user/{userId}")]
-        public async Task<IActionResult>
-            GetByUserId(int userId)
+        public async Task<IActionResult> GetByUserId(int userId)
         {
-            var result =
-                await _service
-                    .GetByUserIdAsync(
-                        userId);
+            try
+            {
+                var result =
+                    await _service.GetByUserIdAsync(userId);
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
         }
 
         [HttpPost]
-        public async Task<IActionResult>
-            Create(
-                MeetingChatMessageCreate model)
+        public async Task<IActionResult> Create(
+              MeetingChatMessageCreate model)
         {
-            var result =
-                await _service
-                    .CreateAsync(model);
+            try
+            {
+                var result =
+                    await _service.CreateAsync(model);
 
-            return Ok(result);
+                return Ok(new
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                string errorMessage = ex.Message;
+
+                // Foreign Key Error
+                if (ex.Message.Contains("FOREIGN KEY"))
+                {
+                    errorMessage = "Invalid MeetingId. Meeting does not exist.";
+                }
+
+                // Duplicate Error
+                else if (ex.Message.Contains("Duplicate"))
+                {
+                    errorMessage = "Duplicate data already exists.";
+                }
+
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = errorMessage
+                });
+            }
         }
-
         [HttpPut]
-        public async Task<IActionResult>
-            Update(
-                MeetingChatMessageUpdate model)
+        public async Task<IActionResult> Update(
+            MeetingChatMessageUpdate model)
         {
-            var result =
-                await _service
-                    .UpdateAsync(model);
+            try
+            {
+                var result =
+                    await _service.UpdateAsync(model);
 
-            return Ok(result);
+                return Ok(new
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+               
+                });
+            }
         }
 
         [HttpDelete("{chatMessageId}")]
-        public async Task<IActionResult>
-            Delete(int chatMessageId)
+        public async Task<IActionResult> Delete(int chatMessageId)
         {
-            var result =
-                await _service
-                    .DeleteAsync(
-                        chatMessageId);
+            try
+            {
+                var result =
+                    await _service.DeleteAsync(chatMessageId);
 
-            return Ok(result);
+                return Ok(new
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+                    
+                });
+            }
         }
     }
 }

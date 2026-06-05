@@ -61,6 +61,8 @@ namespace ahello_backend.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromForm] ServiceDynamicPost model)
         {
+            try
+            {
             var rootPath = _env.WebRootPath
                 ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
 
@@ -138,12 +140,23 @@ namespace ahello_backend.Controllers
                 IntroVideoUrl = model.IntroVideo
             });
         }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+                    
+                });
+            }
+        }
 
         [HttpPut("{serviceId}")]
         public async Task<IActionResult> Update(
             int serviceId,
             [FromForm] ServiceDynamicPut model)
         {
+            try { 
             var rootPath = _env.WebRootPath
                 ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
 
@@ -226,15 +239,49 @@ namespace ahello_backend.Controllers
                 IntroVideoUrl     = model.IntroVideo
             });
         }
+             
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+            });
+            }
+        }
 
         [HttpDelete("{serviceId}")]
         public async Task<IActionResult> Delete(int serviceId)
         {
-            var deleted = await _service.DeleteAsync(serviceId);
-            if (!deleted) return BadRequest("Delete failed");
-            return Ok(new { Success = true, Message = "Deleted successfully" });
-        }
+            try
+            {
+                var deleted = await _service.DeleteAsync(serviceId);
 
+                if (!deleted)
+                {
+                    return BadRequest(new
+                    {
+                        Success = false,
+                        Message = "Delete failed"
+                    });
+                }
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Deleted successfully"
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+                    
+                });
+            }
+        }
         [HttpGet("paged")]
         public async Task<IActionResult> GetAllPaged(
             int pageNumber = 1,
