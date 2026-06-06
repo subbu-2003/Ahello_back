@@ -1,4 +1,5 @@
 ﻿using ahello_backend.Models.Form;
+using ahello_backend.Models.Pagination;
 using ahello_backend.Repositorys.Interfaces;
 using ahello_backend.Services.Interfaces;
 
@@ -32,11 +33,17 @@ namespace ahello_backend.Services.Classes
         {
             return await _repository.GetByIdAsync(formFieldValueId);
         }
-        public async Task<IEnumerable<FormFieldValueUserResponse>>
-    GetByUserIdAsync(int userId)
+        public async Task<PagedResult<FormFieldValueUserResponse>>GetByUserIdAsync(
+            int userId,
+            int pageNumber,
+            int pageSize,
+            string? search)
         {
-            return await _repository
-                .GetByUserIdAsync(userId);
+            return await _repository.GetByUserIdAsync(
+                userId,
+                pageNumber,
+                pageSize,
+                search);
         }
     }
 }
