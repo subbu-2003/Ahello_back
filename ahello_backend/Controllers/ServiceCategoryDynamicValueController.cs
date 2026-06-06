@@ -21,33 +21,97 @@ namespace ahello_backend.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var result = await _service.GetAllAsync();
+            try
+            {
+                var result = await _service.GetAllAsync();
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var result = await _service.GetByIdAsync(id);
+            try
+            {
+                var result = await _service.GetByIdAsync(id);
 
-            if (result == null)
-                return NotFound();
+                if (result == null)
+                {
+                    return NotFound(new
+                    {
+                        Success = false,
+                        Message = "Data not found"
+                    });
+                }
 
-            return Ok(result);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
         }
+
 
         [HttpPost]
         public async Task<IActionResult> Create(
             [FromBody] ServiceCategoryDynamicPost model)
         {
-            var id = await _service.CreateAsync(model);
-
-            return Ok(new
+            try
             {
-                Message = "Created Successfully",
-                ServiceCategoryId = id
-            });
+                var id = await _service.CreateAsync(model);
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Created Successfully",
+                    ServiceCategoryId = id
+                });
+            }
+            catch (Exception ex)
+            {
+                string errorMessage = ex.Message;
+
+                // Foreign Key Error
+                if (ex.Message.Contains("FOREIGN KEY"))
+                {
+                    errorMessage =
+                        "Invalid ServiceCategoryFieldId. Related data does not exist.";
+                }
+
+                // Duplicate Error
+                else if (ex.Message.Contains("Duplicate"))
+                {
+                    errorMessage =
+                        "Duplicate data already exists.";
+                }
+
+                // Null Error
+                else if (ex.Message.Contains("cannot be null"))
+                {
+                    errorMessage =
+                        "Required fields are missing.";
+                }
+
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = errorMessage
+                });
+            }
         }
 
         [HttpPut("{id}")]
@@ -55,31 +119,99 @@ namespace ahello_backend.Controllers
             int id,
             [FromBody] ServiceCategoryDynamicPut model)
         {
-            var result = await _service.UpdateAsync(
-                id,
-                model);
-
-            if (!result)
-                return NotFound();
-
-            return Ok(new
+            try
             {
-                Message = "Updated Successfully"
-            });
+                var result = await _service.UpdateAsync(
+                    id,
+                    model);
+
+                if (!result)
+                {
+                    return NotFound(new
+                    {
+                        Success = false,
+                        Message = "Data not found"
+                    });
+                }
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Updated Successfully"
+                });
+            }
+            catch (Exception ex)
+            {
+                string errorMessage = ex.Message;
+
+                // Foreign Key Error
+                if (ex.Message.Contains("FOREIGN KEY"))
+                {
+                    errorMessage =
+                        "Invalid ServiceCategoryFieldId. Related data does not exist.";
+                }
+
+                // Duplicate Error
+                else if (ex.Message.Contains("Duplicate"))
+                {
+                    errorMessage =
+                        "Duplicate data already exists.";
+                }
+
+                // Null Error
+                else if (ex.Message.Contains("cannot be null"))
+                {
+                    errorMessage =
+                        "Required fields are missing.";
+                }
+
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = errorMessage
+                });
+            }
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var result = await _service.DeleteAsync(id);
-
-            if (!result)
-                return NotFound();
-
-            return Ok(new
+            try
             {
-                Message = "Deleted Successfully"
-            });
+                var result = await _service.DeleteAsync(id);
+
+                if (!result)
+                {
+                    return NotFound(new
+                    {
+                        Success = false,
+                        Message = "Data not found"
+                    });
+                }
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Deleted Successfully"
+                });
+            }
+            catch (Exception ex)
+            {
+                string errorMessage = ex.Message;
+
+                // Foreign Key Error
+                if (ex.Message.Contains("FOREIGN KEY"))
+                {
+                    errorMessage =
+                        "This data is already in use.";
+                }
+
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = errorMessage
+                });
+            }
         }
     }
 }
