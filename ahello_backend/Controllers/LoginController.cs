@@ -55,37 +55,54 @@ namespace ahello_backend.Controllers
 
 
         [HttpPost("google")]
-        public async Task<IActionResult> GoogleLogin(
-        [FromBody] GoogleLoginRequest request)
+        public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
         {
-            var result =
-                await _loginService.GoogleLoginAsync(
-                    request.IdToken);
-
-            if (result == null)
+            if (request == null || string.IsNullOrWhiteSpace(request.IdToken))
             {
                 return BadRequest(new
                 {
                     success = false,
-                    message = "Invalid Google token"
+                    message = "Google token is required"
                 });
             }
 
-            return Ok(new
+            try
             {
-                success = true,
-                message = "Login successful",
-                data = new
+                var result = await _loginService.GoogleLoginAsync(request.IdToken);
+
+                if (result == null)
                 {
-                    token = result.Value.Token,
-                    user = new
+                    return BadRequest(new
                     {
-                        result.Value.User.UserId,
-                        result.Value.User.Email,
-                        result.Value.User.UserName
-                    }
+                        success = false,
+                        message = "Invalid Google token"
+                    });
                 }
-            });
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Login successful",
+                    data = new
+                    {
+                        token = result.Value.Token,
+                        user = new
+                        {
+                            result.Value.User.UserId,
+                            result.Value.User.Email,
+                            result.Value.User.UserName
+                        }
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
         }
 
         [HttpPost("send-otp")]
