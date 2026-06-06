@@ -545,7 +545,7 @@ namespace ahello_backend.Repositorys.Classes
                     new
                     {
                         UserId = userId,
-                        CategoryId = model.CategoryId,
+                        CategoryId = model.CategoryId == 0 ? (int?)null: model.CategoryId,
                         model.FullName,
                         model.Email,
                         model.ProfileUrl,
