@@ -1,9 +1,10 @@
 ﻿using ahello_backend.DbContexts;
 using ahello_backend.Models.Form;
+using ahello_backend.Models.Pagination;
 using ahello_backend.Repositorys.Interfaces;
 using Dapper;
-using System.Text.RegularExpressions;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace ahello_backend.Repositorys.Classes
 {
@@ -401,63 +402,108 @@ namespace ahello_backend.Repositorys.Classes
 
             return errors;
         }
-        public async Task<IEnumerable<FormFieldValueUserResponse>>
-    GetByUserIdAsync(int userId)
-        {
-            var sql = @"
+        public async Task<PagedResult<FormFieldValueUserResponse>>
+                 GetByUserIdAsync(
+                     int userId,
+                     int pageNumber,
+                     int pageSize,
+                     string? search)
+                        {
+                            using var connection = _db.GetConnection();
 
-SELECT
+                            int skip = (pageNumber - 1) * pageSize;
 
-    f.FormId,
-    f.UserId,
-    f.Title,
-    f.Description,
-    f.IsActive,
-    f.CreatedAt,
-    f.CreatedBy,
-    f.ModifiedAt,
-    f.ModifiedBy,
+                            var whereClause = @"
+                    WHERE f.UserId = @UserId
+                    AND f.IsActive = 1";
 
-    ff.FormFieldId,
-    ff.FormId,
-    ff.FieldName,
-    ff.FieldCode,
-    ff.Placeholder,
-    ff.Description,
-    ff.IsRequired,
-    ff.IsActive,
-    ff.DataTypeId,
-    ff.CreatedBy,
-    ff.CreatedAt,
-    ff.ModifiedBy,
-    ff.ModifiedAt,
+                            if (!string.IsNullOrWhiteSpace(search))
+                            {
+                                whereClause += @"
+                        AND
+                        (
+                            f.Title LIKE @Search
+                            OR f.Description LIKE @Search
+                            OR ff.FieldName LIKE @Search
+                            OR ff.FieldCode LIKE @Search
+                            OR ffv.FieldValue LIKE @Search
+                        )";
+                            }
 
-    ffv.FormFieldValueId,
-    ffv.FormId,
-    ffv.FieldCode,
-    ffv.FormFieldId,
-    ffv.FieldValue,
-    ffv.CreatedDate,
-    ffv.CreatedBy,
-    ffv.CreatedAt,
-    ffv.ModifiedBy,
-    ffv.ModifiedAt
+                            // TOTAL COUNT
+                            var totalCount = await connection.ExecuteScalarAsync<int>(
+                            $@"
+                    SELECT COUNT(DISTINCT f.FormId)
 
-FROM forms f
+                    FROM forms f
 
-LEFT JOIN formfields ff
-    ON f.FormId = ff.FormId
+                    LEFT JOIN formfields ff
+                        ON f.FormId = ff.FormId
 
-LEFT JOIN formfieldvalues ffv
-    ON ff.FormFieldId = ffv.FormFieldId
+                    LEFT JOIN formfieldvalues ffv
+                        ON ff.FormFieldId = ffv.FormFieldId
 
-WHERE f.UserId = @UserId
-AND f.IsActive = 1
+                    {whereClause}",
+                            new
+                            {
+                                UserId = userId,
+                                Search = $"%{search}%"
+                            });
 
-ORDER BY f.FormId DESC,
-         ff.FormFieldId";
+                            // MAIN QUERY
+                            var sql = $@"
 
-            using var connection = _db.GetConnection();
+                    SELECT
+
+                        f.FormId,
+                        f.UserId,
+                        f.Title,
+                        f.Description,
+                        f.IsActive,
+                        f.CreatedAt,
+                        f.CreatedBy,
+                        f.ModifiedAt,
+                        f.ModifiedBy,
+
+                        ff.FormFieldId,
+                        ff.FormId,
+                        ff.FieldName,
+                        ff.FieldCode,
+                        ff.Placeholder,
+                        ff.Description,
+                        ff.IsRequired,
+                        ff.IsActive,
+                        ff.DataTypeId,
+                        ff.CreatedBy,
+                        ff.CreatedAt,
+                        ff.ModifiedBy,
+                        ff.ModifiedAt,
+
+                        ffv.FormFieldValueId,
+                        ffv.FormId,
+                        ffv.FieldCode,
+                        ffv.FormFieldId,
+                        ffv.FieldValue,
+                        ffv.CreatedDate,
+                        ffv.CreatedBy,
+                        ffv.CreatedAt,
+                        ffv.ModifiedBy,
+                        ffv.ModifiedAt
+
+                    FROM forms f
+
+                    LEFT JOIN formfields ff
+                        ON f.FormId = ff.FormId
+
+                    LEFT JOIN formfieldvalues ffv
+                        ON ff.FormFieldId = ffv.FormFieldId
+
+                    {whereClause}
+
+                    ORDER BY f.FormId DESC,
+                             ff.FormFieldId
+
+                    LIMIT @PageSize OFFSET @Skip";
 
             var forms =
                 new Dictionary<int, FormFieldValueUserResponse>();
@@ -519,11 +565,21 @@ ORDER BY f.FormId DESC,
 
                     return existingForm;
                 },
-                new { UserId = userId },
+                new
+                {
+                    UserId = userId,
+                    Search = $"%{search}%",
+                    PageSize = pageSize,
+                    Skip = skip
+                },
                 splitOn: "FormFieldId,FormFieldValueId"
             );
 
-            return forms.Values;
+            return new PagedResult<FormFieldValueUserResponse>
+            {
+                TotalCount = totalCount,
+                Details = forms.Values
+            };
         }
     }
 }
