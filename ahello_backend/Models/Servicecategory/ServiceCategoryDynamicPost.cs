@@ -14,5 +14,15 @@
         public int ServiceCategoryFieldId { get; set; }
 
         public string FieldValue { get; set; }
+
+        public List<ServiceCategoryDropdownOptionPost>? DropDownOptions { get; set; }
+    }
+    public class ServiceCategoryDropdownOptionPost
+    {
+        public string OptionValue { get; set; }
+
+        public string OptionLabel { get; set; }
+
+        public bool IsActive { get; set; }
     }
 }

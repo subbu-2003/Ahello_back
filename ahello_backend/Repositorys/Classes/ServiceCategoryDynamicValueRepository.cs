@@ -66,6 +66,53 @@ namespace ahello_backend.Repositorys.Classes
                             tx);
                     }
                 }
+                if (model.Fields != null && model.Fields.Any())
+                {
+                    var dropdownSql = @"
+                        INSERT INTO servicecategorydropdownoption
+                        (
+                            ServiceCategoryFieldId,
+                            ServiceCategoryId,
+                            OptionValue,
+                            OptionLabel,
+                            IsActive,
+                            CreatedDate,
+                            CreatedBy
+                        )
+                        VALUES
+                        (
+                            @ServiceCategoryFieldId,
+                            @ServiceCategoryId,
+                            @OptionValue,
+                            @OptionLabel,
+                            @IsActive,
+                            NOW(),
+                            @CreatedBy
+                        );";
+
+                    foreach (var field in model.Fields)
+                    {
+                        if (field.DropDownOptions != null &&
+                            field.DropDownOptions.Any())
+                        {
+                            foreach (var option in field.DropDownOptions)
+                            {
+                                await connection.ExecuteAsync(
+                                    dropdownSql,
+                                    new
+                                    {
+                                        field.ServiceCategoryFieldId,
+                                        model.ServiceCategoryId,
+                                        option.OptionValue,
+                                        option.OptionLabel,
+                                        option.IsActive,
+                                        model.CreatedBy
+                                    },
+                                    tx);
+                            }
+                        }
+                    }
+                }
 
                 tx.Commit();
 
@@ -120,6 +167,32 @@ namespace ahello_backend.Repositorys.Classes
                     });
 
                 category.Fields = fields.ToList();
+                var dropdownOptions = await connection.QueryAsync< ServiceCategoryDropdownOptionResponse>(
+                @"SELECT DISTINCT
+                    scdo.ServiceCategoryDropDownId,
+                    scdo.ServiceCategoryFieldId,
+                    scdo.ServiceCategoryId,
+                    scdo.OptionValue,
+                    scdo.OptionLabel,
+                    scdo.IsActive
+
+                FROM servicecategorydropdownoption scdo
+
+                INNER JOIN servicecategoryfieldvalues scfv
+                    ON scdo.ServiceCategoryFieldId =
+                       scfv.ServiceCategoryFieldId
+
+                    AND scdo.ServiceCategoryId =
+                        scfv.ServiceCategoryId
+
+                WHERE scdo.ServiceCategoryId =
+                      @ServiceCategoryId",
+                new
+                {
+                    category.ServiceCategoryId
+                });
+
+                category.DropdownOptions = dropdownOptions.ToList();
             }
 
             return categories;
@@ -173,6 +246,33 @@ namespace ahello_backend.Repositorys.Classes
                 });
 
             category.Fields = fields.ToList();
+            var dropdownOptions =await connection.QueryAsync<  ServiceCategoryDropdownOptionResponse>(
+            @"SELECT DISTINCT
+                scdo.ServiceCategoryDropDownId,
+                scdo.ServiceCategoryFieldId,
+                scdo.ServiceCategoryId,
+                scdo.OptionValue,
+                scdo.OptionLabel,
+                scdo.IsActive
+
+            FROM servicecategorydropdownoption scdo
+
+            INNER JOIN servicecategoryfieldvalues scfv
+                ON scdo.ServiceCategoryFieldId =
+                   scfv.ServiceCategoryFieldId
+
+                AND scdo.ServiceCategoryId =
+                    scfv.ServiceCategoryId
+
+            WHERE scdo.ServiceCategoryId =
+                  @ServiceCategoryId",
+            new
+            {
+                ServiceCategoryId = category.ServiceCategoryId
+            });
+
+            category.DropdownOptions =
+                dropdownOptions.ToList();
 
             return category;
         }
@@ -198,7 +298,15 @@ namespace ahello_backend.Repositorys.Classes
                         ServiceCategoryId = serviceCategoryId
                     },
                     tx);
-
+                 await connection.ExecuteAsync(
+                @"DELETE FROM servicecategorydropdownoption
+                  WHERE ServiceCategoryId =
+                        @ServiceCategoryId",
+                new
+                {
+                    ServiceCategoryId = serviceCategoryId
+                },
+                tx);
                 if (model.Fields != null && model.Fields.Any())
                 {
                     var sql = @"
@@ -242,7 +350,53 @@ namespace ahello_backend.Repositorys.Classes
                             tx);
                     }
                 }
+                if (model.Fields != null && model.Fields.Any())
+                {
+                    var dropdownSql = @"
+                    INSERT INTO servicecategorydropdownoption
+                    (
+                        ServiceCategoryFieldId,
+                        ServiceCategoryId,
+                        OptionValue,
+                        OptionLabel,
+                        IsActive,
+                        CreatedDate,
+                        CreatedBy
+                    )
+                    VALUES
+                    (
+                        @ServiceCategoryFieldId,
+                        @ServiceCategoryId,
+                        @OptionValue,
+                        @OptionLabel,
+                        @IsActive,
+                        NOW(),
+                        @ModifiedBy
+                    );";
 
+                    foreach (var field in model.Fields)
+                    {
+                        if (field.DropDownOptions != null &&
+                            field.DropDownOptions.Any())
+                        {
+                            foreach (var option in field.DropDownOptions)
+                            {
+                                await connection.ExecuteAsync(
+                                    dropdownSql,
+                                    new
+                                    {
+                                        field.ServiceCategoryFieldId,
+                                        ServiceCategoryId = serviceCategoryId,
+                                        option.OptionValue,
+                                        option.OptionLabel,
+                                        option.IsActive,
+                                        model.ModifiedBy
+                                    },
+                                    tx);
+                            }
+                        }
+                    }
+                }
                 tx.Commit();
 
                 return true;
@@ -254,21 +408,44 @@ namespace ahello_backend.Repositorys.Classes
             }
         }
 
-        public async Task<bool> DeleteAsync(
-            int serviceCategoryId)
+        public async Task<bool> DeleteAsync( int serviceCategoryId)
         {
             using var connection = _db.GetConnection();
 
-            var rows = await connection.ExecuteAsync(
-                @"DELETE FROM servicecategoryfieldvalues
-                  WHERE ServiceCategoryId =
-                        @ServiceCategoryId",
-                new
-                {
-                    ServiceCategoryId = serviceCategoryId
-                });
+            connection.Open();
 
-            return rows > 0;
+            using var tx = connection.BeginTransaction();
+
+            try
+            {
+                await connection.ExecuteAsync(
+                    @"DELETE FROM servicecategoryfieldvalues
+              WHERE ServiceCategoryId =
+                    @ServiceCategoryId",
+                    new
+                    {
+                        ServiceCategoryId = serviceCategoryId
+                    },
+                    tx);
+                await connection.ExecuteAsync(
+                    @"DELETE FROM servicecategorydropdownoption
+              WHERE ServiceCategoryId =
+                    @ServiceCategoryId",
+                    new
+                    {
+                        ServiceCategoryId = serviceCategoryId
+                    },
+                    tx);
+
+                tx.Commit();
+
+                return true;
+            }
+            catch
+            {
+                tx.Rollback();
+                throw;
+            }
         }
     }
 }

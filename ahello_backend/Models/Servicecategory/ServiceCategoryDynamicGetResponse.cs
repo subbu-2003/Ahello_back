@@ -7,6 +7,7 @@
         public string ServiceCategoryName { get; set; }
 
         public List<ServiceCategoryDynamicFieldResponse>? Fields { get; set; }
+        public List<ServiceCategoryDropdownOptionResponse>? DropdownOptions { get; set; }
     }
 
     public class ServiceCategoryDynamicFieldResponse
