@@ -116,7 +116,6 @@ namespace ahello_backend.Repositorys.Classes
             ModifiedAt = NOW()
         WHERE FormFieldId = @FormFieldId
     ";
-
             var result = await connection.ExecuteAsync(
                 query,
                 model
