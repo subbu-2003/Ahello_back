@@ -8,18 +8,10 @@ namespace ahello_backend.Repositorys.Classes
     public class EmailRepository : IEmailRepository
     {
         private readonly EmailCon _smtp;
-        private readonly SmtpClient _smtpClient;
 
         public EmailRepository(EmailCon smtp)
         {
             _smtp = smtp;
-            _smtpClient = new SmtpClient(_smtp.Host, _smtp.Port)
-            {
-                Credentials = new NetworkCredential(_smtp.Username, _smtp.Password),
-                EnableSsl = _smtp.EnableSsl,
-                DeliveryMethod = SmtpDeliveryMethod.Network,
-                UseDefaultCredentials = false
-            };
         }
 
         // PRIVATE HELPER
@@ -35,15 +27,15 @@ namespace ahello_backend.Repositorys.Classes
 
             mail.To.Add(toEmail);
 
-            //using var smtpClient = new SmtpClient(_smtp.Host, _smtp.Port)
-            //{
-            //    Credentials = new NetworkCredential(_smtp.Username, _smtp.Password),
-            //    EnableSsl = _smtp.EnableSsl,
-            //    DeliveryMethod = SmtpDeliveryMethod.Network,
-            //    UseDefaultCredentials = false
-            //};
+            using var smtpClient = new SmtpClient(_smtp.Host, _smtp.Port)
+            {
+                Credentials = new NetworkCredential(_smtp.Username, _smtp.Password),
+                EnableSsl = _smtp.EnableSsl,
+                DeliveryMethod = SmtpDeliveryMethod.Network,
+                UseDefaultCredentials = false
+            };
 
-            await _smtpClient.SendMailAsync(mail);
+            await smtpClient.SendMailAsync(mail);
         }
 
         public async Task SendLoginOtpEmailAsync(string toEmail, string otp)
