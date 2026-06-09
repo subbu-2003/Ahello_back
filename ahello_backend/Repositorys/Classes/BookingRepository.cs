@@ -17,11 +17,11 @@ namespace ahello_backend.Repositorys.Classes
         private readonly IServiceRepository _serviceRepository;
 
         public BookingRepository(
-     DbContext db,
-     DbContextConnection dbConn,
-     IUserSlotRepository userSlotRepo,
-     IServiceRepository serviceRepository,
-     IEmailRepository emailRepository)
+         DbContext db,
+         DbContextConnection dbConn,
+         IUserSlotRepository userSlotRepo,
+         IServiceRepository serviceRepository,
+         IEmailRepository emailRepository)
         {
             _db = db;
             _dbConn = dbConn;
@@ -109,19 +109,33 @@ namespace ahello_backend.Repositorys.Classes
 
                 await tx.CommitAsync();
 
+                // ✅ Build email data BEFORE the using-blocks dispose
+                string clientEmail = client.Email;
+                string clientFullName = client.FullName;
                 string serviceName = service?.ServiceTitle ?? "the service";
                 string formattedDate = model.ScheduleDate.ToString("dddd, MMMM dd yyyy");
-                string formattedTime = meetingStartTime.ToString(
-                "hh:mm tt",
-                CultureInfo.InvariantCulture);
+                string formattedTime = meetingStartTime.ToString("hh:mm tt", CultureInfo.InvariantCulture);
+                string capturedMeetingLink = meetingLink;
 
-                await _emailRepository.SendBookingConfirmationEmailAsync(
-                    client.Email, client.FullName, serviceName, formattedDate, formattedTime);
+                // ✅ Fire-and-forget — don't await, return bookingId immediately
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _emailRepository.SendBookingConfirmationEmailAsync(
+                            clientEmail, clientFullName, serviceName, formattedDate, formattedTime);
 
-                await _emailRepository.SendMeetingInviteEmailAsync(
-                    client.Email, client.FullName, meetingLink);
+                        await _emailRepository.SendMeetingInviteEmailAsync(
+                            clientEmail, clientFullName, capturedMeetingLink);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log the error — don't crash the app
+                        Console.WriteLine($"[EmailError] BookingId:{bookingId} - {ex.Message}");
+                    }
+                });
 
-                return bookingId;
+                return bookingId; // ✅ Returns instantly, email sends in background
             }
             catch
             {
