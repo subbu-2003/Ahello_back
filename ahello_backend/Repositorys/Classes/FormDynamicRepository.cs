@@ -706,67 +706,68 @@ namespace ahello_backend.Repositorys.Classes
 
             return form;
         }
-        public async Task<bool> UpdateFormTemplateAsync(
-            int formId,
-            FormTemplatePut model)
-        {
-            using var connection = _db.GetConnection();
+       public async Task<bool> UpdateFormTemplateAsync(
+    int formId,
+    FormTemplatePut model)
+{
+    using var connection = _db.GetConnection();
 
-            connection.Open();
+    connection.Open();
 
-            using var tx = connection.BeginTransaction();
+    using var tx = connection.BeginTransaction();
 
-            try
+    try
+    {
+        var rows = await connection.ExecuteAsync(
+            @"
+            UPDATE forms
+            SET
+                UserId = @UserId,
+                Title = @Title,
+                Description = @Description,
+                ModifiedAt = NOW(),
+                ModifiedBy = @ModifiedBy
+            WHERE FormId = @FormId
+            ",
+            new
             {
-                // Update Form
-                var rows = await connection.ExecuteAsync(
-                @"
-        UPDATE forms
-        SET
-            UserId = @UserId,
-            Title = @Title,
-            Description = @Description,
-            ModifiedAt = NOW(),
-            ModifiedBy = @ModifiedBy
-        WHERE FormId = @FormId
-        ",
-                new
-                {
-                    FormId = formId,
-                    model.UserId,
-                    model.Title,
-                    model.Description,
-                    model.ModifiedBy
-                },
-                tx);
+                FormId = formId,
+                model.UserId,
+                model.Title,
+                model.Description,
+                model.ModifiedBy
+            },
+            tx);
 
-                if (rows <= 0)
-                {
-                    tx.Rollback();
-                    return false;
-                }
+        if (rows <= 0)
+        {
+            tx.Rollback();
+            return false;
+        }
 
-                if (model.Fields != null && model.Fields.Any())
+        if (model.Fields != null && model.Fields.Any())
+        {
+            foreach (var field in model.Fields)
+            {
+                int formFieldId = field.FormFieldId;
+
+                // UPDATE EXISTING FIELD
+                if (field.FormFieldId > 0)
                 {
-                    foreach (var field in model.Fields)
-                    {
-                        // Update only selected field
-                        await connection.ExecuteAsync(
+                    await connection.ExecuteAsync(
                         @"
-                UPDATE formfields
-                SET
-                    FieldName = @FieldName,
-                    FieldCode = @FieldCode,
-                    Placeholder = @Placeholder,
-                    Description = @Description,
-                    IsRequired = @IsRequired,
-                    DataTypeId = @DataTypeId
-                WHERE FormFieldId = @FormFieldId
-                  AND FormId = @FormId
-                ",
+                        UPDATE formfields
+                        SET
+                            FieldName = @FieldName,
+                            FieldCode = @FieldCode,
+                            Placeholder = @Placeholder,
+                            Description = @Description,
+                            IsRequired = @IsRequired,
+                            DataTypeId = @DataTypeId
+                        WHERE FormFieldId = @FormFieldId
+                        ",
                         new
                         {
-                            FormId = formId,
                             field.FormFieldId,
                             field.FieldName,
                             FieldCode = field.FieldName
@@ -779,72 +780,124 @@ namespace ahello_backend.Repositorys.Classes
                         },
                         tx);
 
-                        // Remove dropdowns only for this field
-                        await connection.ExecuteAsync(
+                    formFieldId = field.FormFieldId;
+                }
+                // INSERT NEW FIELD
+                else
+                {
+                    formFieldId =
+                        await connection.ExecuteScalarAsync<int>(
                         @"
-                DELETE FROM formdropdownoptions
-                WHERE FormFieldId = @FormFieldId
-                ",
-                        new
-                        {
-                            field.FormFieldId
-                        },
-                        tx);
-
-                        // Insert updated dropdowns
-                        if (field.DropdownOptions != null &&
-                            field.DropdownOptions.Any())
-                        {
-                            foreach (var option in field.DropdownOptions)
-                            {
-                                await connection.ExecuteAsync(
-                                @"
-                        INSERT INTO formdropdownoptions
+                        INSERT INTO formfields
                         (
-                            FormFieldId,
                             FormId,
-                            OptionValue,
-                            OptionLabel,
+                            FieldName,
+                            FieldCode,
+                            Placeholder,
+                            Description,
+                            IsRequired,
                             IsActive,
-                            CreatedDate,
-                            CreatedBy
+                            DataTypeId,
+                            CreatedBy,
+                            CreatedAt
                         )
                         VALUES
                         (
-                            @FormFieldId,
                             @FormId,
-                            @OptionValue,
-                            @OptionLabel,
-                            @IsActive,
-                            NOW(),
-                            @ModifiedBy
-                        )
+                            @FieldName,
+                            @FieldCode,
+                            @Placeholder,
+                            @Description,
+                            @IsRequired,
+                            1,
+                            @DataTypeId,
+                            @CreatedBy,
+                            NOW()
+                        );
+
+                        SELECT LAST_INSERT_ID();
                         ",
-                                new
-                                {
-                                    field.FormFieldId,
-                                    FormId = formId,
-                                    option.OptionValue,
-                                    option.OptionLabel,
-                                    option.IsActive,
-                                    model.ModifiedBy
-                                },
-                                tx);
-                            }
-                        }
-                    }
+                        new
+                        {
+                            FormId = formId,
+                            field.FieldName,
+                            FieldCode = field.FieldName
+                                .Replace(" ", "")
+                                .ToLower(),
+                            field.Placeholder,
+                            field.Description,
+                            field.IsRequired,
+                            field.DataTypeId,
+                            CreatedBy = model.ModifiedBy
+                        },
+                        tx);
                 }
 
-                tx.Commit();
+                // DROPDOWN UPDATE
+                if (field.DropdownOptions != null &&
+                    field.DropdownOptions.Any())
+                {
+                    await connection.ExecuteAsync(
+                        @"
+                        DELETE FROM formdropdownoptions
+                        WHERE FormFieldId = @FormFieldId
+                        ",
+                        new
+                        {
+                            FormFieldId = formFieldId
+                        },
+                        tx);
 
-                return true;
-            }
-            catch
-            {
-                tx.Rollback();
-                throw;
+                    foreach (var option in field.DropdownOptions)
+                    {
+                        await connection.ExecuteAsync(
+                            @"
+                            INSERT INTO formdropdownoptions
+                            (
+                                FormFieldId,
+                                FormId,
+                                OptionValue,
+                                OptionLabel,
+                                IsActive,
+                                CreatedDate,
+                                CreatedBy
+                            )
+                            VALUES
+                            (
+                                @FormFieldId,
+                                @FormId,
+                                @OptionValue,
+                                @OptionLabel,
+                                @IsActive,
+                                NOW(),
+                                @CreatedBy
+                            )
+                            ",
+                            new
+                            {
+                                FormFieldId = formFieldId,
+                                FormId = formId,
+                                option.OptionValue,
+                                option.OptionLabel,
+                                option.IsActive,
+                                CreatedBy = model.ModifiedBy
+                            },
+                            tx);
+                    }
+                }
             }
         }
+
+        tx.Commit();
+
+        return true;
+    }
+    catch
+    {
+        tx.Rollback();
+        throw;
+    }
+}
         public async Task<bool> SubmitFormAsync(FormSubmitPost model)
         {
             using var connection = _db.GetConnection();
