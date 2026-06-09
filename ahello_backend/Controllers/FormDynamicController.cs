@@ -106,7 +106,7 @@ namespace ahello_backend.Controllers
         [HttpPut("update-form-template/{formId}")]
         public async Task<IActionResult> UpdateFormTemplate(
                 int formId,
-                [FromBody] FormTemplatePost model)
+                [FromBody] FormTemplatePut model)
         {
             var result =
                 await _service.UpdateFormTemplateAsync(formId, model);

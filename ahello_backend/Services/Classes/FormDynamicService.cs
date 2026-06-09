@@ -59,7 +59,7 @@ namespace ahello_backend.Services.Classes
             }
             public async Task<bool> UpdateFormTemplateAsync(
                                         int formId,
-                                        FormTemplatePost model)
+                                        FormTemplatePut model)
             {
                 return await _repository.UpdateFormTemplateAsync(formId, model);
             }
