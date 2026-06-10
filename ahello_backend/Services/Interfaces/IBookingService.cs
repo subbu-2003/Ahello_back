@@ -6,6 +6,14 @@ namespace ahello_backend.Services.Interfaces
     public interface IBookingService
     {
         Task<int> CreateAsync(BookingPost model);
+        Task<int> RescheduleAsync(
+    int oldBookingId,
+    DateTime newDate,
+    TimeSpan newStart,
+    TimeSpan newEnd,
+    int slotId,
+    string rescheduledBy,
+    string reason);
 
         Task<IEnumerable<BookingRead>> GetAllAsync();
 
