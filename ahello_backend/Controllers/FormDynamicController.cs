@@ -71,8 +71,8 @@ namespace ahello_backend.Controllers
             });
         }
 
-        [HttpDelete("{formId}/{clientId}")]
-        public async Task<IActionResult> Delete( int formId,int clientId)
+        [HttpDelete("{formId}")]
+        public async Task<IActionResult> Delete( int formId)
         {
             var result =
                 await _service.DeleteAsync(
