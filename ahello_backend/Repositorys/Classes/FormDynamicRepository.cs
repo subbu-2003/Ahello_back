@@ -516,8 +516,7 @@ namespace ahello_backend.Repositorys.Classes
                 var formId = await connection.ExecuteScalarAsync<int>(
                     @"INSERT INTO forms
             (
-                UserId,
-                ClientId,
+                UserId, 
                 Title,
                 Description,
                 IsActive,
@@ -527,7 +526,6 @@ namespace ahello_backend.Repositorys.Classes
             VALUES
             (
                 @UserId,
-                @ClientId,
                 @Title,
                 @Description,
                 1,
@@ -728,7 +726,6 @@ namespace ahello_backend.Repositorys.Classes
             UPDATE forms
             SET
                 UserId = @UserId,
-                ClientId=@ClientId,
                 Title = @Title,
                 Description = @Description,
                 ModifiedAt = NOW(),
@@ -739,7 +736,6 @@ namespace ahello_backend.Repositorys.Classes
             {
                 FormId = formId,
                 model.UserId,
-                model.ClientId,
                 model.Title,
                 model.Description,
                 model.ModifiedBy
