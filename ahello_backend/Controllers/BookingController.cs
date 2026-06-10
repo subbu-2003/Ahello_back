@@ -21,14 +21,13 @@ namespace ahello_backend.Controllers
             try
             {
                 var id = await _service.CreateAsync(model);
-
                 return Ok(id);
             }
-            catch
+            catch (Exception ex)
             {
                 return BadRequest(new
                 {
-                    Message = "Invalid data"
+                    Message = ex.Message
                 });
             }
         }
