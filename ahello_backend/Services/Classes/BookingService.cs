@@ -19,6 +19,25 @@ namespace ahello_backend.Services.Classes
             return await _repository.CreateAsync(model);
         }
 
+        public async Task<int> RescheduleAsync(
+    int oldBookingId,
+    DateTime newDate,
+    TimeSpan newStart,
+    TimeSpan newEnd,
+    int slotId,
+    string rescheduledBy,
+    string reason)
+        {
+            return await _repository.RescheduleAsync(
+                oldBookingId,
+                newDate,
+                newStart,
+                newEnd,
+                slotId,
+                rescheduledBy,
+                reason);
+        }
+
         public async Task<IEnumerable<BookingRead>> GetAllAsync()
         {
             return await _repository.GetAllAsync();

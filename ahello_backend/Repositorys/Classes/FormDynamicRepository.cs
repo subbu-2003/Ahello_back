@@ -3,6 +3,7 @@ using ahello_backend.Models.Form;
 using ahello_backend.Models.Forms;
 using ahello_backend.Repositorys.Interfaces;
 using Dapper;
+using MySqlX.XDevAPI;
 
 namespace ahello_backend.Repositorys.Classes
 {
@@ -15,15 +16,13 @@ namespace ahello_backend.Repositorys.Classes
             _db = db;
         }
 
-        public async Task<IEnumerable<FormDynamicGetResponse>>
-            GetAllAsync()
+        public async Task<IEnumerable<FormDynamicGetResponse>> GetAllAsync()
         {
             using var connection = _db.GetConnection();
 
             var forms = (await connection.QueryAsync<FormDynamicGetResponse>(
-                @"SELECT *
-                  FROM forms
-                  ORDER BY FormId DESC")).ToList();
+           @"SELECT * FROM forms ORDER BY FormId DESC"))
+          .ToList();
 
             foreach (var form in forms)
             {
@@ -60,15 +59,15 @@ namespace ahello_backend.Repositorys.Classes
 
             return forms;
         }
-        public async Task<FormDynamicGetResponse> GetByIdAsync(int formId)
+        public async Task<FormDynamicGetResponse> GetByIdAsync(int formId, int clientId)
         {
             using var connection = _db.GetConnection();
 
             var form = await connection.QueryFirstOrDefaultAsync<FormDynamicGetResponse>(
                 @"SELECT *
           FROM forms
-          WHERE FormId = @FormId",
-                new { FormId = formId });
+          WHERE FormId = @FormId AND ClientId = @ClientId",
+                new { FormId = formId, ClientId = clientId });
 
             if (form == null)
                 return null;
@@ -118,16 +117,16 @@ namespace ahello_backend.Repositorys.Classes
         }
 
         public async Task<IEnumerable<FormDynamicGetResponse>>
-            GetByUserIdAsync(int userId)
+            GetByUserIdAsync(int userId, int clientId)
         {
             using var connection = _db.GetConnection();
 
             var forms = (await connection.QueryAsync <FormDynamicGetResponse>(
                 @"SELECT *
                   FROM forms
-                  WHERE UserId = @UserId
+                  WHERE UserId = @UserId AND ClientId = @ClientId
                   ORDER BY FormId DESC",
-                new { UserId = userId })).ToList();
+                new { UserId = userId, ClientId = clientId })).ToList();
 
             foreach (var form in forms)
             {
@@ -183,6 +182,7 @@ namespace ahello_backend.Repositorys.Classes
             INSERT INTO forms
             (
                 UserId,
+                ClientId,
                 Title,
                 Description,
                 IsActive,
@@ -192,6 +192,7 @@ namespace ahello_backend.Repositorys.Classes
             VALUES
             (
                 @UserId,
+                @ClientId,
                 @Title,
                 @Description,
                 @IsActive,
@@ -321,6 +322,7 @@ namespace ahello_backend.Repositorys.Classes
                     UPDATE forms
                     SET
                         UserId = @UserId,
+                        ClientId = @ClientId,
                         Title = @Title,
                         Description = @Description,
                         IsActive = @IsActive,
@@ -335,6 +337,7 @@ namespace ahello_backend.Repositorys.Classes
                     {
                         FormId = formId,
                         model.UserId,
+                        model.ClientId,
                         model.Title,
                         model.Description,
                         model.IsActive,
@@ -458,7 +461,7 @@ namespace ahello_backend.Repositorys.Classes
         }
 
         public async Task<bool> DeleteAsync(
-            int formId)
+            int formId, int clientId)
         {
             using var connection =
                 _db.GetConnection();
@@ -473,7 +476,7 @@ namespace ahello_backend.Repositorys.Classes
                 await connection.ExecuteAsync(
                     @"DELETE FROM formfieldvalues
                       WHERE FormId = @FormId",
-                    new { FormId = formId },
+                    new { FormId = formId, ClientId = clientId },
                     tx);
 
                 await connection.ExecuteAsync(
@@ -486,7 +489,7 @@ namespace ahello_backend.Repositorys.Classes
                 var rows =
                     await connection.ExecuteAsync(
                     @"DELETE FROM forms
-                      WHERE FormId = @FormId",
+                      WHERE FormId = @FormId AND ClientId = @ClientId",
                     new { FormId = formId },
                     tx);
 
@@ -514,6 +517,7 @@ namespace ahello_backend.Repositorys.Classes
                     @"INSERT INTO forms
             (
                 UserId,
+                ClientId,
                 Title,
                 Description,
                 IsActive,
@@ -523,6 +527,7 @@ namespace ahello_backend.Repositorys.Classes
             VALUES
             (
                 @UserId,
+                @ClientId,
                 @Title,
                 @Description,
                 1,
@@ -642,15 +647,16 @@ namespace ahello_backend.Repositorys.Classes
                 throw;
             }
         }
-        public async Task<FormDynamicGetResponse?> GetSubmittedFormAsync(int formId)
+        public async Task<FormDynamicGetResponse?> GetSubmittedFormAsync(int formId, int clientId)
         {
             using var connection = _db.GetConnection();
 
             var form = await connection.QueryFirstOrDefaultAsync<FormDynamicGetResponse>(
                 @"SELECT *
           FROM forms
-          WHERE FormId = @FormId",
-                new { FormId = formId });
+          WHERE FormId = @FormId AND ClientId = @ClientId",
+
+                new { FormId = formId, ClientId = clientId });
 
             if (form == null)
                 return null;
@@ -723,6 +729,7 @@ namespace ahello_backend.Repositorys.Classes
             UPDATE forms
             SET
                 UserId = @UserId,
+                ClientId=@ClientId,
                 Title = @Title,
                 Description = @Description,
                 ModifiedAt = NOW(),
@@ -733,6 +740,7 @@ namespace ahello_backend.Repositorys.Classes
             {
                 FormId = formId,
                 model.UserId,
+                model.ClientId,
                 model.Title,
                 model.Description,
                 model.ModifiedBy

@@ -226,20 +226,45 @@ namespace ahello_backend.Repositorys.Classes
         {
             using var connection = _db.GetConnection();
 
+            // Step 1: Fetch the meeting by room name only (no time/status filter here)
             var sql = @"
-        SELECT *
-        FROM meetings
-        WHERE MeetingLink LIKE @RoomName
-          AND NOW() >= DATE_SUB(StartTime, INTERVAL 10 MINUTE)
-          AND NOW() <= EndTime
-          AND Status = 'Scheduled'";
+        SELECT
+            m.MeetingId,
+            m.UserId,
+            m.BookingId,
+            m.StartTime,
+            m.EndTime,
+            m.MeetingLink,
+            m.Status,
+            u.FullName  AS UserName,
+            u.Email,
+            cu.FullName AS ClientName,
+            cu.Email    AS ClientEmail
+        FROM meetings m
+        INNER JOIN bookings b  ON m.BookingId  = b.BookingId
+        INNER JOIN users u     ON m.UserId     = u.UserId
+        INNER JOIN users cu    ON b.ClientId   = cu.UserId
+        WHERE m.MeetingLink LIKE @RoomName";
 
-            return await connection.QueryFirstOrDefaultAsync<Meeting>(
+            var meeting = await connection.QueryFirstOrDefaultAsync<Meeting>(
                 sql,
-                new
-                {
-                    RoomName = $"%{roomName}%"
-                });
+                new { RoomName = $"%{roomName}%" });
+
+            if (meeting == null) return null;
+
+            // Step 2: Auto-complete if EndTime has passed
+            if (DateTime.Now > meeting.EndTime && meeting.Status != "Completed")
+            {
+                await connection.ExecuteAsync(@"
+            UPDATE meetings
+            SET Status = 'Completed', ModifiedAt = NOW()
+            WHERE MeetingId = @MeetingId",
+                    new { meeting.MeetingId });
+
+                meeting.Status = "Completed"; // reflect locally
+            }
+
+            return meeting;
         }
 
 
