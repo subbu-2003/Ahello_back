@@ -49,9 +49,14 @@ namespace ahello_backend.Repositorys.Classes
         }
         public async Task<int> CreateAsync(FormCreate model)
         {
+            if (model.UserId == model.ClientId)
+            {
+                throw new Exception("UserId and ClientId cannot be same.");
+            }
             var query = @"INSERT INTO forms
                         (
                             UserId,
+                            ClientId,
                             Title,
                             Description,
                             IsActive,
@@ -61,6 +66,7 @@ namespace ahello_backend.Repositorys.Classes
                         VALUES
                         (
                             @UserId,
+                            @ClientId,
                             @Title,
                             @Description,
                             @IsActive,
@@ -75,9 +81,14 @@ namespace ahello_backend.Repositorys.Classes
 
         public async Task<int> UpdateAsync(FormUpdate model)
         {
+            if (model.UserId == model.ClientId)
+            {
+                throw new Exception("UserId and ClientId cannot be same.");
+            }
             var query = @"UPDATE forms
                           SET
                               UserId = @UserId,
+                              ClientId = @ClientId,
                               Title = @Title,
                               Description = @Description,
                               IsActive = @IsActive,

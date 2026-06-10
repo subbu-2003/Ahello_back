@@ -26,17 +26,23 @@ namespace ahello_backend.Controllers
             return Ok(data);
         }
 
-        [HttpGet("{formId}")]
-        public async Task<IActionResult> GetById(int formId)
+        [HttpGet("{formId}/{clientId}")]
+        public async Task<IActionResult> GetById( int formId, int clientId)
         {
-            var data = await _service.GetByIdAsync(formId);
+            var data =
+                await _service.GetByIdAsync(
+                    formId,
+                    clientId);
+
             return Ok(data);
         }
-
-        [HttpGet("user/{userId}")]
-        public async Task<IActionResult> GetByUserId(int userId)
+        [HttpGet("user/{userId}/{clientId}")]
+        public async Task<IActionResult> GetByUserId(int userId, int clientId)
         {
-            var data = await _service.GetByUserIdAsync(userId);
+            var data =
+                await _service.GetByUserIdAsync(
+                    userId,
+                    clientId);
 
             return Ok(data);
         }
@@ -66,10 +72,13 @@ namespace ahello_backend.Controllers
             });
         }
 
-        [HttpDelete("{formId}")]
-        public async Task<IActionResult> Delete(int formId)
+        [HttpDelete("{formId}/{clientId}")]
+        public async Task<IActionResult> Delete( int formId,int clientId)
         {
-            var result = await _service.DeleteAsync(formId);
+            var result =
+                await _service.DeleteAsync(
+                    formId,
+                    clientId);
 
             return Ok(new
             {
@@ -93,10 +102,13 @@ namespace ahello_backend.Controllers
             });
         }
 
-        [HttpGet("submitted/{formId}")]
-        public async Task<IActionResult> GetSubmittedForm(int formId)
+        [HttpGet("submitted/{formId}/{clientId}")]
+        public async Task<IActionResult>GetSubmittedForm( int formId, int clientId)
         {
-            var result = await _service.GetSubmittedFormAsync(formId);
+            var result =
+                await _service.GetSubmittedFormAsync(
+                    formId,
+                    clientId);
 
             if (result == null)
                 return NotFound();
