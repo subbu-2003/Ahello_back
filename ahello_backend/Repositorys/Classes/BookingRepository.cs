@@ -115,7 +115,7 @@ namespace ahello_backend.Repositorys.Classes
                 string serviceName = service?.ServiceTitle ?? "the service";
                 string formattedDate = model.ScheduleDate.ToString("dddd, MMMM dd yyyy");
                 string formattedTime = meetingStartTime.ToString("hh:mm tt", CultureInfo.InvariantCulture);
-                string capturedMeetingLink = meetingLink;
+                string capturedMeetingLink = $"{meetingLink}?userId={model.ClientId}&email={Uri.EscapeDataString(clientEmail)}";
 
                 // ✅ Fire-and-forget — don't await, return bookingId immediately
                 _ = Task.Run(async () =>
@@ -156,6 +156,298 @@ namespace ahello_backend.Repositorys.Classes
 
             return
                 $"https://ahllo.com/meeting/join/{roomName}";
+        }
+
+
+
+        public async Task<int> RescheduleAsync(
+    int oldBookingId,
+    DateTime newDate,
+    TimeSpan newStart,
+    TimeSpan newEnd,
+    int slotId,
+    string rescheduledBy,
+    string reason)
+        {
+            using var connection = _dbConn.GetMyConnection();
+            await connection.OpenAsync();
+            using var tx = await connection.BeginTransactionAsync();
+
+            try
+            {
+                // ======================================================
+                // 1. Fetch old booking
+                // ======================================================
+                var old = await connection.QueryFirstOrDefaultAsync<BookingRead>(@"
+            SELECT
+                b.BookingId,
+                b.UserId,
+                b.ClientId,
+                b.ServiceId,
+                b.ScheduleDate,
+                b.StartTime,
+                b.EndTime,
+                b.Status,
+                b.CreatedBy,
+                cu.FullName AS ClientName,
+                cu.Email AS ClientEmail,
+                s.ServiceTitle
+            FROM bookings b
+            INNER JOIN users cu ON b.ClientId = cu.UserId
+            INNER JOIN services s ON b.ServiceId = s.ServiceId
+            WHERE b.BookingId = @Id",
+                    new { Id = oldBookingId },
+                    tx);
+
+                if (old == null)
+                    throw new Exception("Booking not found.");
+
+                if (old.Status == "Cancelled" || old.Status == "Rejected")
+                    throw new Exception("Cancelled or rejected booking cannot be rescheduled.");
+
+                // ======================================================
+                // 2. Check selected slot is still free
+                // This protects other users from double booking
+                // ======================================================
+                var alreadyBooked = await connection.ExecuteScalarAsync<int>(@"
+            SELECT COUNT(1)
+            FROM bookedslots
+            WHERE SlotId = @SlotId
+              AND SlotDate = @SlotDate
+              AND StartTime = @StartTime
+              AND EndTime = @EndTime",
+                    new
+                    {
+                        SlotId = slotId,
+                        SlotDate = newDate.Date,
+                        StartTime = newStart,
+                        EndTime = newEnd
+                    },
+                    tx);
+
+                if (alreadyBooked > 0)
+                    throw new Exception("Selected slot is already booked by someone else.");
+
+                // ======================================================
+                // 3. Mark old meeting as Rescheduled
+                // ======================================================
+                await connection.ExecuteAsync(@"
+            UPDATE meetings
+            SET Status = 'Rescheduled',
+                ModifiedAt = NOW()
+            WHERE BookingId = @BookingId",
+                    new { BookingId = oldBookingId },
+                    tx);
+
+                // ======================================================
+                // 4. Mark old booking as Rescheduled
+                // For auto no-show, reason is stored in reschedules table
+                // ======================================================
+                await connection.ExecuteAsync(@"
+            UPDATE bookings
+            SET Status = 'Rescheduled',
+                ModifiedAt = NOW(),
+                ModifiedBy = @ModifiedBy
+            WHERE BookingId = @BookingId",
+                    new
+                    {
+                        BookingId = oldBookingId,
+                        ModifiedBy = rescheduledBy
+                    },
+                    tx);
+
+                // ======================================================
+                // 5. Create new booking
+                // ======================================================
+                var newBookingId = await connection.ExecuteScalarAsync<int>(@"
+            INSERT INTO bookings
+            (
+                UserId,
+                ClientId,
+                ServiceId,
+                ScheduleDate,
+                StartTime,
+                EndTime,
+                Status,
+                CreatedAt,
+                CreatedBy
+            )
+            VALUES
+            (
+                @UserId,
+                @ClientId,
+                @ServiceId,
+                @ScheduleDate,
+                @StartTime,
+                @EndTime,
+                'Pending',
+                NOW(),
+                @CreatedBy
+            );
+            SELECT LAST_INSERT_ID();",
+                    new
+                    {
+                        old.UserId,
+                        old.ClientId,
+                        old.ServiceId,
+                        ScheduleDate = newDate.Date,
+                        StartTime = newStart,
+                        EndTime = newEnd,
+                        CreatedBy = rescheduledBy
+                    },
+                    tx);
+
+                // ======================================================
+                // 6. Create fresh meeting link
+                // ======================================================
+                var newMeetingLink = GenerateMiroTalkLink(newBookingId);
+                var newMeetingStart = newDate.Date.Add(newStart);
+                var newMeetingEnd = newDate.Date.Add(newEnd);
+
+                await connection.ExecuteAsync(@"
+            INSERT INTO meetings
+            (
+                UserId,
+                BookingId,
+                StartTime,
+                EndTime,
+                MeetingLink,
+                Status,
+                CreatedAt,
+                CreatedBy
+            )
+            VALUES
+            (
+                @UserId,
+                @BookingId,
+                @StartTime,
+                @EndTime,
+                @MeetingLink,
+                'Pending',
+                NOW(),
+                @CreatedBy
+            );",
+                    new
+                    {
+                        old.UserId,
+                        BookingId = newBookingId,
+                        StartTime = newMeetingStart,
+                        EndTime = newMeetingEnd,
+                        MeetingLink = newMeetingLink,
+                        CreatedBy = rescheduledBy
+                    },
+                    tx);
+
+                // ======================================================
+                // 7. Insert new booked slot
+                // ======================================================
+                await connection.ExecuteAsync(@"
+            INSERT INTO bookedslots
+            (
+                SlotId,
+                UserId,
+                ServiceId,
+                BookingId,
+                SlotDate,
+                StartTime,
+                EndTime,
+                CreatedAt
+            )
+            VALUES
+            (
+                @SlotId,
+                @UserId,
+                @ServiceId,
+                @BookingId,
+                @SlotDate,
+                @StartTime,
+                @EndTime,
+                NOW()
+            )",
+                    new
+                    {
+                        SlotId = slotId,
+                        old.UserId,
+                        old.ServiceId,
+                        BookingId = newBookingId,
+                        SlotDate = newDate.Date,
+                        StartTime = newStart,
+                        EndTime = newEnd
+                    },
+                    tx);
+
+                // ======================================================
+                // 8. Insert reschedule history
+                // reason = Manual or NoShow
+                // ======================================================
+                await connection.ExecuteAsync(@"
+            INSERT INTO reschedules
+            (
+                OldBookingId,
+                NewBookingId,
+                Reason,
+                RescheduledBy,
+                CreatedAt
+            )
+            VALUES
+            (
+                @OldBookingId,
+                @NewBookingId,
+                @Reason,
+                @RescheduledBy,
+                NOW()
+            )",
+                    new
+                    {
+                        OldBookingId = oldBookingId,
+                        NewBookingId = newBookingId,
+                        Reason = reason,
+                        RescheduledBy = rescheduledBy
+                    },
+                    tx);
+
+                await tx.CommitAsync();
+
+                // ======================================================
+                // 9. Send email after commit
+                // ======================================================
+                string capturedEmail = old.ClientEmail ?? "";
+                string capturedName = old.ClientName ?? "Client";
+                string capturedService = old.ServiceTitle ?? "the service";
+                string capturedDate = newDate.ToString("dddd, MMMM dd yyyy");
+                string capturedTime = newMeetingStart.ToString("hh:mm tt", CultureInfo.InvariantCulture);
+                string capturedLink = $"{newMeetingLink}?userId={old.ClientId}&email={Uri.EscapeDataString(capturedEmail)}";
+
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _emailRepository.SendBookingConfirmationEmailAsync(
+                            capturedEmail,
+                            capturedName,
+                            capturedService,
+                            capturedDate,
+                            capturedTime);
+
+                        await _emailRepository.SendMeetingInviteEmailAsync(
+                            capturedEmail,
+                            capturedName,
+                            capturedLink);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(
+                            $"[RescheduleEmailError] OldBookingId:{oldBookingId} NewBookingId:{newBookingId} - {ex.Message}");
+                    }
+                });
+
+                return newBookingId;
+            }
+            catch
+            {
+                await tx.RollbackAsync();
+                throw;
+            }
         }
 
 
