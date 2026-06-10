@@ -348,12 +348,6 @@ namespace ahello_backend.Repositorys.Classes
                     return false;
                 }
 
-                await connection.ExecuteAsync(
-                    @"DELETE FROM formfieldvalues
-                      WHERE FormId = @FormId",
-                    new { FormId = formId },
-                    tx);
-
                 if (model.Fields != null
                     && model.Fields.Any())
                 {
@@ -397,12 +391,6 @@ namespace ahello_backend.Repositorys.Classes
                             tx);
                     }
                 }
-
-                await connection.ExecuteAsync(
-                    @"DELETE FROM formdropdownoptions
-                      WHERE FormId = @FormId",
-                    new { FormId = formId },
-                    tx);
 
                 if (model.Fields != null
                     && model.Fields.Any())
@@ -718,116 +706,152 @@ namespace ahello_backend.Repositorys.Classes
 
             return form;
         }
-        public async Task<bool> UpdateFormTemplateAsync(
+       public async Task<bool> UpdateFormTemplateAsync(
     int formId,
-    FormTemplatePost model)
-        {
-            using var connection = _db.GetConnection();
+    FormTemplatePut model)
+{
+    using var connection = _db.GetConnection();
 
-            connection.Open();
+    connection.Open();
 
-            using var tx = connection.BeginTransaction();
+    using var tx = connection.BeginTransaction();
 
-            try
-            {
-                // Update Form
-                var rows = await connection.ExecuteAsync(
-                    @"
+    try
+    {
+        var rows = await connection.ExecuteAsync(
+            @"
             UPDATE forms
             SET
                 UserId = @UserId,
                 Title = @Title,
                 Description = @Description,
                 ModifiedAt = NOW(),
-                ModifiedBy = @CreatedBy
+                ModifiedBy = @ModifiedBy
             WHERE FormId = @FormId
             ",
-                    new
-                    {
-                        FormId = formId,
-                        model.UserId,
-                        model.Title,
-                        model.Description,
-                        model.CreatedBy
-                    },
-                    tx);
+            new
+            {
+                FormId = formId,
+                model.UserId,
+                model.Title,
+                model.Description,
+                model.ModifiedBy
+            },
+            tx);
 
-                if (rows == 0)
+        if (rows <= 0)
+        {
+            tx.Rollback();
+            return false;
+        }
+
+        if (model.Fields != null && model.Fields.Any())
+        {
+            foreach (var field in model.Fields)
+            {
+                int formFieldId = field.FormFieldId;
+
+                // UPDATE EXISTING FIELD
+                if (field.FormFieldId > 0)
                 {
-                    tx.Rollback();
-                    return false;
+                    await connection.ExecuteAsync(
+                        @"
+                        UPDATE formfields
+                        SET
+                            FieldName = @FieldName,
+                            FieldCode = @FieldCode,
+                            Placeholder = @Placeholder,
+                            Description = @Description,
+                            IsRequired = @IsRequired,
+                            DataTypeId = @DataTypeId
+                        WHERE FormFieldId = @FormFieldId
+                        ",
+                        new
+                        {
+                            field.FormFieldId,
+                            field.FieldName,
+                            FieldCode = field.FieldName
+                                .Replace(" ", "")
+                                .ToLower(),
+                            field.Placeholder,
+                            field.Description,
+                            field.IsRequired,
+                            field.DataTypeId
+                        },
+                        tx);
+
+                    formFieldId = field.FormFieldId;
+                }
+                // INSERT NEW FIELD
+                else
+                {
+                    formFieldId =
+                        await connection.ExecuteScalarAsync<int>(
+                        @"
+                        INSERT INTO formfields
+                        (
+                            FormId,
+                            FieldName,
+                            FieldCode,
+                            Placeholder,
+                            Description,
+                            IsRequired,
+                            IsActive,
+                            DataTypeId,
+                            CreatedBy,
+                            CreatedAt
+                        )
+                        VALUES
+                        (
+                            @FormId,
+                            @FieldName,
+                            @FieldCode,
+                            @Placeholder,
+                            @Description,
+                            @IsRequired,
+                            1,
+                            @DataTypeId,
+                            @CreatedBy,
+                            NOW()
+                        );
+
+                        SELECT LAST_INSERT_ID();
+                        ",
+                        new
+                        {
+                            FormId = formId,
+                            field.FieldName,
+                            FieldCode = field.FieldName
+                                .Replace(" ", "")
+                                .ToLower(),
+                            field.Placeholder,
+                            field.Description,
+                            field.IsRequired,
+                            field.DataTypeId,
+                            CreatedBy = model.ModifiedBy
+                        },
+                        tx);
                 }
 
-                // Delete Old Dropdowns
-                await connection.ExecuteAsync(
-                    @"DELETE FROM formdropdownoptions
-              WHERE FormId = @FormId",
-                    new { FormId = formId },
-                    tx);
-
-                // Delete Old Fields
-                await connection.ExecuteAsync(
-                    @"DELETE FROM formfields
-              WHERE FormId = @FormId",
-                    new { FormId = formId },
-                    tx);
-
-                // Reinsert Fields
-                if (model.Fields != null && model.Fields.Any())
+                // DROPDOWN UPDATE
+                if (field.DropdownOptions != null &&
+                    field.DropdownOptions.Any())
                 {
-                    foreach (var field in model.Fields)
-                    {
-                        var formFieldId = await connection.ExecuteScalarAsync<int>(
-                            @"
-                    INSERT INTO formfields
-                    (
-                        FormId,
-                        FieldName,
-                        FieldCode,
-                        Placeholder,
-                        Description,
-                        IsRequired,
-                        IsActive,
-                        DataTypeId,
-                        CreatedBy,
-                        CreatedAt
-                    )
-                    VALUES
-                    (
-                        @FormId,
-                        @FieldName,
-                        @FieldCode,
-                        @Placeholder,
-                        @Description,
-                        @IsRequired,
-                        1,
-                        @DataTypeId,
-                        @CreatedBy,
-                        NOW()
-                    );
-
-                    SELECT LAST_INSERT_ID();
-                    ",
-                            new
-                            {
-                                FormId = formId,
-                                field.FieldName,
-                                FieldCode = field.FieldName.Replace(" ", "").ToLower(),
-                                field.Placeholder,
-                                field.Description,
-                                field.IsRequired,
-                                field.DataTypeId,
-                                CreatedBy = model.CreatedBy.ToString()
-                            },
-                            tx);
-
-                        if (field.DropdownOptions != null &&
-                            field.DropdownOptions.Any())
+                    await connection.ExecuteAsync(
+                        @"
+                        DELETE FROM formdropdownoptions
+                        WHERE FormFieldId = @FormFieldId
+                        ",
+                        new
                         {
-                            foreach (var option in field.DropdownOptions)
-                            {
-                                await connection.ExecuteAsync(
-                                    @"
+                            FormFieldId = formFieldId
+                        },
+                        tx);
+
+                    foreach (var option in field.DropdownOptions)
+                    {
+                        await connection.ExecuteAsync(
+                            @"
                             INSERT INTO formdropdownoptions
                             (
                                 FormFieldId,
@@ -844,35 +868,36 @@ namespace ahello_backend.Repositorys.Classes
                                 @FormId,
                                 @OptionValue,
                                 @OptionLabel,
-                                1,
+                                @IsActive,
                                 NOW(),
                                 @CreatedBy
                             )
                             ",
-                                    new
-                                    {
-                                        FormFieldId = formFieldId,
-                                        FormId = formId,
-                                        OptionValue = option.OptionLabel,
-                                        OptionLabel = option.OptionLabel,
-                                        CreatedBy = model.CreatedBy.ToString()
-                                    },
-                                    tx);
-                            }
-                        }
+                            new
+                            {
+                                FormFieldId = formFieldId,
+                                FormId = formId,
+                                option.OptionValue,
+                                option.OptionLabel,
+                                option.IsActive,
+                                CreatedBy = model.ModifiedBy
+                            },
+                            tx);
                     }
                 }
-
-                tx.Commit();
-
-                return true;
-            }
-            catch
-            {
-                tx.Rollback();
-                throw;
             }
         }
+
+        tx.Commit();
+
+        return true;
+    }
+    catch
+    {
+        tx.Rollback();
+        throw;
+    }
+}
         public async Task<bool> SubmitFormAsync(FormSubmitPost model)
         {
             using var connection = _db.GetConnection();

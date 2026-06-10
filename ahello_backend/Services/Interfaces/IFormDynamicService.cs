@@ -18,7 +18,7 @@ namespace ahello_backend.Services.Interfaces
         Task<bool> DeleteAsync(int formId);
         Task<int> CreateFormTemplateAsync(FormTemplatePost model);
         Task<FormDynamicGetResponse> GetSubmittedFormAsync(int formId);
-        Task<bool> UpdateFormTemplateAsync(int formId, FormTemplatePost model);
+        Task<bool> UpdateFormTemplateAsync(int formId, FormTemplatePut model);
         Task<bool> SubmitFormAsync(FormSubmitPost model);
     }
 }
