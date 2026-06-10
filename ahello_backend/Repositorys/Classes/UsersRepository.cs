@@ -335,7 +335,7 @@ namespace ahello_backend.Repositorys.Classes
                     CategoryId = g.Key.CategoryId,
                     CategoryName = g.Key.CategoryName,
 
-                Services = g.Take(1).Select(s => new UserServiceItem
+                Services = g.Select(s => new UserServiceItem
                 {
                     ServiceId = s.ServiceId,
                     ServiceTypeId = s.ServiceTypeId,
