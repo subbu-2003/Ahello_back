@@ -489,7 +489,7 @@ namespace ahello_backend.Repositorys.Classes
                 var rows =
                     await connection.ExecuteAsync(
                     @"DELETE FROM forms
-                      WHERE FormId = @FormId AND ClientId = @ClientId",
+                      WHERE FormId = @FormId ",
                     new { FormId = formId },
                     tx);
 
