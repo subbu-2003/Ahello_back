@@ -24,14 +24,14 @@ namespace ahello_backend.Services.Classes
                 return await _repository .GetAllAsync();
             }
 
-            public async Task<FormDynamicGetResponse>GetByIdAsync(int formId, int clientId)
+            public async Task<FormDynamicGetResponse>GetByIdAsync(int formId)
             {
-                return await _repository.GetByIdAsync(formId, clientId);
+                return await _repository.GetByIdAsync(formId);
             }
 
-            public async Task<IEnumerable<FormDynamicGetResponse>>GetByUserIdAsync(int userId, int clientId)
+            public async Task<IEnumerable<FormDynamicGetResponse>>GetByUserIdAsync(int userId)
             {
-                return await _repository .GetByUserIdAsync(userId, clientId);
+                return await _repository .GetByUserIdAsync(userId);
             }
 
             public async Task<int> CreateAsync(FormDynamicPost model)
@@ -44,18 +44,18 @@ namespace ahello_backend.Services.Classes
                 return await _repository.UpdateAsync(formId, model);
             }
 
-            public async Task<bool> DeleteAsync(int formId, int clientId)
+            public async Task<bool> DeleteAsync(int formId  )
             {
-                return await _repository.DeleteAsync(formId, clientId);
+                return await _repository.DeleteAsync(formId);
             }
             public async Task<int> CreateFormTemplateAsync(FormTemplatePost model)
             {
                 return await _repository.CreateFormTemplateAsync(model);
             }
 
-            public async Task<FormDynamicGetResponse> GetSubmittedFormAsync(int formId, int clientId)
+            public async Task<FormDynamicGetResponse> GetSubmittedFormAsync(int formId)
             {
-                return await _repository.GetSubmittedFormAsync(formId, clientId);
+                return await _repository.GetSubmittedFormAsync(formId);
             }
             public async Task<bool> UpdateFormTemplateAsync(
                                         int formId,
