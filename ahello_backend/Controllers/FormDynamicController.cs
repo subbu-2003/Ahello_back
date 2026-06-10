@@ -26,23 +26,22 @@ namespace ahello_backend.Controllers
             return Ok(data);
         }
 
-        [HttpGet("{formId}/{clientId}")]
-        public async Task<IActionResult> GetById( int formId, int clientId)
+        [HttpGet("{formId}")]
+        public async Task<IActionResult> GetById( int formId)
         {
             var data =
                 await _service.GetByIdAsync(
-                    formId,
-                    clientId);
+                    formId
+                    );
 
             return Ok(data);
         }
-        [HttpGet("user/{userId}/{clientId}")]
-        public async Task<IActionResult> GetByUserId(int userId, int clientId)
+        [HttpGet("user/{userId}")]
+        public async Task<IActionResult> GetByUserId(int userId)
         {
             var data =
                 await _service.GetByUserIdAsync(
-                    userId,
-                    clientId);
+                    userId);
 
             return Ok(data);
         }
@@ -77,8 +76,7 @@ namespace ahello_backend.Controllers
         {
             var result =
                 await _service.DeleteAsync(
-                    formId,
-                    clientId);
+                    formId);
 
             return Ok(new
             {
@@ -102,13 +100,12 @@ namespace ahello_backend.Controllers
             });
         }
 
-        [HttpGet("submitted/{formId}/{clientId}")]
-        public async Task<IActionResult>GetSubmittedForm( int formId, int clientId)
+        [HttpGet("submitted/{formId}")]
+        public async Task<IActionResult>GetSubmittedForm( int formId)
         {
             var result =
                 await _service.GetSubmittedFormAsync(
-                    formId,
-                    clientId);
+                    formId);
 
             if (result == null)
                 return NotFound();

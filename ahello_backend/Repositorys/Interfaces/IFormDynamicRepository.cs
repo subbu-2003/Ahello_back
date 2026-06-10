@@ -8,17 +8,17 @@ namespace ahello_backend.Repositorys.Interfaces
     {
         Task<IEnumerable<FormDynamicGetResponse>> GetAllAsync();
 
-        Task<FormDynamicGetResponse> GetByIdAsync(int formId, int clientId);
+        Task<FormDynamicGetResponse> GetByIdAsync(int formId);
 
-        Task<IEnumerable<FormDynamicGetResponse>> GetByUserIdAsync(int userId, int clientId);
+        Task<IEnumerable<FormDynamicGetResponse>> GetByUserIdAsync(int userId);
 
         Task<int> CreateAsync(FormDynamicPost model);
 
         Task<bool> UpdateAsync(int formId,FormDynamicPut model);
 
-        Task<bool> DeleteAsync(int formId,int clientId);
+        Task<bool> DeleteAsync(int formId);
         Task<int> CreateFormTemplateAsync(FormTemplatePost model);
-        Task<FormDynamicGetResponse> GetSubmittedFormAsync(int formId, int clientId);
+        Task<FormDynamicGetResponse> GetSubmittedFormAsync(int formId);
         Task<bool> UpdateFormTemplateAsync(int formId, FormTemplatePut model);
         Task<bool> SubmitFormAsync(FormSubmitPost model);
     }

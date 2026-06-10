@@ -59,15 +59,15 @@ namespace ahello_backend.Repositorys.Classes
 
             return forms;
         }
-        public async Task<FormDynamicGetResponse> GetByIdAsync(int formId, int clientId)
+        public async Task<FormDynamicGetResponse> GetByIdAsync(int formId)
         {
             using var connection = _db.GetConnection();
 
             var form = await connection.QueryFirstOrDefaultAsync<FormDynamicGetResponse>(
                 @"SELECT *
           FROM forms
-          WHERE FormId = @FormId AND ClientId = @ClientId",
-                new { FormId = formId, ClientId = clientId });
+          WHERE FormId = @FormId",
+                new { FormId = formId });
 
             if (form == null)
                 return null;
@@ -117,16 +117,16 @@ namespace ahello_backend.Repositorys.Classes
         }
 
         public async Task<IEnumerable<FormDynamicGetResponse>>
-            GetByUserIdAsync(int userId, int clientId)
+            GetByUserIdAsync(int userId)
         {
             using var connection = _db.GetConnection();
 
             var forms = (await connection.QueryAsync <FormDynamicGetResponse>(
                 @"SELECT *
                   FROM forms
-                  WHERE UserId = @UserId AND ClientId = @ClientId
+                  WHERE UserId = @UserId 
                   ORDER BY FormId DESC",
-                new { UserId = userId, ClientId = clientId })).ToList();
+                new { UserId = userId })).ToList();
 
             foreach (var form in forms)
             {
@@ -461,7 +461,7 @@ namespace ahello_backend.Repositorys.Classes
         }
 
         public async Task<bool> DeleteAsync(
-            int formId, int clientId)
+            int formId)
         {
             using var connection =
                 _db.GetConnection();
@@ -476,7 +476,7 @@ namespace ahello_backend.Repositorys.Classes
                 await connection.ExecuteAsync(
                     @"DELETE FROM formfieldvalues
                       WHERE FormId = @FormId",
-                    new { FormId = formId, ClientId = clientId },
+                    new { FormId = formId},
                     tx);
 
                 await connection.ExecuteAsync(
@@ -647,16 +647,16 @@ namespace ahello_backend.Repositorys.Classes
                 throw;
             }
         }
-        public async Task<FormDynamicGetResponse?> GetSubmittedFormAsync(int formId, int clientId)
+        public async Task<FormDynamicGetResponse?> GetSubmittedFormAsync(int formId)
         {
             using var connection = _db.GetConnection();
 
             var form = await connection.QueryFirstOrDefaultAsync<FormDynamicGetResponse>(
                 @"SELECT *
           FROM forms
-          WHERE FormId = @FormId AND ClientId = @ClientId",
+          WHERE FormId = @FormId ",
 
-                new { FormId = formId, ClientId = clientId });
+                new { FormId = formId });
 
             if (form == null)
                 return null;
@@ -712,8 +712,7 @@ namespace ahello_backend.Repositorys.Classes
 
             return form;
         }
-       public async Task<bool> UpdateFormTemplateAsync(
-    int formId,
+       public async Task<bool> UpdateFormTemplateAsync(int formId,
     FormTemplatePut model)
 {
     using var connection = _db.GetConnection();
