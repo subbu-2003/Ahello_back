@@ -44,7 +44,7 @@ namespace ahello_backend.Services.Classes
                 return await _repository.UpdateAsync(formId, model);
             }
 
-            public async Task<bool> DeleteAsync(int formId)
+            public async Task<bool> DeleteAsync(int formId  )
             {
                 return await _repository.DeleteAsync(formId);
             }

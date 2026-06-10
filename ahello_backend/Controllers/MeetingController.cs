@@ -75,27 +75,127 @@ namespace ahello_backend.Controllers
         {
             try
             {
-                // 1. Meeting fetch
+                // 1. Fetch meeting
                 var meeting = await _service.GetByRoomNameAsync(roomName);
 
                 if (meeting == null)
-                    return NotFound("Meeting not found");
+                    return NotFound(new
+                    {
+                        allowed = false,
+                        reason = "Meeting not found."
+                    });
 
-                // 2. Booking fetch
+                // 2. Block if already completed
+                if (meeting.Status == "Completed")
+                    return StatusCode(410, new
+                    {
+                        allowed = false,
+                        reason = "This meeting has already ended."
+                    });
+
+                // 3. Block if cancelled
+                if (meeting.Status == "Cancelled")
+                    return StatusCode(410, new
+                    {
+                        allowed = false,
+                        reason = "This meeting was cancelled."
+                    });
+
+                // 4. Block old rescheduled meeting link
+                if (meeting.Status == "Rescheduled")
+                    return StatusCode(410, new
+                    {
+                        allowed = false,
+                        reason = "This meeting was rescheduled. Please use the new meeting link."
+                    });
+
+                // 5. Block missed meeting
+                if (meeting.Status == "Missed")
+                    return StatusCode(410, new
+                    {
+                        allowed = false,
+                        reason = "This meeting was missed."
+                    });
+
+                // 6. Block if too early, more than 10 minutes before start
+                if (DateTime.Now < meeting.StartTime.AddMinutes(-10))
+                    return StatusCode(425, new
+                    {
+                        allowed = false,
+                        reason = "Meeting hasn't started yet.",
+                        startsAt = meeting.StartTime
+                    });
+
+                // 7. Block if meeting end time passed
+                if (DateTime.Now > meeting.EndTime)
+                    return StatusCode(410, new
+                    {
+                        allowed = false,
+                        reason = "This meeting has already ended."
+                    });
+
+                // 8. Fetch booking and verify user belongs to it
                 var booking = await _bookingService.GetByIdAsync(meeting.BookingId);
 
                 if (booking == null)
-                    return NotFound("Booking not found");
+                    return NotFound(new
+                    {
+                        allowed = false,
+                        reason = "Booking not found."
+                    });
 
-                // 3. User check — UserId (4) or ClientId (1)
                 if (booking.UserId != userId && booking.ClientId != userId)
-                    return Unauthorized("You are not part of this meeting");
+                    return Unauthorized(new
+                    {
+                        allowed = false,
+                        reason = "You are not part of this meeting."
+                    });
 
-                // 4. Payment check
-                // if (booking.Status != "Confirmed")
-                //     return Unauthorized("Payment not completed");
+                // 9. Block if booking itself is cancelled/rejected/rescheduled/no-show
+                if (booking.Status == "Cancelled")
+                    return StatusCode(410, new
+                    {
+                        allowed = false,
+                        reason = "This booking was cancelled."
+                    });
 
-                return Ok(new { allowed = true });
+                if (booking.Status == "Rejected")
+                    return StatusCode(410, new
+                    {
+                        allowed = false,
+                        reason = "This booking was rejected."
+                    });
+
+                if (booking.Status == "Rescheduled")
+                    return StatusCode(410, new
+                    {
+                        allowed = false,
+                        reason = "This booking was rescheduled. Please use the new meeting link."
+                    });
+
+                if (booking.Status == "NoShow")
+                    return StatusCode(410, new
+                    {
+                        allowed = false,
+                        reason = "This booking was marked as no-show."
+                    });
+
+                // 10. Payment check, uncomment when payments go live
+                // if (booking.PaymentStatus != "Paid")
+                //     return StatusCode(402, new
+                //     {
+                //         allowed = false,
+                //         reason = "Payment not completed."
+                //     });
+
+                return Ok(new
+                {
+                    allowed = true,
+                    meetingId = meeting.MeetingId,
+                    bookingId = meeting.BookingId,
+                    startTime = meeting.StartTime,
+                    endTime = meeting.EndTime
+                });
             }
             catch (Exception ex)
             {

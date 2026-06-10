@@ -1,24 +1,20 @@
 ﻿using ahello_backend.Models.Form;
 using ahello_backend.Models.Forms;
+using MySqlX.XDevAPI;
 
 namespace ahello_backend.Repositorys.Interfaces
 {
     public interface IFormDynamicRepository
     {
-        Task<IEnumerable<FormDynamicGetResponse>>
-            GetAllAsync();
+        Task<IEnumerable<FormDynamicGetResponse>> GetAllAsync();
 
-        Task<FormDynamicGetResponse>
-            GetByIdAsync(int formId);
+        Task<FormDynamicGetResponse> GetByIdAsync(int formId);
 
-        Task<IEnumerable<FormDynamicGetResponse>>
-            GetByUserIdAsync(int userId);
+        Task<IEnumerable<FormDynamicGetResponse>> GetByUserIdAsync(int userId);
 
         Task<int> CreateAsync(FormDynamicPost model);
 
-        Task<bool> UpdateAsync(
-            int formId,
-            FormDynamicPut model);
+        Task<bool> UpdateAsync(int formId,FormDynamicPut model);
 
         Task<bool> DeleteAsync(int formId);
         Task<int> CreateFormTemplateAsync(FormTemplatePost model);
