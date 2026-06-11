@@ -33,6 +33,7 @@ namespace ahello_backend.Repositorys.Classes
             var sql = @"INSERT INTO formfieldvalues
                 (
                     FormId,
+                    ClientId,
                     FieldCode,
                     FormFieldId,
                     FieldValue,
@@ -43,6 +44,7 @@ namespace ahello_backend.Repositorys.Classes
                 VALUES
                 (
                     @FormId,
+                    @ClientId,
                     @FieldCode,
                     @FormFieldId,
                     @FieldValue,
@@ -63,10 +65,10 @@ namespace ahello_backend.Repositorys.Classes
             using var connection = _db.GetConnection();
 
             var formFieldId = await connection.QueryFirstOrDefaultAsync<int>(
-     @"SELECT FormFieldId
-      FROM formfieldvalues
-      WHERE FormFieldValueId = @FormFieldValueId",
-     new { FormFieldValueId = model.FormFieldValueId });
+             @"SELECT FormFieldId
+              FROM formfieldvalues
+              WHERE FormFieldValueId = @FormFieldValueId",
+             new { FormFieldValueId = model.FormFieldValueId });
 
             var validationErrors =
                 await ValidateFieldValueAsync(
@@ -120,8 +122,8 @@ namespace ahello_backend.Repositorys.Classes
         }
 
         private async Task<List<string>> ValidateFieldValueAsync(
-     int formFieldId,
-     string fieldValue)
+         int formFieldId,
+         string fieldValue)
         {
             var errors = new List<string>();
 
@@ -481,6 +483,7 @@ namespace ahello_backend.Repositorys.Classes
 
                         ffv.FormFieldValueId,
                         ffv.FormId,
+                        ffv.ClientId,
                         ffv.FieldCode,
                         ffv.FormFieldId,
                         ffv.FieldValue,
