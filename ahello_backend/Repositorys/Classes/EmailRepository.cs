@@ -115,7 +115,7 @@ namespace ahello_backend.Repositorys.Classes
 </html>");
         }
 
-        public async Task SendMeetingReminderEmailAsync(string toEmail, string clientName, DateTime startTime, string meetingLink)
+        public async Task SendMeetingReminderEmailAsync(string toEmail, string clientName, DateTime startTime, string meetingLink, int minutesLeft)
         {
             await SendEmailAsync(toEmail, "Meeting Reminder - Ahllo", $@"
 <html>
@@ -127,9 +127,9 @@ namespace ahello_backend.Repositorys.Classes
         </div>
         <div style='padding:30px;'>
             <h2 style='color:#333;'>Hello {clientName},</h2>
-            <p style='font-size:16px;color:#555;line-height:1.6;'>
-                Your meeting starts in <strong style='color:#005B71;'>10 minutes</strong>.
-            </p>
+             <p style='font-size:16px;color:#555;line-height:1.6;'>
+            Your meeting starts in <strong style='color:#005B71;'>{minutesLeft} minutes</strong>.
+        </p>
             <div style='background:#f8f9fc;border-left:5px solid #005B71;padding:20px;
                         margin-top:25px;border-radius:8px;'>
                 <p style='margin:10px 0;font-size:15px;'>

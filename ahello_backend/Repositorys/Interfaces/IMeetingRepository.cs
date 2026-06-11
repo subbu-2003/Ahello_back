@@ -18,7 +18,7 @@ namespace ahello_backend.Repositorys.Interfaces
         Task<bool> UpdateAsync(MeetingPut model);
 
         Task<bool> DeleteAsync(int meetingId);
-        Task<bool> SendMeetingReminderMailAsync(Meeting meeting);
+        Task<bool> SendMeetingReminderMailAsync(Meeting meeting, int minutesLeft);
 
         Task UpdateReminderSentAsync(int meetingId);
     }

@@ -114,6 +114,7 @@ builder.Services.Scan(scan =>
         ))
         .AsImplementedInterfaces()
         .WithScopedLifetime());
+builder.Services.AddSingleton<IEmailRepository, EmailRepository>();
 
 
 // =====================================================

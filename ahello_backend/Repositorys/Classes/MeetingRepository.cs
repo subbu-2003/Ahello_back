@@ -305,7 +305,7 @@ namespace ahello_backend.Repositorys.Classes
         }
         // REMOVE SendMeetingReminderEmailAsync entirely from this file
 
-        public async Task<bool> SendMeetingReminderMailAsync(Meeting meeting)
+        public async Task<bool> SendMeetingReminderMailAsync(Meeting meeting, int minutesLeft)
         {
             if (meeting == null || string.IsNullOrWhiteSpace(meeting.ClientEmail))
                 return false;
@@ -314,7 +314,8 @@ namespace ahello_backend.Repositorys.Classes
                 meeting.ClientEmail,
                 meeting.ClientName,
                 meeting.StartTime,
-                meeting.MeetingLink);
+                meeting.MeetingLink,
+                minutesLeft); // ✅ pass it
 
             return true;
         }
