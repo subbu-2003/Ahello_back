@@ -35,7 +35,7 @@ namespace ahello_backend.Repositorys.Classes
             if (model.UserId == model.ClientId)
                 throw new Exception("UserId and ClientId cannot be same.");
 
-            // STEP 1 — PARALLEL READS using TWO separate connections
+            // STEP 1 — PARALLEL READS
             using var clientConn = _dbConn.GetMyConnection();
             using var serviceConn = _dbConn.GetMyConnection();
 
@@ -54,6 +54,11 @@ namespace ahello_backend.Repositorys.Classes
             var client = clientTask.Result;
             var service = serviceTask.Result;
 
+            // ✅ Capture outside try block so they're accessible after commit
+            int bookingId = 0;
+            string meetingLink = string.Empty;
+            DateTime meetingStartTime = default;
+
             // STEP 2 — TRANSACTION WRITES
             using var connection = _dbConn.GetMyConnection();
             await connection.OpenAsync();
@@ -62,23 +67,23 @@ namespace ahello_backend.Repositorys.Classes
             try
             {
                 var bookingSql = @"
-            INSERT INTO bookings
-            (UserId, ClientId, ServiceId, ScheduleDate, StartTime, EndTime, Status, CreatedAt, CreatedBy)
-            VALUES
-            (@UserId, @ClientId, @ServiceId, @ScheduleDate, @StartTime, @EndTime, @Status, NOW(), @CreatedBy);
-            SELECT LAST_INSERT_ID();";
+    INSERT INTO bookings
+    (UserId, ClientId, ServiceId, ScheduleDate, StartTime, EndTime, Status, CreatedAt, CreatedBy)
+    VALUES
+    (@UserId, @ClientId, @ServiceId, @ScheduleDate, @StartTime, @EndTime, @Status, NOW(), @CreatedBy);
+    SELECT LAST_INSERT_ID();";
 
-                var bookingId = await connection.ExecuteScalarAsync<int>(bookingSql, model, tx);
+                bookingId = await connection.ExecuteScalarAsync<int>(bookingSql, model, tx);
 
-                var meetingLink = GenerateMiroTalkLink(bookingId);
-                var meetingStartTime = model.ScheduleDate.Date.Add(model.StartTime);
+                meetingLink = GenerateMiroTalkLink(bookingId);
+                meetingStartTime = model.ScheduleDate.Date.Add(model.StartTime);
                 var meetingEndTime = model.ScheduleDate.Date.Add(model.EndTime);
 
                 await connection.ExecuteAsync(@"
-            INSERT INTO meetings
-            (UserId, BookingId, StartTime, EndTime, MeetingLink, Status, CreatedAt, CreatedBy)
-            VALUES
-            (@UserId, @BookingId, @StartTime, @EndTime, @MeetingLink, 'Pending', NOW(), @CreatedBy);",
+    INSERT INTO meetings
+    (UserId, BookingId, StartTime, EndTime, MeetingLink, Status, CreatedAt, CreatedBy)
+    VALUES
+    (@UserId, @BookingId, @StartTime, @EndTime, @MeetingLink, 'Pending', NOW(), @CreatedBy);",
                     new
                     {
                         model.UserId,
@@ -89,12 +94,11 @@ namespace ahello_backend.Repositorys.Classes
                         model.CreatedBy
                     }, tx);
 
-                // INSERT INTO BOOKEDSLOTS
                 var bookedSlotSql = @"
-            INSERT INTO bookedslots
-            (SlotId, UserId, ServiceId, BookingId, SlotDate, StartTime, EndTime, CreatedAt)
-            VALUES
-            (@SlotId, @UserId, @ServiceId, @BookingId, @SlotDate, @StartTime, @EndTime, NOW())";
+    INSERT INTO bookedslots
+    (SlotId, UserId, ServiceId, BookingId, SlotDate, StartTime, EndTime, CreatedAt)
+    VALUES
+    (@SlotId, @UserId, @ServiceId, @BookingId, @SlotDate, @StartTime, @EndTime, NOW())";
 
                 await connection.ExecuteAsync(bookedSlotSql, new
                 {
@@ -108,20 +112,26 @@ namespace ahello_backend.Repositorys.Classes
                 }, tx);
 
                 await tx.CommitAsync();
+            }
+            catch
+            {
+                await tx.RollbackAsync();
+                throw;
+            }
 
-                // ✅ capture values
-                string clientEmail = client.Email;
-                string clientFullName = client.FullName;
-                string serviceName = service?.ServiceTitle ?? "the service";
-                string formattedDate = model.ScheduleDate.ToString("dddd, MMMM dd yyyy");
-                string formattedTime = meetingStartTime.ToString("hh:mm tt", CultureInfo.InvariantCulture);
-                string capturedMeetingLink = $"{meetingLink}?userId={model.ClientId}&email={Uri.EscapeDataString(clientEmail)}";
+            // ✅ Outside try block — runs only after successful commit
+            string clientEmail = client.Email;
+            string clientFullName = client.FullName;
+            string serviceName = service?.ServiceTitle ?? "the service";
+            string formattedDate = model.ScheduleDate.ToString("dddd, MMMM dd yyyy");
+            string formattedTime = meetingStartTime.ToString("hh:mm tt", CultureInfo.InvariantCulture);
+            string capturedMeetingLink = $"{meetingLink}?userId={model.ClientId}&email={Uri.EscapeDataString(clientEmail)}";
 
-                // ✅ await directly but with timeout — won't cause double commit
+            // ✅ Fire-and-forget — singleton EmailRepository is safe
+            _ = Task.Run(async () =>
+            {
                 try
                 {
-                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-
                     await _emailRepository.SendBookingConfirmationEmailAsync(
                         clientEmail, clientFullName, serviceName, formattedDate, formattedTime);
 
@@ -132,18 +142,12 @@ namespace ahello_backend.Repositorys.Classes
                 }
                 catch (Exception ex)
                 {
-                    // ✅ email failure never affects booking — already committed
                     Console.WriteLine($"[EmailError] {ex.GetType().Name}: {ex.Message}");
                     Console.WriteLine(ex.StackTrace);
                 }
+            });
 
-                return bookingId;
-            }
-            catch
-            {
-                await tx.RollbackAsync();
-                throw;
-            }
+            return bookingId;
         }
 
         // MIROTALK LINK GENERATOR
