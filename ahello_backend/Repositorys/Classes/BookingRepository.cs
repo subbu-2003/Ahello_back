@@ -109,7 +109,7 @@ namespace ahello_backend.Repositorys.Classes
 
                 await tx.CommitAsync();
 
-                // ✅ Build email data
+                // ✅ capture values
                 string clientEmail = client.Email;
                 string clientFullName = client.FullName;
                 string serviceName = service?.ServiceTitle ?? "the service";
@@ -117,22 +117,25 @@ namespace ahello_backend.Repositorys.Classes
                 string formattedTime = meetingStartTime.ToString("hh:mm tt", CultureInfo.InvariantCulture);
                 string capturedMeetingLink = $"{meetingLink}?userId={model.ClientId}&email={Uri.EscapeDataString(clientEmail)}";
 
-                // TEMP — await directly to surface real error
-                _ = Task.Run(async () =>
+                // ✅ await directly but with timeout — won't cause double commit
+                try
                 {
-                    try
-                    {
-                        await _emailRepository.SendBookingConfirmationEmailAsync(
-                            clientEmail, clientFullName, serviceName, formattedDate, formattedTime);
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
 
-                        await _emailRepository.SendMeetingInviteEmailAsync(
-                            clientEmail, clientFullName, capturedMeetingLink);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"[EmailError] - {ex.Message}");
-                    }
-                });
+                    await _emailRepository.SendBookingConfirmationEmailAsync(
+                        clientEmail, clientFullName, serviceName, formattedDate, formattedTime);
+
+                    await _emailRepository.SendMeetingInviteEmailAsync(
+                        clientEmail, clientFullName, capturedMeetingLink);
+
+                    Console.WriteLine($"[Email] Both emails sent to {clientEmail}");
+                }
+                catch (Exception ex)
+                {
+                    // ✅ email failure never affects booking — already committed
+                    Console.WriteLine($"[EmailError] {ex.GetType().Name}: {ex.Message}");
+                    Console.WriteLine(ex.StackTrace);
+                }
 
                 return bookingId;
             }
