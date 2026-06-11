@@ -149,5 +149,36 @@ namespace ahello_backend.Repositorys.Classes
 </body>
 </html>");
         }
+        public async Task SendRescheduleConfirmationEmailAsync(
+    string toEmail, string clientName, string serviceName, string date, string time)
+        {
+            await SendEmailAsync(toEmail, "Booking Rescheduled – " + serviceName, $@"
+<html>
+<body style='font-family:Arial;padding:20px;background:#f5f5f5;'>
+    <div style='background:white;padding:20px;border-radius:10px;'>
+        <h2>Hi {clientName},</h2>
+        <p>Your booking has been <strong style='color:#005B71;'>rescheduled</strong>. Here are your updated details:</p>
+        <table style='border-collapse:collapse;width:100%;'>
+            <tr>
+                <td style='padding:8px;border:1px solid #ddd;'><strong>Service</strong></td>
+                <td style='padding:8px;border:1px solid #ddd;'>{serviceName}</td>
+            </tr>
+            <tr>
+                <td style='padding:8px;border:1px solid #ddd;'><strong>New Date</strong></td>
+                <td style='padding:8px;border:1px solid #ddd;'>{date}</td>
+            </tr>
+            <tr>
+                <td style='padding:8px;border:1px solid #ddd;'><strong>New Time</strong></td>
+                <td style='padding:8px;border:1px solid #ddd;'>{time}</td>
+            </tr>
+        </table>
+        <p>If you have any questions, feel free to reach out.</p>
+        <br/>
+        <p>Regards,</p>
+        <strong>Ahllo Team</strong>
+    </div>
+</body>
+</html>");
+        }
     }
 }
