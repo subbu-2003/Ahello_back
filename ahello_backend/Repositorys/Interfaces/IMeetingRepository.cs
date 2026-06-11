@@ -21,5 +21,6 @@ namespace ahello_backend.Repositorys.Interfaces
         Task<bool> SendMeetingReminderMailAsync(Meeting meeting, int minutesLeft);
 
         Task UpdateReminderSentAsync(int meetingId);
+        Task<IEnumerable<Meeting>> GetPendingRemindersAsync();
     }
 }

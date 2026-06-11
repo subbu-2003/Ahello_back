@@ -333,5 +333,34 @@ namespace ahello_backend.Repositorys.Classes
 
             await connection.ExecuteAsync(sql, new { meetingId });
         }
+        public async Task<IEnumerable<Meeting>> GetPendingRemindersAsync()
+        {
+            using var connection = _db.GetConnection();
+
+            var sql = @"
+        SELECT
+            m.MeetingId,
+            m.UserId,
+            m.BookingId,
+            m.StartTime,
+            m.EndTime,
+            m.MeetingLink,
+            m.Status,
+            m.ReminderSent,
+            u.FullName  AS UserName,
+            u.Email,
+            cu.FullName AS ClientName,
+            cu.Email    AS ClientEmail
+        FROM meetings m
+        INNER JOIN bookings b  ON m.BookingId = b.BookingId
+        INNER JOIN users u     ON m.UserId    = u.UserId
+        INNER JOIN users cu    ON b.ClientId  = cu.UserId
+        WHERE m.ReminderSent = 0
+          AND m.Status = 'Pending'
+          AND m.StartTime BETWEEN DATE_ADD(NOW(), INTERVAL 1 MINUTE)
+                              AND DATE_ADD(NOW(), INTERVAL 15 MINUTE)";
+
+            return await connection.QueryAsync<Meeting>(sql);
+        }
     }
 }
