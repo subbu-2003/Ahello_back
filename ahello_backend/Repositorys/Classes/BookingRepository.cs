@@ -118,13 +118,23 @@ namespace ahello_backend.Repositorys.Classes
                 string capturedMeetingLink = $"{meetingLink}?userId={model.ClientId}&email={Uri.EscapeDataString(clientEmail)}";
 
                 // TEMP — await directly to surface real error
-                await _emailRepository.SendBookingConfirmationEmailAsync(
-                    clientEmail, clientFullName, serviceName, formattedDate, formattedTime);
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _emailRepository.SendBookingConfirmationEmailAsync(
+                            clientEmail, clientFullName, serviceName, formattedDate, formattedTime);
 
-                await _emailRepository.SendMeetingInviteEmailAsync(
-                    clientEmail, clientFullName, capturedMeetingLink);
+                        await _emailRepository.SendMeetingInviteEmailAsync(
+                            clientEmail, clientFullName, capturedMeetingLink);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[EmailError] - {ex.Message}");
+                    }
+                });
 
-                return bookingId; // ✅ Returns instantly, email sends in background
+                return bookingId;
             }
             catch
             {

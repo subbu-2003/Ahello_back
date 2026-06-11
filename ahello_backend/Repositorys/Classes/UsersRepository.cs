@@ -245,8 +245,13 @@ namespace ahello_backend.Repositorys.Classes
                         LIKE LOWER(CONCAT('%', @search, '%'))
                      
                       
-                      OR LOWER(sc.ServiceCategoryName)
-                     LIKE LOWER(CONCAT('%', @search, '%'))
+                     OR s.ServiceCategoryId IN
+                    (
+                        SELECT ServiceCategoryId
+                        FROM servicecategorydynamic
+                        WHERE LOWER(ServiceCategoryName)
+                        LIKE LOWER(CONCAT('%', @search, '%'))
+                    )
                 )
 
                 GROUP BY
@@ -335,7 +340,7 @@ namespace ahello_backend.Repositorys.Classes
                     CategoryId = g.Key.CategoryId,
                     CategoryName = g.Key.CategoryName,
 
-                Services = g.Select(s => new UserServiceItem
+                Services = g.Take(1).Select(s => new UserServiceItem
                 {
                     ServiceId = s.ServiceId,
                     ServiceTypeId = s.ServiceTypeId,
