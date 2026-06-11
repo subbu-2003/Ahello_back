@@ -428,7 +428,7 @@ namespace ahello_backend.Repositorys.Classes
                 {
                     try
                     {
-                        await _emailRepository.SendBookingConfirmationEmailAsync(
+                        await _emailRepository.SendRescheduleConfirmationEmailAsync(
                             capturedEmail,
                             capturedName,
                             capturedService,
