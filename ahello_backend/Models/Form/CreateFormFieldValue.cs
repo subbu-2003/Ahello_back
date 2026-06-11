@@ -3,7 +3,7 @@
     public class CreateFormFieldValue
     {
         public int FormId { get; set; }
-
+        public int ClientId { get; set; }
         public string FieldCode { get; set; }
 
         public int FormFieldId { get; set; }
