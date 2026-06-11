@@ -42,34 +42,27 @@ namespace ahello_backend.Services.Classes
         public async Task<bool> SendMeetingReminderAsync()
         {
             var meetings = await _repo.GetAllAsync();
-
             var now = DateTime.Now;
 
             foreach (var meeting in meetings)
             {
-                // ✅ Skip completed meetings
-                if (meeting.Status == "Completed")
-                    continue;
+                if (meeting.Status == "Completed") continue;
+                if (meeting.ReminderSent) continue;
 
-                // ✅ Skip already sent reminders
-                if (meeting.ReminderSent)
-                    continue;
-
-                // ✅ Time window: 10 mins to 5 mins before start
-                var fromTime = meeting.StartTime.AddMinutes(-10);
-                var toTime = meeting.StartTime.AddMinutes(-5);
+                // ✅ Wider window: 15 mins to 1 min before start
+                var fromTime = meeting.StartTime.AddMinutes(-15);
+                var toTime = meeting.StartTime.AddMinutes(-1);
 
                 if (now >= fromTime && now <= toTime)
                 {
-                    var sent = await _repo.SendMeetingReminderMailAsync(meeting);
+                    // ✅ Dynamically calculate minutes left
+                    int minutesLeft = (int)Math.Round((meeting.StartTime - now).TotalMinutes);
 
+                    var sent = await _repo.SendMeetingReminderMailAsync(meeting, minutesLeft);
                     if (sent)
-                    {
                         await _repo.UpdateReminderSentAsync(meeting.MeetingId);
-                    }
                 }
             }
-
             return true;
         }
     }

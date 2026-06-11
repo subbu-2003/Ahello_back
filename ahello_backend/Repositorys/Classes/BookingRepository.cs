@@ -109,7 +109,7 @@ namespace ahello_backend.Repositorys.Classes
 
                 await tx.CommitAsync();
 
-                // ✅ Build email data BEFORE the using-blocks dispose
+                // ✅ Build email data
                 string clientEmail = client.Email;
                 string clientFullName = client.FullName;
                 string serviceName = service?.ServiceTitle ?? "the service";
@@ -117,23 +117,12 @@ namespace ahello_backend.Repositorys.Classes
                 string formattedTime = meetingStartTime.ToString("hh:mm tt", CultureInfo.InvariantCulture);
                 string capturedMeetingLink = $"{meetingLink}?userId={model.ClientId}&email={Uri.EscapeDataString(clientEmail)}";
 
-                // ✅ Fire-and-forget — don't await, return bookingId immediately
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        await _emailRepository.SendBookingConfirmationEmailAsync(
-                            clientEmail, clientFullName, serviceName, formattedDate, formattedTime);
+                // TEMP — await directly to surface real error
+                await _emailRepository.SendBookingConfirmationEmailAsync(
+                    clientEmail, clientFullName, serviceName, formattedDate, formattedTime);
 
-                        await _emailRepository.SendMeetingInviteEmailAsync(
-                            clientEmail, clientFullName, capturedMeetingLink);
-                    }
-                    catch (Exception ex)
-                    {
-                        // Log the error — don't crash the app
-                        Console.WriteLine($"[EmailError] BookingId:{bookingId} - {ex.Message}");
-                    }
-                });
+                await _emailRepository.SendMeetingInviteEmailAsync(
+                    clientEmail, clientFullName, capturedMeetingLink);
 
                 return bookingId; // ✅ Returns instantly, email sends in background
             }
