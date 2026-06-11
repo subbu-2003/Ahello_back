@@ -428,7 +428,7 @@ namespace ahello_backend.Repositorys.Classes
                 {
                     try
                     {
-                        await _emailRepository.SendBookingConfirmationEmailAsync(
+                        await _emailRepository.SendRescheduleConfirmationEmailAsync(
                             capturedEmail,
                             capturedName,
                             capturedService,
@@ -667,6 +667,8 @@ namespace ahello_backend.Repositorys.Classes
 
                 INNER JOIN services s
                     ON b.ServiceId = s.ServiceId
+                LEFT JOIN servicecategorydynamic sc
+                     ON s.ServiceCategoryId = sc.ServiceCategoryId
 
                 WHERE b.UserId = @UserId
 
@@ -688,6 +690,8 @@ namespace ahello_backend.Repositorys.Classes
                         LIKE CONCAT('%', @Search, '%')
 
                     OR b.Status
+                        LIKE CONCAT('%', @Search, '%')
+                    OR sc.ServiceCategoryName
                         LIKE CONCAT('%', @Search, '%')
                 );";
 
@@ -715,7 +719,8 @@ namespace ahello_backend.Repositorys.Classes
 
                     b.ServiceId,
                     s.ServiceTitle,
-
+                    s.ServiceCategoryId,
+                    sc.ServiceCategoryName,
                     b.ScheduleDate,
                     b.StartTime,
                     b.EndTime,
@@ -737,6 +742,8 @@ namespace ahello_backend.Repositorys.Classes
 
                 INNER JOIN services s
                     ON b.ServiceId = s.ServiceId
+                LEFT JOIN servicecategorydynamic sc
+                    ON s.ServiceCategoryId = sc.ServiceCategoryId
 
                 WHERE b.UserId = @UserId
 
@@ -758,6 +765,8 @@ namespace ahello_backend.Repositorys.Classes
                         LIKE CONCAT('%', @Search, '%')
 
                     OR b.Status
+                        LIKE CONCAT('%', @Search, '%')
+                    OR sc.ServiceCategoryName
                         LIKE CONCAT('%', @Search, '%')
                 )
 
@@ -808,6 +817,8 @@ namespace ahello_backend.Repositorys.Classes
 
                 INNER JOIN services s
                     ON b.ServiceId = s.ServiceId
+                LEFT JOIN servicecategorydynamic sc
+                     ON s.ServiceCategoryId = sc.ServiceCategoryId
 
                 WHERE b.ClientId = @ClientId
 
@@ -829,6 +840,8 @@ namespace ahello_backend.Repositorys.Classes
                         LIKE CONCAT('%', @Search, '%')
 
                     OR b.Status
+                        LIKE CONCAT('%', @Search, '%')
+                    OR sc.ServiceCategoryName
                         LIKE CONCAT('%', @Search, '%')
                 );";
 
@@ -856,7 +869,8 @@ namespace ahello_backend.Repositorys.Classes
 
                     b.ServiceId,
                     s.ServiceTitle,
-
+                    s.ServiceCategoryId,
+                    sc.ServiceCategoryName,
                     b.ScheduleDate,
                     b.StartTime,
                     b.EndTime,
@@ -878,7 +892,8 @@ namespace ahello_backend.Repositorys.Classes
 
                 INNER JOIN services s
                     ON b.ServiceId = s.ServiceId
-
+                LEFT JOIN servicecategorydynamic sc
+                     ON s.ServiceCategoryId = sc.ServiceCategoryId
                 WHERE b.ClientId = @ClientId
 
                 AND
@@ -899,6 +914,8 @@ namespace ahello_backend.Repositorys.Classes
                         LIKE CONCAT('%', @Search, '%')
 
                     OR b.Status
+                        LIKE CONCAT('%', @Search, '%')
+                    OR sc.ServiceCategoryName
                         LIKE CONCAT('%', @Search, '%')
                 )
 

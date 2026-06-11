@@ -10,6 +10,8 @@
     string toEmail,
     string userName,
     string meetingLink);
+        Task SendRescheduleConfirmationEmailAsync(
+    string toEmail, string clientName, string serviceName, string date, string time);
     }
 }
 

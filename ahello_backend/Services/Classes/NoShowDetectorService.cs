@@ -48,7 +48,6 @@ namespace ahello_backend.Services.Classes
 
             using var connection = db.GetConnection();
 
-            // Find pending bookings where end time passed more than 5 minutes ago
             var candidates = await connection.QueryAsync<NoShowCandidate>(@"
     SELECT
         b.BookingId,
@@ -68,12 +67,12 @@ namespace ahello_backend.Services.Classes
     INNER JOIN users cu ON b.ClientId = cu.UserId
     WHERE b.Status = 'Pending'
       AND s.AutoReschedule = 1
-      AND b.CreatedAt >= DATE_SUB(NOW(), INTERVAL 1 DAY)
+      AND CONVERT_TZ(b.CreatedAt, '+05:30', '+00:00') >= DATE_SUB(NOW(), INTERVAL 1 DAY)
       AND TIMESTAMPADD(
-            MINUTE,
-            5,
-            TIMESTAMP(b.ScheduleDate, b.EndTime)
-          ) < NOW()");
+      MINUTE,
+      5,
+      CONVERT_TZ(TIMESTAMP(b.ScheduleDate, b.EndTime), '+05:30', '+00:00')
+    ) < NOW()");
 
             foreach (var booking in candidates)
             {
@@ -147,58 +146,62 @@ namespace ahello_backend.Services.Classes
                 booking.UserId,
                 booking.ServiceId);
 
+            // Only check today's remaining slots
+            var tryDate = DateTime.UtcNow.AddHours(5).AddMinutes(30).Date;
 
-            for (int dayOffset = 0; dayOffset <= 30; dayOffset++)
+            var slots = await slotService.GetDaySlots(
+                booking.UserId,
+                booking.ServiceId,
+                duration,
+                tryDate);
+
+            if (slots == null || !slots.Any())
             {
-                var tryDate = DateTime.Now.Date.AddDays(dayOffset);
+                _logger.LogWarning(
+                    "[NoShowDetector] No slots available today for BookingId:{BookingId}.",
+                    booking.BookingId);
+                return;
+            }
 
-                var slots = await slotService.GetDaySlots(
-                    booking.UserId,
-                    booking.ServiceId,
-                    duration,
-                    tryDate);
+            foreach (var slot in slots)
+            {
+                var slotStartDateTime = slot.SlotDate.Date.Add(slot.StartTime);
 
-                if (slots == null || !slots.Any())
+                // Skip slots that have already passed
+                var istNow = DateTime.UtcNow.AddHours(5).AddMinutes(30);
+                if (slotStartDateTime <= istNow)
                     continue;
 
-                foreach (var slot in slots)
+                try
                 {
-                    var slotStartDateTime = slot.SlotDate.Date.Add(slot.StartTime);
+                    var newBookingId = await bookingRepo.RescheduleAsync(
+                        oldBookingId: booking.BookingId,
+                        newDate: slot.SlotDate,
+                        newStart: slot.StartTime,
+                        newEnd: slot.EndTime,
+                        slotId: slot.SlotId,
+                        rescheduledBy: "System",
+                        reason: "NoShow");
 
-                    if (slotStartDateTime <= DateTime.Now)
-                        continue;
+                    _logger.LogInformation(
+                        "[NoShowDetector] BookingId:{OldId} auto-rescheduled to NewBookingId:{NewId}",
+                        booking.BookingId,
+                        newBookingId);
 
-                    try
-                    {
-                        var newBookingId = await bookingRepo.RescheduleAsync(
-                            oldBookingId: booking.BookingId,
-                            newDate: slot.SlotDate,
-                            newStart: slot.StartTime,
-                            newEnd: slot.EndTime,
-                            slotId: slot.SlotId,
-                            rescheduledBy: "System",
-                            reason: "NoShow");
-
-                        _logger.LogInformation(
-                            "[NoShowDetector] BookingId:{OldId} auto-rescheduled to NewBookingId:{NewId}",
-                            booking.BookingId,
-                            newBookingId);
-
-                        return;
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(
-                            ex,
-                            "[NoShowDetector] Failed slot {SlotId} for BookingId:{BookingId}. Trying next slot.",
-                            slot.SlotId,
-                            booking.BookingId);
-                    }
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(
+                        ex,
+                        "[NoShowDetector] Failed slot {SlotId} for BookingId:{BookingId}. Trying next slot.",
+                        slot.SlotId,
+                        booking.BookingId);
                 }
             }
 
             _logger.LogWarning(
-                "[NoShowDetector] No available slot found for BookingId:{BookingId} within 30 days.",
+                "[NoShowDetector] No available slot found today for BookingId:{BookingId}.",
                 booking.BookingId);
         }
     }
