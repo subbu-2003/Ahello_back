@@ -16,7 +16,9 @@
         public int ServiceId { get; set; }
 
         public string ServiceTitle { get; set; }
+        public int ServiceCategoryId { get; set; }
 
+        public string? ServiceCategoryName { get; set; }
         public DateTime ScheduleDate { get; set; }
 
         public TimeSpan StartTime { get; set; }

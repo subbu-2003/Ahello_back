@@ -148,6 +148,11 @@ namespace ahello_backend.Repositorys.Classes
             cu.FullName AS ClientName,
 
             m.BookingId,
+            s.ServiceId,
+            s.ServiceTitle,
+
+            s.ServiceCategoryId,
+            sc.ServiceCategoryName,
             m.StartTime,
             m.EndTime,
             m.MeetingLink,
@@ -163,6 +168,11 @@ namespace ahello_backend.Repositorys.Classes
 
         INNER JOIN users cu
             ON b.ClientId = cu.UserId
+        INNER JOIN services s
+            ON b.ServiceId = s.ServiceId
+
+        LEFT JOIN servicecategorydynamic sc
+            ON s.ServiceCategoryId = sc.ServiceCategoryId
 
         WHERE b.UserId = @UserId
 
