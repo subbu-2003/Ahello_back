@@ -38,7 +38,8 @@ namespace ahello_backend.Repositorys.Classes
         SELECT
             UserId,
             Email,
-            FullName AS UserName
+            FullName AS UserName,
+            ProfileUrl
         FROM users
         WHERE Email = @Email
         LIMIT 1",
@@ -77,7 +78,8 @@ namespace ahello_backend.Repositorys.Classes
                 {
                     UserId = newUserId,
                     Email = email.Trim(),
-                    UserName = email.Split('@')[0]
+                    UserName = email.Split('@')[0],
+                    ProfileUrl=null
                 };
             }
 
@@ -96,15 +98,67 @@ namespace ahello_backend.Repositorys.Classes
         }
             };
 
-            var payload =
-                await GoogleJsonWebSignature.ValidateAsync(
-                    idToken,
-                    settings);
+            var payload = await GoogleJsonWebSignature.ValidateAsync(idToken, settings);
 
             if (!payload.EmailVerified)
                 return null;
 
-            return await LoginAsync(payload.Email);
+            using var connection = _db.GetConnection();
+
+            var email = payload.Email.Trim();
+
+            var user = await connection.QueryFirstOrDefaultAsync<LoginResponseDto>(
+                @"
+        SELECT
+            UserId,
+            Email,
+            FullName AS UserName,
+            ProfileUrl
+        FROM users
+        WHERE Email = @Email
+        LIMIT 1",
+                new { Email = email });
+
+            // Existing user: don't change profile image
+            if (user != null)
+                return user;
+
+            // New Google user: insert Google profile image
+            var fullName = !string.IsNullOrWhiteSpace(payload.Name)
+                ? payload.Name
+                : email.Split('@')[0];
+
+            var newUserId = await connection.ExecuteScalarAsync<int>(
+                @"
+        INSERT INTO users
+        (
+            Email,
+            FullName,
+            ProfileUrl
+        )
+        VALUES
+        (
+            @Email,
+            @FullName,
+            @ProfileUrl
+        );
+
+        SELECT LAST_INSERT_ID();
+        ",
+                new
+                {
+                    Email = email,
+                    FullName = fullName,
+                    ProfileUrl = payload.Picture
+                });
+
+            return new LoginResponseDto
+            {
+                UserId = newUserId,
+                Email = email,
+                UserName = fullName,
+                ProfileUrl = payload.Picture
+            };
         }
 
         public async Task<bool> SendOtpAsync(string email)
@@ -177,7 +231,8 @@ namespace ahello_backend.Repositorys.Classes
         SELECT
             UserId,
             Email,
-            FullName AS UserName
+            FullName AS UserName,
+            ProfileUrl
         FROM users
         WHERE Email = @Email
         LIMIT 1",
@@ -218,7 +273,8 @@ namespace ahello_backend.Repositorys.Classes
                 {
                     UserId = newUserId,
                     Email = email.Trim(),
-                    UserName = fullName
+                    UserName = fullName,
+                    ProfileUrl=null
                 };
             }
 
