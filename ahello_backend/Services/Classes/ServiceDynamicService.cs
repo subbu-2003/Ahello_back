@@ -61,5 +61,11 @@ namespace ahello_backend.Services.Classes
                 pageSize,
                 search);
         }
+        public async Task<bool> UpdateServiceIsActiveAsync(int serviceId,ServiceIsActivePut model)
+        {
+            return await _repository.UpdateServiceIsActiveAsync(
+                serviceId,
+                model);
+        }
     }
 }

@@ -25,5 +25,7 @@ namespace ahello_backend.Repositorys.Interfaces
             int pageNumber,
             int pageSize,
             string? search = null);
+        Task<bool> UpdateServiceIsActiveAsync( int serviceId,ServiceIsActivePut model);
+
     }
 }

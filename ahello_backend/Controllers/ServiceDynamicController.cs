@@ -291,5 +291,26 @@ namespace ahello_backend.Controllers
             var data = await _service.GetAllPagedAsync(pageNumber, pageSize, search);
             return Ok(data);
         }
+        [HttpPut("{serviceId}/isactive")]
+        public async Task<IActionResult> UpdateServiceIsActive(int serviceId,[FromBody] ServiceIsActivePut model)
+        {
+            var result =
+                await _service.UpdateServiceIsActiveAsync(
+                    serviceId,
+                    model);
+
+            if (!result)
+            {
+                return NotFound(new
+                {
+                    Message = "Service not found"
+                });
+            }
+
+            return Ok(new
+            {
+                Message = "Service status updated successfully"
+            });
+        }
     }
 }

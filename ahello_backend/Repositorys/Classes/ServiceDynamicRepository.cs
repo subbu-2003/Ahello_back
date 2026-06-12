@@ -21,28 +21,29 @@ namespace ahello_backend.Repositorys.Classes
 
             var services = (await connection.QueryAsync<ServiceDynamicGetResponse>(
                 @"SELECT
-    s.ServiceId,
-    s.UserId,
-    s.ServiceTypeId,
-    s.ServiceCategoryId,
-    sc.ServiceCategoryName,
-    s.ServiceTitle,
-    s.Price,
-    s.Duration,
-    s.ShortDescription,
-    s.FullDescription,
-    s.Tags,
-    s.Language,
-    s.ThumbnailImage,
-    s.BannerImage,
-    s.IntroVideo,
-    s.Status,
-    s.CreatedBy,
-    s.CreatedAt
-FROM services s
-LEFT JOIN ServiceCategoryDynamic sc
-    ON s.ServiceCategoryId = sc.ServiceCategoryId
-ORDER BY s.ServiceId DESC")).ToList();
+                s.ServiceId,
+                s.UserId,
+                s.ServiceTypeId,
+                s.ServiceCategoryId,
+                sc.ServiceCategoryName,
+                s.ServiceTitle,
+                s.Price,
+                s.Duration,
+                s.ShortDescription,
+                s.FullDescription,
+                s.Tags,
+                s.Language,
+                s.ThumbnailImage,
+                s.BannerImage,
+                s.IntroVideo,
+                s.Status,
+                s.IsActive,
+                s.CreatedBy,
+                s.CreatedAt
+            FROM services s
+            LEFT JOIN ServiceCategoryDynamic sc
+                ON s.ServiceCategoryId = sc.ServiceCategoryId
+            ORDER BY s.ServiceId DESC")).ToList();
 
             foreach (var service in services)
             {
@@ -69,45 +70,46 @@ ORDER BY s.ServiceId DESC")).ToList();
             using var connection = _db.GetConnection();
 
             var service = await connection.QueryFirstOrDefaultAsync<ServiceDynamicGetResponse>(
- @"SELECT
-    s.ServiceId,
-    s.UserId,
-    s.ServiceTypeId,
-    s.ServiceCategoryId,
-    sc.ServiceCategoryName,
-    s.ServiceTitle,
-    s.Price,
-    s.Duration,
-    s.ShortDescription,
-    s.FullDescription,
-    s.Tags,
-    s.Language,
-    s.ThumbnailImage,
-    s.BannerImage,
-    s.IntroVideo,
-    s.Status,
-    s.CreatedBy,
-    s.CreatedAt
-FROM services s
-LEFT JOIN ServiceCategoryDynamic sc
-    ON s.ServiceCategoryId = sc.ServiceCategoryId
-WHERE s.ServiceId = @ServiceId",
- new { ServiceId = serviceId });
+             @"SELECT
+                s.ServiceId,
+                s.UserId,
+                s.ServiceTypeId,
+                s.ServiceCategoryId,
+                sc.ServiceCategoryName,
+                s.ServiceTitle,
+                s.Price,
+                s.Duration,
+                s.ShortDescription,
+                s.FullDescription,
+                s.Tags,
+                s.Language,
+                s.ThumbnailImage,
+                s.BannerImage,
+                s.IntroVideo,
+                s.Status,
+                s.IsActive,
+                s.CreatedBy,
+                s.CreatedAt
+            FROM services s
+            LEFT JOIN ServiceCategoryDynamic sc
+                ON s.ServiceCategoryId = sc.ServiceCategoryId
+            WHERE s.ServiceId = @ServiceId",
+             new { ServiceId = serviceId });
 
             if (service == null)
                 return null;
 
             var fields = (await connection.QueryAsync<ServiceDynamicFieldResponse>(
-        @"SELECT
-            sf.ServiceFieldId,
-            sf.FieldName,
-            sf.FieldCode,
-            sfv.FieldValue
-          FROM servicefieldvalues sfv
-          INNER JOIN servicefields sf
-            ON sfv.ServiceFieldId = sf.ServiceFieldId
-          WHERE sfv.ServiceId = @ServiceId",
-        new { ServiceId = serviceId })).ToList();
+            @"SELECT
+                sf.ServiceFieldId,
+                sf.FieldName,
+                sf.FieldCode,
+                sfv.FieldValue
+              FROM servicefieldvalues sfv
+              INNER JOIN servicefields sf
+                ON sfv.ServiceFieldId = sf.ServiceFieldId
+              WHERE sfv.ServiceId = @ServiceId",
+            new { ServiceId = serviceId })).ToList();
 
             foreach (var field in fields)
             {
@@ -117,8 +119,8 @@ WHERE s.ServiceId = @ServiceId",
                 OptionValue,
                 OptionLabel,
                 IsActive
-              FROM servicedropdownoptions
-              WHERE ServiceId = @ServiceId
+                FROM servicedropdownoptions
+                WHERE ServiceId = @ServiceId
                 AND ServiceFieldId = @ServiceFieldId
                 AND IsActive = 1",
                     new
@@ -147,62 +149,63 @@ WHERE s.ServiceId = @ServiceId",
             var offset = (pageNumber - 1) * pageSize;
 
             var whereClause = @"
-        WHERE UserId = @UserId";
+            WHERE UserId = @UserId";
 
             if (!string.IsNullOrWhiteSpace(search))
             {
                 whereClause += @"
-    AND
-    (
-        s.ServiceTitle LIKE @Search
-        OR sc.ServiceCategoryName LIKE @Search
-        OR s.ShortDescription LIKE @Search
-        OR s.Tags LIKE @Search
-        OR s.Language LIKE @Search
-        OR s.Status LIKE @Search
-    )";
+            AND
+            (
+                s.ServiceTitle LIKE @Search
+                OR sc.ServiceCategoryName LIKE @Search
+                OR s.ShortDescription LIKE @Search
+                OR s.Tags LIKE @Search
+                OR s.Language LIKE @Search
+                OR s.Status LIKE @Search
+            )";
             }
 
             // TOTAL COUNT
             var totalRecords = await connection.ExecuteScalarAsync<int>(
-$@"SELECT COUNT(*)
-FROM services s
-LEFT JOIN ServiceCategoryDynamic sc
-    ON s.ServiceCategoryId = sc.ServiceCategoryId
-{whereClause}",
-new
-{
-    UserId = userId,
-    Search = $"%{search}%"
-});
+            $@"SELECT COUNT(*)
+            FROM services s
+            LEFT JOIN ServiceCategoryDynamic sc
+                ON s.ServiceCategoryId = sc.ServiceCategoryId
+            {whereClause}",
+            new
+            {
+                UserId = userId,
+                Search = $"%{search}%"
+            });
 
             // PAGINATION DATA
             var services = (await connection.QueryAsync<ServiceDynamicGetResponse>(
             $@"SELECT
-    s.ServiceId,
-    s.UserId,
-    s.ServiceTypeId,
-    s.ServiceCategoryId,
-    sc.ServiceCategoryName,
-    s.ServiceTitle,
-    s.Price,
-    s.Duration,
-    s.ShortDescription,
-    s.FullDescription,
-    s.Tags,
-    s.Language,
-    s.ThumbnailImage,
-    s.BannerImage,
-    s.IntroVideo,
-    s.Status,
-    s.CreatedBy,
-    s.CreatedAt
-FROM services s
-LEFT JOIN ServiceCategoryDynamic sc
-    ON s.ServiceCategoryId = sc.ServiceCategoryId
-{whereClause}
-ORDER BY s.ServiceId DESC
-LIMIT @PageSize OFFSET @Offset",
+            s.ServiceId,
+            s.UserId,
+            s.ServiceTypeId,
+            s.ServiceCategoryId,
+            sc.ServiceCategoryName,
+            s.ServiceTitle,
+            s.Price,
+            s.Duration,
+            s.ShortDescription,
+            s.FullDescription,
+            s.Tags,
+            s.Language,
+            s.ThumbnailImage,
+            s.BannerImage,
+            s.IntroVideo,
+            s.Status,
+            s.IsActive,
+            s.CreatedBy,
+            s.CreatedAt
+        FROM services s
+        LEFT JOIN ServiceCategoryDynamic sc
+            ON s.ServiceCategoryId = sc.ServiceCategoryId
+        {whereClause}
+        ORDER BY s.ServiceId DESC
+        LIMIT @PageSize OFFSET @Offset",
             new
             {
                 UserId = userId,
@@ -256,7 +259,7 @@ LIMIT @PageSize OFFSET @Offset",
                 var sql = @"
                     INSERT INTO services
                     (
-                         UserId,
+                        UserId,
                         ServiceTypeId,
                         ServiceCategoryId,
                         ServiceTitle,
@@ -270,6 +273,7 @@ LIMIT @PageSize OFFSET @Offset",
                         BannerImage,
                         IntroVideo,
                         Status,
+                        IsActive,
                         CreatedAt,
                         CreatedBy
                     )
@@ -289,6 +293,7 @@ LIMIT @PageSize OFFSET @Offset",
                         @BannerImage,
                         @IntroVideo,
                         @Status,
+                        @IsActive,
                         NOW(),
                         @CreatedBy
                     );
@@ -296,26 +301,27 @@ LIMIT @PageSize OFFSET @Offset",
                     SELECT LAST_INSERT_ID();";
 
                 var serviceId = await connection.ExecuteScalarAsync<int>(
-       sql,
-       new
-       {
-           model.UserId,
-           model.ServiceTypeId,
-           model.ServiceCategoryId,
-           model.ServiceTitle,
-           model.Price,
-           model.Duration,
-           model.ShortDescription,
-           model.FullDescription,
-           model.Tags,
-           model.Language,
-           ThumbnailImage = model.ThumbnailImageUrl,   // ← changed
-           BannerImage = model.BannerImageUrl,          // ← changed
-           model.IntroVideo,
-           model.Status,
-           model.CreatedBy
-       },
-       tx);
+                   sql,
+                   new
+                   {
+                       model.UserId,
+                       model.ServiceTypeId,
+                       model.ServiceCategoryId,
+                       model.ServiceTitle,
+                       model.Price,
+                       model.Duration,
+                       model.ShortDescription,
+                       model.FullDescription,
+                       model.Tags,
+                       model.Language,
+                       ThumbnailImage = model.ThumbnailImageUrl,   // ← changed
+                       BannerImage = model.BannerImageUrl,          // ← changed
+                       model.IntroVideo,
+                       model.Status,
+                       IsActive = model.IsActive,
+                       model.CreatedBy
+                   },
+                   tx);
 
                 if (model.Fields != null && model.Fields.Any())
                 {
@@ -390,10 +396,11 @@ LIMIT @PageSize OFFSET @Offset",
                         FullDescription = @FullDescription,
                         Tags = @Tags,
                         Language = @Language,
-                       ThumbnailImage = COALESCE(@ThumbnailImage, ThumbnailImage),
+                        ThumbnailImage = COALESCE(@ThumbnailImage, ThumbnailImage),
                         BannerImage    = COALESCE(@BannerImage, BannerImage),
                         IntroVideo = @IntroVideo,
                         Status = @Status,
+                        IsActive = @IsActive,
                         ModifiedAt = NOW(),
                         ModifiedBy = @ModifiedBy
                     WHERE ServiceId = @ServiceId";
@@ -417,6 +424,7 @@ LIMIT @PageSize OFFSET @Offset",
                         BannerImage = model.BannerImageUrl,
                         model.IntroVideo,
                         model.Status,
+                        model.IsActive,
                         model.ModifiedBy
                     },
                     tx);
@@ -475,33 +483,33 @@ LIMIT @PageSize OFFSET @Offset",
 
                 await connection.ExecuteAsync(
                     @"DELETE FROM servicedropdownoptions
-      WHERE ServiceId = @ServiceId",
+                       WHERE ServiceId = @ServiceId",
                     new { ServiceId = serviceId },
                     tx);
 
                 if (model.Fields != null && model.Fields.Any())
                 {
                     var dropdownSql = @"
-        INSERT INTO servicedropdownoptions
-        (
-            ServiceFieldId,
-            ServiceId,
-            OptionValue,
-            OptionLabel,
-            IsActive,
-            CreatedDate,
-            CreatedBy
-        )
-        VALUES
-        (
-            @ServiceFieldId,
-            @ServiceId,
-            @OptionValue,
-            @OptionLabel,
-            @IsActive,
-            NOW(),
-            @ModifiedBy
-        );";
+                    INSERT INTO servicedropdownoptions
+                    (
+                        ServiceFieldId,
+                        ServiceId,
+                        OptionValue,
+                        OptionLabel,
+                        IsActive,
+                        CreatedDate,
+                        CreatedBy
+                    )
+                    VALUES
+                    (
+                        @ServiceFieldId,
+                        @ServiceId,
+                        @OptionValue,
+                        @OptionLabel,
+                        @IsActive,
+                        NOW(),
+                        @ModifiedBy
+                    );";
 
                     foreach (var field in model.Fields)
                     {
@@ -589,48 +597,49 @@ LIMIT @PageSize OFFSET @Offset",
             }
 
             var totalRecords = await connection.ExecuteScalarAsync<int>(
-$@"SELECT COUNT(*)
-FROM services s
-LEFT JOIN ServiceCategoryDynamic sc
-    ON s.ServiceCategoryId = sc.ServiceCategoryId
-{whereClause}",
-new
-{
-    Search = $"%{search}%"
-});
+            $@"SELECT COUNT(*)
+            FROM services s
+            LEFT JOIN ServiceCategoryDynamic sc
+                ON s.ServiceCategoryId = sc.ServiceCategoryId
+            {whereClause}",
+            new
+            {
+                Search = $"%{search}%"
+            });
 
             var services = (await connection.QueryAsync<ServiceDynamicGetResponse>(
-$@"SELECT
-    s.ServiceId,
-    s.UserId,
-    s.ServiceTypeId,
-    s.ServiceCategoryId,
-    sc.ServiceCategoryName,
-    s.ServiceTitle,
-    s.Price,
-    s.Duration,
-    s.ShortDescription,
-    s.FullDescription,
-    s.Tags,
-    s.Language,
-    s.ThumbnailImage,
-    s.BannerImage,
-    s.IntroVideo,
-    s.Status,
-    s.CreatedBy,
-    s.CreatedAt
-FROM services s
-LEFT JOIN ServiceCategoryDynamic sc
-    ON s.ServiceCategoryId = sc.ServiceCategoryId
-{whereClause}
-ORDER BY s.ServiceId DESC
-LIMIT @PageSize OFFSET @Offset",
-new
-{
-    Search = $"%{search}%",
-    PageSize = pageSize,
-    Offset = offset
-})).ToList();
+                $@"SELECT
+                    s.ServiceId,
+                    s.UserId,
+                    s.ServiceTypeId,
+                    s.ServiceCategoryId,
+                    sc.ServiceCategoryName,
+                    s.ServiceTitle,
+                    s.Price,
+                    s.Duration,
+                    s.ShortDescription,
+                    s.FullDescription,
+                    s.Tags,
+                    s.Language,
+                    s.ThumbnailImage,
+                    s.BannerImage,
+                    s.IntroVideo,
+                    s.Status,
+                    s.IsActive,
+                    s.CreatedBy,
+                    s.CreatedAt
+                FROM services s
+                LEFT JOIN ServiceCategoryDynamic sc
+                    ON s.ServiceCategoryId = sc.ServiceCategoryId
+                {whereClause}
+                ORDER BY s.ServiceId DESC
+                LIMIT @PageSize OFFSET @Offset",
+                new
+                {
+                    Search = $"%{search}%",
+                    PageSize = pageSize,
+                    Offset = offset
+                })).ToList();
 
             foreach (var service in services)
             {
@@ -656,6 +665,29 @@ new
                 PageSize = pageSize,
                 Data = services
             };
+        }
+        public async Task<bool> UpdateServiceIsActiveAsync( int serviceId, ServiceIsActivePut model)
+        {
+            using var connection = _db.GetConnection();
+
+            var sql = @"
+        UPDATE services
+        SET
+            IsActive = @IsActive,
+            ModifiedAt = NOW(),
+            ModifiedBy = @ModifiedBy
+        WHERE ServiceId = @ServiceId";
+
+            var rows = await connection.ExecuteAsync(
+                sql,
+                new
+                {
+                    ServiceId = serviceId,
+                    model.IsActive,
+                    model.ModifiedBy
+                });
+
+            return rows > 0;
         }
     }
 }
