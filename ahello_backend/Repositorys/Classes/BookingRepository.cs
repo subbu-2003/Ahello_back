@@ -922,6 +922,18 @@ namespace ahello_backend.Repositorys.Classes
                 LEFT JOIN servicecategorydynamic sc
                      ON s.ServiceCategoryId = sc.ServiceCategoryId
                 WHERE b.ClientId = @ClientId
+                AND
+                (
+                    @Status IS NULL
+                    OR @Status = ''
+                    OR b.Status = @Status
+                )
+
+                AND
+                (
+                    @ScheduleDate IS NULL
+                    OR DATE(b.ScheduleDate) = DATE(@ScheduleDate)
+                )
 
                 AND
                 (
@@ -957,6 +969,8 @@ namespace ahello_backend.Repositorys.Classes
                     {
                         ClientId = clientId,
                         Search = search,
+                        Status = status,
+                        ScheduleDate = scheduleDate,
                         PageSize = pageSize,
                         Offset = (pageNumber - 1) * pageSize
                     });
