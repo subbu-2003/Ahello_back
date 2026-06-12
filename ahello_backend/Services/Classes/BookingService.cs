@@ -20,13 +20,13 @@ namespace ahello_backend.Services.Classes
         }
 
         public async Task<int> RescheduleAsync(
-    int oldBookingId,
-    DateTime newDate,
-    TimeSpan newStart,
-    TimeSpan newEnd,
-    int slotId,
-    string rescheduledBy,
-    string reason)
+        int oldBookingId,
+        DateTime newDate,
+        TimeSpan newStart,
+        TimeSpan newEnd,
+        int slotId,
+        string rescheduledBy,
+        string reason)
         {
             return await _repository.RescheduleAsync(
                 oldBookingId,
@@ -61,25 +61,29 @@ namespace ahello_backend.Services.Classes
             int userId,
             int pageNumber,
             int pageSize,
-            string? search)
+            string? search, string? status,
+            DateTime? scheduleDate)
         {
             return await _repository.GetByUserIdAsync(
                 userId,
                 pageNumber,
                 pageSize,
-                search);
+                search, status,
+                scheduleDate);
         }
         public async Task<PagedResult<BookingRead>> GetByClientIdAsync(
             int clientId,
             int pageNumber,
             int pageSize,
-            string? search)
+            string? search, string? status,
+            DateTime? scheduleDate)
         {
             return await _repository.GetByClientIdAsync(
                 clientId,
                 pageNumber,
                 pageSize,
-                search);
+                search, status,
+                scheduleDate);
         }
         public async Task<BookingModalGet>
     GetBookingModal(

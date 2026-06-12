@@ -26,12 +26,14 @@ namespace ahello_backend.Services.Interfaces
             int userId,
             int pageNumber,
             int pageSize,
-            string? search);
+            string? search, string? status,
+            DateTime? scheduleDate);
         Task<PagedResult<BookingRead>> GetByClientIdAsync(
             int clientId,
             int pageNumber,
             int pageSize,
-            string? search);
+            string? search, string? status,
+            DateTime? scheduleDate);
 
         Task<BookingModalGet>GetBookingModal( int serviceId);
     }

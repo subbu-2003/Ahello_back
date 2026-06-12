@@ -121,16 +121,17 @@ namespace ahello_backend.Repositorys.Classes
         public async Task<PagedResult<Meeting>> GetByUserIdAsync(
         int userId,
         int pageNumber,
-        int pageSize)
+        int pageSize, string? status,
+        DateTime? createdDate)
         {
             using var connection = _db.GetConnection();
 
             var countSql = @"
-        SELECT COUNT(*)
-        FROM meetings m
-        INNER JOIN bookings b
+            SELECT COUNT(*)
+            FROM meetings m
+            INNER JOIN bookings b
             ON m.BookingId = b.BookingId
-        WHERE b.UserId = @UserId";
+            WHERE b.UserId = @UserId";
 
             var totalCount =
                 await connection.ExecuteScalarAsync<int>(
@@ -175,6 +176,18 @@ namespace ahello_backend.Repositorys.Classes
             ON s.ServiceCategoryId = sc.ServiceCategoryId
 
         WHERE b.UserId = @UserId
+        AND
+        (
+            @Status IS NULL
+            OR @Status = ''
+            OR m.Status = @Status
+        )
+
+        AND
+        (
+            @CreatedDate IS NULL
+            OR DATE(m.CreatedAt) = DATE(@CreatedDate)
+        )
 
         ORDER BY m.MeetingId DESC
 
@@ -186,6 +199,8 @@ namespace ahello_backend.Repositorys.Classes
                     new
                     {
                         UserId = userId,
+                        Status = status,
+                        CreatedDate = createdDate,
                         PageSize = pageSize,
                         Offset = (pageNumber - 1) * pageSize
                     });

@@ -28,8 +28,9 @@ namespace ahello_backend.Services.Classes
             return await _repo.GetByRoomNameAsync(roomName);
         }
 
-        public async Task<PagedResult<Meeting>> GetByUserIdAsync( int userId,int pageNumber,int pageSize)
-            => await _repo.GetByUserIdAsync(userId,pageNumber,pageSize);
+        public async Task<PagedResult<Meeting>> GetByUserIdAsync( int userId,int pageNumber,int pageSize, string? status,DateTime? createdDate)
+            => await _repo.GetByUserIdAsync(userId,pageNumber,pageSize, status,
+        createdDate);
 
         public async Task<int> CreateAsync(MeetingPost model)
             => await _repo.CreateAsync(model);
