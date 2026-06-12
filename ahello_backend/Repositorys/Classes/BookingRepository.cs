@@ -67,11 +67,11 @@ namespace ahello_backend.Repositorys.Classes
             try
             {
                 var bookingSql = @"
-    INSERT INTO bookings
-    (UserId, ClientId, ServiceId, ScheduleDate, StartTime, EndTime, Status, CreatedAt, CreatedBy)
-    VALUES
-    (@UserId, @ClientId, @ServiceId, @ScheduleDate, @StartTime, @EndTime, @Status, NOW(), @CreatedBy);
-    SELECT LAST_INSERT_ID();";
+                INSERT INTO bookings
+                (UserId, ClientId, ServiceId, ScheduleDate, StartTime, EndTime, Status, CreatedAt, CreatedBy)
+                VALUES
+                (@UserId, @ClientId, @ServiceId, @ScheduleDate, @StartTime, @EndTime, @Status, NOW(), @CreatedBy);
+                SELECT LAST_INSERT_ID();";
 
                 bookingId = await connection.ExecuteScalarAsync<int>(bookingSql, model, tx);
 
@@ -80,10 +80,10 @@ namespace ahello_backend.Repositorys.Classes
                 var meetingEndTime = model.ScheduleDate.Date.Add(model.EndTime);
 
                 await connection.ExecuteAsync(@"
-    INSERT INTO meetings
-    (UserId, BookingId, StartTime, EndTime, MeetingLink, Status, CreatedAt, CreatedBy)
-    VALUES
-    (@UserId, @BookingId, @StartTime, @EndTime, @MeetingLink, 'Pending', NOW(), @CreatedBy);",
+                INSERT INTO meetings
+                (UserId, BookingId, StartTime, EndTime, MeetingLink, Status, CreatedAt, CreatedBy)
+                VALUES
+                (@UserId, @BookingId, @StartTime, @EndTime, @MeetingLink, 'Pending', NOW(), @CreatedBy);",
                     new
                     {
                         model.UserId,
@@ -95,10 +95,10 @@ namespace ahello_backend.Repositorys.Classes
                     }, tx);
 
                 var bookedSlotSql = @"
-    INSERT INTO bookedslots
-    (SlotId, UserId, ServiceId, BookingId, SlotDate, StartTime, EndTime, CreatedAt)
-    VALUES
-    (@SlotId, @UserId, @ServiceId, @BookingId, @SlotDate, @StartTime, @EndTime, NOW())";
+                INSERT INTO bookedslots
+                (SlotId, UserId, ServiceId, BookingId, SlotDate, StartTime, EndTime, CreatedAt)
+                VALUES
+                (@SlotId, @UserId, @ServiceId, @BookingId, @SlotDate, @StartTime, @EndTime, NOW())";
 
                 await connection.ExecuteAsync(bookedSlotSql, new
                 {
@@ -167,13 +167,13 @@ namespace ahello_backend.Repositorys.Classes
 
 
         public async Task<int> RescheduleAsync(
-    int oldBookingId,
-    DateTime newDate,
-    TimeSpan newStart,
-    TimeSpan newEnd,
-    int slotId,
-    string rescheduledBy,
-    string reason)
+        int oldBookingId,
+        DateTime newDate,
+        TimeSpan newStart,
+        TimeSpan newEnd,
+        int slotId,
+        string rescheduledBy,
+        string reason)
         {
             using var connection = _dbConn.GetMyConnection();
             await connection.OpenAsync();
@@ -216,12 +216,12 @@ namespace ahello_backend.Repositorys.Classes
                 // This protects other users from double booking
                 // ======================================================
                 var alreadyBooked = await connection.ExecuteScalarAsync<int>(@"
-            SELECT COUNT(1)
-            FROM bookedslots
-            WHERE SlotId = @SlotId
-              AND SlotDate = @SlotDate
-              AND StartTime = @StartTime
-              AND EndTime = @EndTime",
+                SELECT COUNT(1)
+                FROM bookedslots
+                WHERE SlotId = @SlotId
+                AND SlotDate = @SlotDate
+                AND StartTime = @StartTime
+                AND EndTime = @EndTime",
                     new
                     {
                         SlotId = slotId,
@@ -238,10 +238,10 @@ namespace ahello_backend.Repositorys.Classes
                 // 3. Mark old meeting as Rescheduled
                 // ======================================================
                 await connection.ExecuteAsync(@"
-            UPDATE meetings
-            SET Status = 'Rescheduled',
+                UPDATE meetings
+                SET Status = 'Rescheduled',
                 ModifiedAt = NOW()
-            WHERE BookingId = @BookingId",
+                WHERE BookingId = @BookingId",
                     new { BookingId = oldBookingId },
                     tx);
 
@@ -250,11 +250,11 @@ namespace ahello_backend.Repositorys.Classes
                 // For auto no-show, reason is stored in reschedules table
                 // ======================================================
                 await connection.ExecuteAsync(@"
-            UPDATE bookings
-            SET Status = 'Rescheduled',
+                UPDATE bookings
+                SET Status = 'Rescheduled',
                 ModifiedAt = NOW(),
                 ModifiedBy = @ModifiedBy
-            WHERE BookingId = @BookingId",
+                 WHERE BookingId = @BookingId",
                     new
                     {
                         BookingId = oldBookingId,
@@ -647,7 +647,8 @@ namespace ahello_backend.Repositorys.Classes
             int userId,
             int pageNumber,
             int pageSize,
-            string? search)
+            string? search, string? status,
+            DateTime? scheduleDate)
         {
             using var connection = _db.GetConnection();
 
@@ -671,7 +672,17 @@ namespace ahello_backend.Repositorys.Classes
                      ON s.ServiceCategoryId = sc.ServiceCategoryId
 
                 WHERE b.UserId = @UserId
-
+                AND
+                (
+                    @Status IS NULL
+                    OR @Status = ''
+                    OR b.Status = @Status
+                )
+                AND
+                (
+                    @ScheduleDate IS NULL
+                    OR DATE(b.ScheduleDate) = DATE(@ScheduleDate)
+                )
                 AND
                 (
                     @Search IS NULL
@@ -701,7 +712,9 @@ namespace ahello_backend.Repositorys.Classes
                     new
                     {
                         UserId = userId,
-                        Search = search
+                        Search = search,
+                        Status = status,
+                        ScheduleDate = scheduleDate
                     });
 
             var sql = @"
@@ -746,7 +759,18 @@ namespace ahello_backend.Repositorys.Classes
                     ON s.ServiceCategoryId = sc.ServiceCategoryId
 
                 WHERE b.UserId = @UserId
+                AND
+                (
+                    @Status IS NULL
+                    OR @Status = ''
+                    OR b.Status = @Status
+                )
 
+                AND
+                (
+                    @ScheduleDate IS NULL
+                    OR DATE(b.ScheduleDate) = DATE(@ScheduleDate)
+                )
                 AND
                 (
                     @Search IS NULL
@@ -781,6 +805,8 @@ namespace ahello_backend.Repositorys.Classes
                     {
                         UserId = userId,
                         Search = search,
+                        Status = status,
+                        ScheduleDate = scheduleDate,
                         PageSize = pageSize,
                         Offset = (pageNumber - 1) * pageSize
                     });
@@ -797,7 +823,8 @@ namespace ahello_backend.Repositorys.Classes
             int clientId,
             int pageNumber,
             int pageSize,
-            string? search)
+            string? search, string? status,
+            DateTime? scheduleDate)
         {
             using var connection = _db.GetConnection();
 

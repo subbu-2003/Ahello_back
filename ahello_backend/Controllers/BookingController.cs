@@ -204,7 +204,8 @@ namespace ahello_backend.Controllers
             int userId,
             int pageNumber = 1,
             int pageSize = 10,
-            string? search = null)
+            string? search = null, string? status = null,
+            DateTime? scheduleDate = null)
         {
             try
             {
@@ -221,7 +222,8 @@ namespace ahello_backend.Controllers
                     userId,
                     pageNumber,
                     pageSize,
-                    search);
+                    search, status,
+                    scheduleDate);
 
                 return Ok(new
                 {
@@ -243,7 +245,8 @@ namespace ahello_backend.Controllers
             int clientId,
             int pageNumber = 1,
             int pageSize = 10,
-            string? search = null)
+            string? search = null, string? status = null,
+            DateTime? scheduleDate = null)
         {
             try
             {
@@ -260,7 +263,8 @@ namespace ahello_backend.Controllers
                     clientId,
                     pageNumber,
                     pageSize,
-                    search);
+                    search, status,
+                    scheduleDate);
 
                 return Ok(new
                 {

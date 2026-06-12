@@ -211,7 +211,9 @@ namespace ahello_backend.Controllers
         public async Task<IActionResult> GetByUserId(
             int userId,
             int pageNumber = 1,
-            int pageSize = 10)
+            int pageSize = 10,
+            string? status = null,
+            DateTime? createdDate = null)
         {
             try
             {
@@ -219,7 +221,8 @@ namespace ahello_backend.Controllers
                     await _service.GetByUserIdAsync(
                         userId,
                         pageNumber,
-                        pageSize);
+                        pageSize, status,
+                        createdDate);
 
                 return Ok(result);
             }
