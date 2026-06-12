@@ -28,7 +28,7 @@
         public string IntroVideo { get; set; }
 
         public string Status { get; set; }
-
+        public bool IsActive { get; set; } = true;
         public string CreatedBy { get; set; }
 
         public DateTime CreatedAt { get; set; }

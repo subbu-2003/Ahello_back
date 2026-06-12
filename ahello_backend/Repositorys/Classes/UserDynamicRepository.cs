@@ -788,6 +788,7 @@ if (model.Fields != null && model.Fields.Any())
                     ON sc.ServiceCategoryId = s.ServiceCategoryId
 
                 WHERE s.UserId = @UserId
+                AND s.IsActive = 1
                 AND
                 (
                     @Search IS NULL
@@ -830,6 +831,7 @@ if (model.Fields != null && model.Fields.Any())
             ON sc.ServiceCategoryId = s.ServiceCategoryId
 
         WHERE s.UserId = @UserId
+        AND s.IsActive = 1
         AND
         (
             @Search IS NULL
