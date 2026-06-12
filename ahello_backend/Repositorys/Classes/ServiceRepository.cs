@@ -36,6 +36,7 @@ namespace ahello_backend.Repositorys.Classes
                     s.BannerImage,
                     s.IntroVideo,
                     s.Status,
+                    s.IsActive,
                     s.CreatedAt,
                     s.CreatedBy,
                     s.ModifiedAt,
@@ -69,6 +70,7 @@ namespace ahello_backend.Repositorys.Classes
                 s.BannerImage,
                 s.IntroVideo,
                 s.Status,
+                s.IsActive,
                 s.CreatedAt,
                 s.CreatedBy,
                 s.ModifiedAt,
@@ -107,6 +109,7 @@ namespace ahello_backend.Repositorys.Classes
                     BannerImage,
                     IntroVideo,
                     Status,
+                    IsActive,
                     CreatedAt,
                     CreatedBy
                 )
@@ -126,6 +129,7 @@ namespace ahello_backend.Repositorys.Classes
                     @BannerImage,
                     @IntroVideo,
                     @Status,
+                    IFNULL(@IsActive,1),
                     NOW(),
                     @CreatedBy
                 );
@@ -160,6 +164,7 @@ namespace ahello_backend.Repositorys.Classes
                     BannerImage = @BannerImage,
                     IntroVideo = @IntroVideo,
                     Status = @Status,
+                    IsActive = @IsActive,
                     ModifiedAt = NOW(),
                     ModifiedBy = @ModifiedBy
                 WHERE ServiceId = @ServiceId";
@@ -183,6 +188,7 @@ namespace ahello_backend.Repositorys.Classes
                     model.BannerImage,
                     model.IntroVideo,
                     model.Status,
+                    model.IsActive,
                     model.ModifiedBy
                 });
 
@@ -229,6 +235,7 @@ namespace ahello_backend.Repositorys.Classes
             s.BannerImage,
             s.IntroVideo,
             s.Status,
+            s.IsActive,
             s.CreatedAt,
             s.CreatedBy,
             s.ModifiedAt,
@@ -258,7 +265,7 @@ namespace ahello_backend.Repositorys.Classes
             s.ShortDescription,
             s.Duration,
             s.Price,
-
+            s.IsActive,
             u.FullName,
             u.ProfileUrl,
 

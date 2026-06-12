@@ -29,7 +29,7 @@
         public string? IntroVideo { get; set; }           // ← keeps existing URL string
 
         public string Status { get; set; }
-
+        public bool IsActive { get; set; } = true;
         public string CreatedBy { get; set; }
 
         public List<CreateServiceDynamicFieldValue> Fields { get; set; }
