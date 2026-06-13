@@ -428,6 +428,8 @@ namespace ahello_backend.Repositorys.Classes
                 {
                     try
                     {
+                        Console.WriteLine($"[RescheduleEmail] Sending to: {capturedEmail}");
+
                         await _emailRepository.SendRescheduleConfirmationEmailAsync(
                             capturedEmail,
                             capturedName,
@@ -435,10 +437,14 @@ namespace ahello_backend.Repositorys.Classes
                             capturedDate,
                             capturedTime);
 
+                        Console.WriteLine("[RescheduleEmail] Confirmation email sent");
+
                         await _emailRepository.SendMeetingInviteEmailAsync(
                             capturedEmail,
                             capturedName,
                             capturedLink);
+
+                        Console.WriteLine("[RescheduleEmail] Meeting invite email sent");
                     }
                     catch (Exception ex)
                     {
