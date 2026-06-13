@@ -11,11 +11,14 @@
 
         public int ClientId { get; set; }
         public string ClientName { get; set; }
+        public string? ClientEmail { get; set; }
 
         public int ServiceId { get; set; }
 
         public string ServiceTitle { get; set; }
+        public int ServiceCategoryId { get; set; }
 
+        public string? ServiceCategoryName { get; set; }
         public DateTime ScheduleDate { get; set; }
 
         public TimeSpan StartTime { get; set; }
@@ -27,5 +30,9 @@
         public DateTime CreatedAt { get; set; }
 
         public string CreatedBy { get; set; }
+        public DateTime? ModifiedAt { get; set; }
+        public string? ModifiedBy { get; set; }
+
+        public bool AutoReschedule { get; set; }
     }
 }

@@ -6,6 +6,14 @@ namespace ahello_backend.Repositorys.Interfaces
     public interface IBookingRepository
     {
         Task<int> CreateAsync(BookingPost model);
+        Task<int> RescheduleAsync(
+         int oldBookingId,
+         DateTime newDate,
+         TimeSpan newStart,
+         TimeSpan newEnd,
+         int slotId,
+         string rescheduledBy,
+         string reason);
 
         Task<IEnumerable<BookingRead>> GetAllAsync();
 
@@ -18,12 +26,14 @@ namespace ahello_backend.Repositorys.Interfaces
             int userId,
             int pageNumber,
             int pageSize,
-            string? search);
+            string? search, string? status,
+            DateTime? scheduleDate);
         Task<PagedResult<BookingRead>> GetByClientIdAsync(
             int clientId,
             int pageNumber,
             int pageSize,
-            string? search);
+            string? search, string? status,
+            DateTime? scheduleDate);
 
         Task<BookingModalGet> GetBookingModal(int serviceId);
     }

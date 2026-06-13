@@ -46,7 +46,8 @@ namespace ahello_backend.Controllers
                     {
                         result.Value.User.UserId,
                         result.Value.User.Email,
-                        result.Value.User.UserName
+                        result.Value.User.UserName,
+                        result.Value.User.ProfileUrl
                     }
                 }
             });
@@ -90,7 +91,8 @@ namespace ahello_backend.Controllers
                         {
                             result.Value.User.UserId,
                             result.Value.User.Email,
-                            result.Value.User.UserName
+                            result.Value.User.UserName,
+                            result.Value.User.ProfileUrl
                         }
                     }
                 });
@@ -153,7 +155,8 @@ namespace ahello_backend.Controllers
                     {
                         result.Value.User.UserId,
                         result.Value.User.Email,
-                        result.Value.User.UserName
+                        result.Value.User.UserName,
+                        result.Value.User.ProfileUrl
                     }
                 }
             });

@@ -16,19 +16,76 @@ namespace ahello_backend.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create(BookingPost model)
+        public async Task<IActionResult> Create([FromBody] BookingPost model)
         {
             try
             {
                 var id = await _service.CreateAsync(model);
 
-                return Ok(id);
+                return Ok(new
+                {
+                    Message = "Booking created successfully.",
+                    BookingId = id
+                });
             }
-            catch
+            catch (Exception ex)
             {
                 return BadRequest(new
                 {
-                    Message = "Invalid data"
+                    Message = ex.Message
+                });
+            }
+        }
+
+        [HttpPost("{id}/reschedule")]
+        public async Task<IActionResult> Reschedule(
+            int id,
+            [FromBody] RescheduleRequest req)
+        {
+            try
+            {
+                if (id <= 0)
+                    return BadRequest(new { Message = "BookingId is required." });
+
+                if (req == null)
+                    return BadRequest(new { Message = "Request body is required." });
+
+                if (req.NewDate == default)
+                    return BadRequest(new { Message = "NewDate is required." });
+
+                if (req.NewStartTime == default || req.NewEndTime == default)
+                    return BadRequest(new { Message = "NewStartTime and NewEndTime are required." });
+
+                if (req.NewEndTime <= req.NewStartTime)
+                    return BadRequest(new { Message = "NewEndTime must be greater than NewStartTime." });
+
+                if (req.SlotId <= 0)
+                    return BadRequest(new { Message = "SlotId is required." });
+
+                if (req.RescheduledBy <= 0)
+                    return BadRequest(new { Message = "RescheduledBy is required." });
+
+                var newBookingId = await _service.RescheduleAsync(
+                    oldBookingId: id,
+                    newDate: req.NewDate,
+                    newStart: req.NewStartTime,
+                    newEnd: req.NewEndTime,
+                    slotId: req.SlotId,
+                    rescheduledBy: req.RescheduledBy.ToString(),
+                    reason: "Manual");
+
+                return Ok(new
+                {
+                    Message = "Booking rescheduled successfully.",
+                    OldBookingId = id,
+                    NewBookingId = newBookingId
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    Message = ex.Message
                 });
             }
         }
@@ -40,13 +97,17 @@ namespace ahello_backend.Controllers
             {
                 var result = await _service.GetAllAsync();
 
-                return Ok(result);
+                return Ok(new
+                {
+                    Message = "Bookings fetched successfully.",
+                    Data = result
+                });
             }
-            catch
+            catch (Exception ex)
             {
                 return BadRequest(new
                 {
-                    Message = "Something went wrong"
+                    Message = ex.Message
                 });
             }
         }
@@ -56,42 +117,57 @@ namespace ahello_backend.Controllers
         {
             try
             {
-                var result =
-                    await _service.GetByIdAsync(bookingId);
+                if (bookingId <= 0)
+                    return BadRequest(new { Message = "BookingId is required." });
+
+                var result = await _service.GetByIdAsync(bookingId);
 
                 if (result == null)
                 {
                     return NotFound(new
                     {
-                        Message = "Booking not found"
+                        Message = "Booking not found."
                     });
                 }
 
-                return Ok(result);
+                return Ok(new
+                {
+                    Message = "Booking fetched successfully.",
+                    Data = result
+                });
             }
-            catch
+            catch (Exception ex)
             {
                 return BadRequest(new
                 {
-                    Message = "Something went wrong"
+                    Message = ex.Message
                 });
             }
         }
 
         [HttpPut]
-        public async Task<IActionResult> Update(BookingPut model)
+        public async Task<IActionResult> Update([FromBody] BookingPut model)
         {
             try
             {
+                if (model == null)
+                    return BadRequest(new { Message = "Request body is required." });
+
                 var result = await _service.UpdateAsync(model);
 
-                return Ok(result);
+                return Ok(new
+                {
+                    Message = result
+                        ? "Booking updated successfully."
+                        : "Booking update failed.",
+                    Success = result
+                });
             }
-            catch
+            catch (Exception ex)
             {
                 return BadRequest(new
                 {
-                    Message = "Invalid data"
+                    Message = ex.Message
                 });
             }
         }
@@ -101,16 +177,24 @@ namespace ahello_backend.Controllers
         {
             try
             {
-                var result =
-                    await _service.DeleteAsync(bookingId);
+                if (bookingId <= 0)
+                    return BadRequest(new { Message = "BookingId is required." });
 
-                return Ok(result);
+                var result = await _service.DeleteAsync(bookingId);
+
+                return Ok(new
+                {
+                    Message = result
+                        ? "Booking deleted successfully."
+                        : "Booking delete failed.",
+                    Success = result
+                });
             }
-            catch
+            catch (Exception ex)
             {
                 return BadRequest(new
                 {
-                    Message = "Something went wrong"
+                    Message = ex.Message
                 });
             }
         }
@@ -120,24 +204,38 @@ namespace ahello_backend.Controllers
             int userId,
             int pageNumber = 1,
             int pageSize = 10,
-            string? search = null)
+            string? search = null, string? status = null,
+            DateTime? scheduleDate = null)
         {
             try
             {
-                var result =
-                    await _service.GetByUserIdAsync(
-                        userId,
-                        pageNumber,
-                        pageSize,
-                        search);
+                if (userId <= 0)
+                    return BadRequest(new { Message = "UserId is required." });
 
-                return Ok(result);
+                if (pageNumber <= 0)
+                    return BadRequest(new { Message = "PageNumber must be greater than 0." });
+
+                if (pageSize <= 0)
+                    return BadRequest(new { Message = "PageSize must be greater than 0." });
+
+                var result = await _service.GetByUserIdAsync(
+                    userId,
+                    pageNumber,
+                    pageSize,
+                    search, status,
+                    scheduleDate);
+
+                return Ok(new
+                {
+                    Message = "User bookings fetched successfully.",
+                    Data = result
+                });
             }
-            catch
+            catch (Exception ex)
             {
                 return BadRequest(new
                 {
-                    Message = "Something went wrong"
+                    Message = ex.Message
                 });
             }
         }
@@ -147,53 +245,71 @@ namespace ahello_backend.Controllers
             int clientId,
             int pageNumber = 1,
             int pageSize = 10,
-            string? search = null)
+            string? search = null, string? status = null,
+            DateTime? scheduleDate = null)
         {
             try
             {
-                var result =
-                    await _service.GetByClientIdAsync(
-                        clientId,
-                        pageNumber,
-                        pageSize,
-                        search);
+                if (clientId <= 0)
+                    return BadRequest(new { Message = "ClientId is required." });
 
-                return Ok(result);
+                if (pageNumber <= 0)
+                    return BadRequest(new { Message = "PageNumber must be greater than 0." });
+
+                if (pageSize <= 0)
+                    return BadRequest(new { Message = "PageSize must be greater than 0." });
+
+                var result = await _service.GetByClientIdAsync(
+                    clientId,
+                    pageNumber,
+                    pageSize,
+                    search, status,
+                    scheduleDate);
+
+                return Ok(new
+                {
+                    Message = "Client bookings fetched successfully.",
+                    Data = result
+                });
             }
-            catch
+            catch (Exception ex)
             {
                 return BadRequest(new
                 {
-                    Message = "Something went wrong"
+                    Message = ex.Message
                 });
             }
         }
 
         [HttpGet("service/{serviceId}")]
-        public async Task<IActionResult> GetBookingModal(
-            int serviceId)
+        public async Task<IActionResult> GetBookingModal(int serviceId)
         {
             try
             {
-                var result =
-                    await _service.GetBookingModal(
-                        serviceId);
+                if (serviceId <= 0)
+                    return BadRequest(new { Message = "ServiceId is required." });
+
+                var result = await _service.GetBookingModal(serviceId);
 
                 if (result == null)
                 {
                     return NotFound(new
                     {
-                        Message = "Service not found"
+                        Message = "Service not found."
                     });
                 }
 
-                return Ok(result);
+                return Ok(new
+                {
+                    Message = "Booking modal fetched successfully.",
+                    Data = result
+                });
             }
-            catch
+            catch (Exception ex)
             {
                 return BadRequest(new
                 {
-                    Message = "Something went wrong"
+                    Message = ex.Message
                 });
             }
         }

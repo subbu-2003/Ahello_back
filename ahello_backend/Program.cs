@@ -114,6 +114,7 @@ builder.Services.Scan(scan =>
         ))
         .AsImplementedInterfaces()
         .WithScopedLifetime());
+builder.Services.AddSingleton<IEmailRepository, EmailRepository>();
 
 
 // =====================================================
@@ -130,6 +131,7 @@ builder.Services.Scan(scan =>
 
 builder.Services.AddHostedService<
     MeetingReminderBackgroundService>();
+//builder.Services.AddHostedService<NoShowDetectorService>();
 
 // =====================================================
 // BUILD APP

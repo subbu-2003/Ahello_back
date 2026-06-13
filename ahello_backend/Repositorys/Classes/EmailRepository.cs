@@ -1,7 +1,8 @@
 using ahello_backend.Models.Login;
 using ahello_backend.Repositorys.Interfaces;
-using System.Net;
-using System.Net.Mail;
+using MailKit.Net.Smtp;
+using MailKit.Security;
+using MimeKit;
 
 namespace ahello_backend.Repositorys.Classes
 {
@@ -14,28 +15,30 @@ namespace ahello_backend.Repositorys.Classes
             _smtp = smtp;
         }
 
-        // PRIVATE HELPER
-        public async Task SendEmailAsync(string toEmail, string subject, string body)
+        // PRIVATE HELPER — truly async with MailKit
+        private async Task SendEmailAsync(string toEmail, string subject, string body)
         {
-            var mail = new MailMessage
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress(_smtp.DisplayName, _smtp.FromEmail));
+            message.To.Add(MailboxAddress.Parse(toEmail));
+            message.Subject = subject;
+
+            message.Body = new TextPart("html") { Text = body };
+
+            using var client = new SmtpClient();
+
+            // Use StartTls if port 587, Ssl if port 465, None if port 25
+            var secureOption = _smtp.Port switch
             {
-                From = new MailAddress(_smtp.FromEmail, _smtp.DisplayName),
-                Subject = subject,
-                IsBodyHtml = true,
-                Body = body
+                465 => SecureSocketOptions.SslOnConnect,
+                587 => SecureSocketOptions.StartTls,
+                _ => SecureSocketOptions.Auto
             };
 
-            mail.To.Add(toEmail);
-
-            using var smtpClient = new SmtpClient(_smtp.Host, _smtp.Port)
-            {
-                Credentials = new NetworkCredential(_smtp.Username, _smtp.Password),
-                EnableSsl = _smtp.EnableSsl,
-                DeliveryMethod = SmtpDeliveryMethod.Network,
-                UseDefaultCredentials = false
-            };
-
-            await smtpClient.SendMailAsync(mail);
+            await client.ConnectAsync(_smtp.Host, _smtp.Port, secureOption);
+            await client.AuthenticateAsync(_smtp.Username, _smtp.Password);
+            await client.SendAsync(message);
+            await client.DisconnectAsync(true);
         }
 
         public async Task SendLoginOtpEmailAsync(string toEmail, string otp)
@@ -46,12 +49,11 @@ namespace ahello_backend.Repositorys.Classes
     <div style='background:white;padding:20px;border-radius:10px;'>
         <h2>Login OTP</h2>
         <p>Your OTP for login is:</p>
-        <h1 style='color:#2d6cdf;'>{otp}</h1>
-        <p>This OTP is valid for 5 minutes.</p>
-        <p>Please do not share this OTP.</p>
+        <h1 style='color:#005B71;'>{otp}</h1>
+        <p>This OTP is valid for 5 minutes. Do not share it.</p>
         <br/>
         <p>Regards,</p>
-        <strong>Ahello Team</strong>
+        <strong>Ahllo Team</strong>
     </div>
 </body>
 </html>");
@@ -68,19 +70,21 @@ namespace ahello_backend.Repositorys.Classes
         <p>Your meeting has been scheduled. Click below to join:</p>
         <p>
             <a href='{meetingLink}'
-               style='background:#2d6cdf;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;'>
+               style='background:#005B71;color:white;padding:10px 20px;
+                      text-decoration:none;border-radius:5px;'>
                 Join Meeting
             </a>
         </p>
         <br/>
         <p>Regards,</p>
-        <strong>Ahello Team</strong>
+        <strong>Ahllo Team</strong>
     </div>
 </body>
 </html>");
         }
 
-        public async Task SendBookingConfirmationEmailAsync(string toEmail, string clientName, string serviceName, string date, string time)
+        public async Task SendBookingConfirmationEmailAsync(
+            string toEmail, string clientName, string serviceName, string date, string time)
         {
             await SendEmailAsync(toEmail, "Booking Confirmed – " + serviceName, $@"
 <html>
@@ -102,7 +106,73 @@ namespace ahello_backend.Repositorys.Classes
                 <td style='padding:8px;border:1px solid #ddd;'>{time}</td>
             </tr>
         </table>
-        <p>We look forward to seeing you. If you have any questions, feel free to reach out.</p>
+        <p>We look forward to seeing you. Feel free to reach out with any questions.</p>
+        <br/>
+        <p>Regards,</p>
+        <strong>Ahllo Team</strong>
+    </div>
+</body>
+</html>");
+        }
+
+        public async Task SendMeetingReminderEmailAsync(string toEmail, string clientName, DateTime startTime, string meetingLink, int minutesLeft)
+        {
+            await SendEmailAsync(toEmail, "Meeting Reminder - Ahllo", $@"
+<html>
+<body style='margin:0;padding:0;background:#f4f6f9;font-family:Arial,sans-serif;'>
+    <div style='max-width:600px;margin:40px auto;background:#ffffff;border-radius:12px;
+                overflow:hidden;box-shadow:0 4px 10px rgba(0,0,0,0.1);'>
+        <div style='background:#005B71;color:white;padding:25px;text-align:center;'>
+            <h1 style='margin:0;font-size:26px;'>Meeting Reminder</h1>
+        </div>
+        <div style='padding:30px;'>
+            <h2 style='color:#333;'>Hello {clientName},</h2>
+             <p style='font-size:16px;color:#555;line-height:1.6;'>
+            Your meeting starts in <strong style='color:#005B71;'>{minutesLeft} minutes</strong>.
+        </p>
+            <div style='background:#f8f9fc;border-left:5px solid #005B71;padding:20px;
+                        margin-top:25px;border-radius:8px;'>
+                <p style='margin:10px 0;font-size:15px;'>
+                    <strong>Meeting Time:</strong> {startTime:dd MMM yyyy hh:mm tt}
+                </p>
+                <a href='{meetingLink}'
+                   style='display:inline-block;margin-top:10px;background:#005B71;color:white;
+                          padding:12px 20px;text-decoration:none;border-radius:6px;font-weight:bold;'>
+                    Join Meeting
+                </a>
+            </div>
+        </div>
+        <div style='background:#f1f1f1;text-align:center;padding:15px;font-size:13px;color:#888;'>
+            © 2026 Ahllo. All Rights Reserved.
+        </div>
+    </div>
+</body>
+</html>");
+        }
+        public async Task SendRescheduleConfirmationEmailAsync(
+    string toEmail, string clientName, string serviceName, string date, string time)
+        {
+            await SendEmailAsync(toEmail, "Booking Rescheduled – " + serviceName, $@"
+<html>
+<body style='font-family:Arial;padding:20px;background:#f5f5f5;'>
+    <div style='background:white;padding:20px;border-radius:10px;'>
+        <h2>Hi {clientName},</h2>
+        <p>Your booking has been <strong style='color:#005B71;'>rescheduled</strong>. Here are your updated details:</p>
+        <table style='border-collapse:collapse;width:100%;'>
+            <tr>
+                <td style='padding:8px;border:1px solid #ddd;'><strong>Service</strong></td>
+                <td style='padding:8px;border:1px solid #ddd;'>{serviceName}</td>
+            </tr>
+            <tr>
+                <td style='padding:8px;border:1px solid #ddd;'><strong>New Date</strong></td>
+                <td style='padding:8px;border:1px solid #ddd;'>{date}</td>
+            </tr>
+            <tr>
+                <td style='padding:8px;border:1px solid #ddd;'><strong>New Time</strong></td>
+                <td style='padding:8px;border:1px solid #ddd;'>{time}</td>
+            </tr>
+        </table>
+        <p>If you have any questions, feel free to reach out.</p>
         <br/>
         <p>Regards,</p>
         <strong>Ahllo Team</strong>

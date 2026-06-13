@@ -3,6 +3,7 @@
     public class FormTemplatePost
     {
         public int UserId { get; set; }
+        public int ClientId { get; set; }
         public int CreatedBy { get; set; }
 
         public string Title { get; set; }

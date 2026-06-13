@@ -84,5 +84,22 @@ namespace ahello_backend.Controllers
 
             return Ok(data);
         }
+        [HttpPut("{categoryId}/status")]
+        public async Task<IActionResult> UpdateStatus(int categoryId, CategoryStatusUpdateRequest model)
+        {
+            var updated = await _service.UpdateStatusAsync(
+                categoryId,
+                model.IsActive,
+                model.ModifiedBy);
+
+            if (!updated)
+                return NotFound("Category not found");
+
+            return Ok(new
+            {
+                Success = true,
+                Message = "Category status updated successfully"
+            });
+        }
     }
 }

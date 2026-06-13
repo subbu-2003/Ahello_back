@@ -17,11 +17,11 @@ namespace ahello_backend.Repositorys.Classes
         private readonly IServiceRepository _serviceRepository;
 
         public BookingRepository(
-     DbContext db,
-     DbContextConnection dbConn,
-     IUserSlotRepository userSlotRepo,
-     IServiceRepository serviceRepository,
-     IEmailRepository emailRepository)
+         DbContext db,
+         DbContextConnection dbConn,
+         IUserSlotRepository userSlotRepo,
+         IServiceRepository serviceRepository,
+         IEmailRepository emailRepository)
         {
             _db = db;
             _dbConn = dbConn;
@@ -35,7 +35,7 @@ namespace ahello_backend.Repositorys.Classes
             if (model.UserId == model.ClientId)
                 throw new Exception("UserId and ClientId cannot be same.");
 
-            // STEP 1 — PARALLEL READS using TWO separate connections
+            // STEP 1 — PARALLEL READS
             using var clientConn = _dbConn.GetMyConnection();
             using var serviceConn = _dbConn.GetMyConnection();
 
@@ -54,6 +54,11 @@ namespace ahello_backend.Repositorys.Classes
             var client = clientTask.Result;
             var service = serviceTask.Result;
 
+            // ✅ Capture outside try block so they're accessible after commit
+            int bookingId = 0;
+            string meetingLink = string.Empty;
+            DateTime meetingStartTime = default;
+
             // STEP 2 — TRANSACTION WRITES
             using var connection = _dbConn.GetMyConnection();
             await connection.OpenAsync();
@@ -62,23 +67,23 @@ namespace ahello_backend.Repositorys.Classes
             try
             {
                 var bookingSql = @"
-            INSERT INTO bookings
-            (UserId, ClientId, ServiceId, ScheduleDate, StartTime, EndTime, Status, CreatedAt, CreatedBy)
-            VALUES
-            (@UserId, @ClientId, @ServiceId, @ScheduleDate, @StartTime, @EndTime, @Status, NOW(), @CreatedBy);
-            SELECT LAST_INSERT_ID();";
+                INSERT INTO bookings
+                (UserId, ClientId, ServiceId, ScheduleDate, StartTime, EndTime, Status, CreatedAt, CreatedBy)
+                VALUES
+                (@UserId, @ClientId, @ServiceId, @ScheduleDate, @StartTime, @EndTime, @Status, NOW(), @CreatedBy);
+                SELECT LAST_INSERT_ID();";
 
-                var bookingId = await connection.ExecuteScalarAsync<int>(bookingSql, model, tx);
+                bookingId = await connection.ExecuteScalarAsync<int>(bookingSql, model, tx);
 
-                var meetingLink = GenerateMiroTalkLink(bookingId);
-                var meetingStartTime = model.ScheduleDate.Date.Add(model.StartTime);
+                meetingLink = GenerateMiroTalkLink(bookingId);
+                meetingStartTime = model.ScheduleDate.Date.Add(model.StartTime);
                 var meetingEndTime = model.ScheduleDate.Date.Add(model.EndTime);
 
                 await connection.ExecuteAsync(@"
-            INSERT INTO meetings
-            (UserId, BookingId, StartTime, EndTime, MeetingLink, Status, CreatedAt, CreatedBy)
-            VALUES
-            (@UserId, @BookingId, @StartTime, @EndTime, @MeetingLink, 'Pending', NOW(), @CreatedBy);",
+                INSERT INTO meetings
+                (UserId, BookingId, StartTime, EndTime, MeetingLink, Status, CreatedAt, CreatedBy)
+                VALUES
+                (@UserId, @BookingId, @StartTime, @EndTime, @MeetingLink, 'Pending', NOW(), @CreatedBy);",
                     new
                     {
                         model.UserId,
@@ -89,12 +94,11 @@ namespace ahello_backend.Repositorys.Classes
                         model.CreatedBy
                     }, tx);
 
-                // INSERT INTO BOOKEDSLOTS
                 var bookedSlotSql = @"
-            INSERT INTO bookedslots
-            (SlotId, UserId, ServiceId, BookingId, SlotDate, StartTime, EndTime, CreatedAt)
-            VALUES
-            (@SlotId, @UserId, @ServiceId, @BookingId, @SlotDate, @StartTime, @EndTime, NOW())";
+                INSERT INTO bookedslots
+                (SlotId, UserId, ServiceId, BookingId, SlotDate, StartTime, EndTime, CreatedAt)
+                VALUES
+                (@SlotId, @UserId, @ServiceId, @BookingId, @SlotDate, @StartTime, @EndTime, NOW())";
 
                 await connection.ExecuteAsync(bookedSlotSql, new
                 {
@@ -108,26 +112,42 @@ namespace ahello_backend.Repositorys.Classes
                 }, tx);
 
                 await tx.CommitAsync();
-
-                string serviceName = service?.ServiceTitle ?? "the service";
-                string formattedDate = model.ScheduleDate.ToString("dddd, MMMM dd yyyy");
-                string formattedTime = meetingStartTime.ToString(
-                "hh:mm tt",
-                CultureInfo.InvariantCulture);
-
-                await _emailRepository.SendBookingConfirmationEmailAsync(
-                    client.Email, client.FullName, serviceName, formattedDate, formattedTime);
-
-                await _emailRepository.SendMeetingInviteEmailAsync(
-                    client.Email, client.FullName, meetingLink);
-
-                return bookingId;
             }
             catch
             {
                 await tx.RollbackAsync();
                 throw;
             }
+
+            // ✅ Outside try block — runs only after successful commit
+            string clientEmail = client.Email;
+            string clientFullName = client.FullName;
+            string serviceName = service?.ServiceTitle ?? "the service";
+            string formattedDate = model.ScheduleDate.ToString("dddd, MMMM dd yyyy");
+            string formattedTime = meetingStartTime.ToString("hh:mm tt", CultureInfo.InvariantCulture);
+            string capturedMeetingLink = $"{meetingLink}?userId={model.ClientId}&email={Uri.EscapeDataString(clientEmail)}";
+
+            // ✅ Fire-and-forget — singleton EmailRepository is safe
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _emailRepository.SendBookingConfirmationEmailAsync(
+                        clientEmail, clientFullName, serviceName, formattedDate, formattedTime);
+
+                    await _emailRepository.SendMeetingInviteEmailAsync(
+                        clientEmail, clientFullName, capturedMeetingLink);
+
+                    Console.WriteLine($"[Email] Both emails sent to {clientEmail}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[EmailError] {ex.GetType().Name}: {ex.Message}");
+                    Console.WriteLine(ex.StackTrace);
+                }
+            });
+
+            return bookingId;
         }
 
         // MIROTALK LINK GENERATOR
@@ -142,6 +162,304 @@ namespace ahello_backend.Repositorys.Classes
 
             return
                 $"https://ahllo.com/meeting/join/{roomName}";
+        }
+
+
+
+        public async Task<int> RescheduleAsync(
+        int oldBookingId,
+        DateTime newDate,
+        TimeSpan newStart,
+        TimeSpan newEnd,
+        int slotId,
+        string rescheduledBy,
+        string reason)
+        {
+            using var connection = _dbConn.GetMyConnection();
+            await connection.OpenAsync();
+            using var tx = await connection.BeginTransactionAsync();
+
+            try
+            {
+                // ======================================================
+                // 1. Fetch old booking
+                // ======================================================
+                var old = await connection.QueryFirstOrDefaultAsync<BookingRead>(@"
+            SELECT
+                b.BookingId,
+                b.UserId,
+                b.ClientId,
+                b.ServiceId,
+                b.ScheduleDate,
+                b.StartTime,
+                b.EndTime,
+                b.Status,
+                b.CreatedBy,
+                cu.FullName AS ClientName,
+                cu.Email AS ClientEmail,
+                s.ServiceTitle
+            FROM bookings b
+            INNER JOIN users cu ON b.ClientId = cu.UserId
+            INNER JOIN services s ON b.ServiceId = s.ServiceId
+            WHERE b.BookingId = @Id",
+                    new { Id = oldBookingId },
+                    tx);
+
+                if (old == null)
+                    throw new Exception("Booking not found.");
+
+                if (old.Status == "Cancelled" || old.Status == "Rejected")
+                    throw new Exception("Cancelled or rejected booking cannot be rescheduled.");
+
+                // ======================================================
+                // 2. Check selected slot is still free
+                // This protects other users from double booking
+                // ======================================================
+                var alreadyBooked = await connection.ExecuteScalarAsync<int>(@"
+                SELECT COUNT(1)
+                FROM bookedslots
+                WHERE SlotId = @SlotId
+                AND SlotDate = @SlotDate
+                AND StartTime = @StartTime
+                AND EndTime = @EndTime",
+                    new
+                    {
+                        SlotId = slotId,
+                        SlotDate = newDate.Date,
+                        StartTime = newStart,
+                        EndTime = newEnd
+                    },
+                    tx);
+
+                if (alreadyBooked > 0)
+                    throw new Exception("Selected slot is already booked by someone else.");
+
+                // ======================================================
+                // 3. Mark old meeting as Rescheduled
+                // ======================================================
+                await connection.ExecuteAsync(@"
+                UPDATE meetings
+                SET Status = 'Rescheduled',
+                ModifiedAt = NOW()
+                WHERE BookingId = @BookingId",
+                    new { BookingId = oldBookingId },
+                    tx);
+
+                // ======================================================
+                // 4. Mark old booking as Rescheduled
+                // For auto no-show, reason is stored in reschedules table
+                // ======================================================
+                await connection.ExecuteAsync(@"
+                UPDATE bookings
+                SET Status = 'Rescheduled',
+                ModifiedAt = NOW(),
+                ModifiedBy = @ModifiedBy
+                 WHERE BookingId = @BookingId",
+                    new
+                    {
+                        BookingId = oldBookingId,
+                        ModifiedBy = rescheduledBy
+                    },
+                    tx);
+
+                // ======================================================
+                // 5. Create new booking
+                // ======================================================
+                var newBookingId = await connection.ExecuteScalarAsync<int>(@"
+            INSERT INTO bookings
+            (
+                UserId,
+                ClientId,
+                ServiceId,
+                ScheduleDate,
+                StartTime,
+                EndTime,
+                Status,
+                CreatedAt,
+                CreatedBy
+            )
+            VALUES
+            (
+                @UserId,
+                @ClientId,
+                @ServiceId,
+                @ScheduleDate,
+                @StartTime,
+                @EndTime,
+                'Pending',
+                NOW(),
+                @CreatedBy
+            );
+            SELECT LAST_INSERT_ID();",
+                    new
+                    {
+                        old.UserId,
+                        old.ClientId,
+                        old.ServiceId,
+                        ScheduleDate = newDate.Date,
+                        StartTime = newStart,
+                        EndTime = newEnd,
+                        CreatedBy = rescheduledBy
+                    },
+                    tx);
+
+                // ======================================================
+                // 6. Create fresh meeting link
+                // ======================================================
+                var newMeetingLink = GenerateMiroTalkLink(newBookingId);
+                var newMeetingStart = newDate.Date.Add(newStart);
+                var newMeetingEnd = newDate.Date.Add(newEnd);
+
+                await connection.ExecuteAsync(@"
+            INSERT INTO meetings
+            (
+                UserId,
+                BookingId,
+                StartTime,
+                EndTime,
+                MeetingLink,
+                Status,
+                CreatedAt,
+                CreatedBy
+            )
+            VALUES
+            (
+                @UserId,
+                @BookingId,
+                @StartTime,
+                @EndTime,
+                @MeetingLink,
+                'Pending',
+                NOW(),
+                @CreatedBy
+            );",
+                    new
+                    {
+                        old.UserId,
+                        BookingId = newBookingId,
+                        StartTime = newMeetingStart,
+                        EndTime = newMeetingEnd,
+                        MeetingLink = newMeetingLink,
+                        CreatedBy = rescheduledBy
+                    },
+                    tx);
+
+                // ======================================================
+                // 7. Insert new booked slot
+                // ======================================================
+                await connection.ExecuteAsync(@"
+            INSERT INTO bookedslots
+            (
+                SlotId,
+                UserId,
+                ServiceId,
+                BookingId,
+                SlotDate,
+                StartTime,
+                EndTime,
+                CreatedAt
+            )
+            VALUES
+            (
+                @SlotId,
+                @UserId,
+                @ServiceId,
+                @BookingId,
+                @SlotDate,
+                @StartTime,
+                @EndTime,
+                NOW()
+            )",
+                    new
+                    {
+                        SlotId = slotId,
+                        old.UserId,
+                        old.ServiceId,
+                        BookingId = newBookingId,
+                        SlotDate = newDate.Date,
+                        StartTime = newStart,
+                        EndTime = newEnd
+                    },
+                    tx);
+
+                // ======================================================
+                // 8. Insert reschedule history
+                // reason = Manual or NoShow
+                // ======================================================
+                await connection.ExecuteAsync(@"
+            INSERT INTO reschedules
+            (
+                OldBookingId,
+                NewBookingId,
+                Reason,
+                RescheduledBy,
+                CreatedAt
+            )
+            VALUES
+            (
+                @OldBookingId,
+                @NewBookingId,
+                @Reason,
+                @RescheduledBy,
+                NOW()
+            )",
+                    new
+                    {
+                        OldBookingId = oldBookingId,
+                        NewBookingId = newBookingId,
+                        Reason = reason,
+                        RescheduledBy = rescheduledBy
+                    },
+                    tx);
+
+                await tx.CommitAsync();
+
+                // ======================================================
+                // 9. Send email after commit
+                // ======================================================
+                string capturedEmail = old.ClientEmail ?? "";
+                string capturedName = old.ClientName ?? "Client";
+                string capturedService = old.ServiceTitle ?? "the service";
+                string capturedDate = newDate.ToString("dddd, MMMM dd yyyy");
+                string capturedTime = newMeetingStart.ToString("hh:mm tt", CultureInfo.InvariantCulture);
+                string capturedLink = $"{newMeetingLink}?userId={old.ClientId}&email={Uri.EscapeDataString(capturedEmail)}";
+
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        Console.WriteLine($"[RescheduleEmail] Sending to: {capturedEmail}");
+
+                        await _emailRepository.SendRescheduleConfirmationEmailAsync(
+                            capturedEmail,
+                            capturedName,
+                            capturedService,
+                            capturedDate,
+                            capturedTime);
+
+                        Console.WriteLine("[RescheduleEmail] Confirmation email sent");
+
+                        await _emailRepository.SendMeetingInviteEmailAsync(
+                            capturedEmail,
+                            capturedName,
+                            capturedLink);
+
+                        Console.WriteLine("[RescheduleEmail] Meeting invite email sent");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(
+                            $"[RescheduleEmailError] OldBookingId:{oldBookingId} NewBookingId:{newBookingId} - {ex.Message}");
+                    }
+                });
+
+                return newBookingId;
+            }
+            catch
+            {
+                await tx.RollbackAsync();
+                throw;
+            }
         }
 
 
@@ -335,7 +653,8 @@ namespace ahello_backend.Repositorys.Classes
             int userId,
             int pageNumber,
             int pageSize,
-            string? search)
+            string? search, string? status,
+            DateTime? scheduleDate)
         {
             using var connection = _db.GetConnection();
 
@@ -355,9 +674,21 @@ namespace ahello_backend.Repositorys.Classes
 
                 INNER JOIN services s
                     ON b.ServiceId = s.ServiceId
+                LEFT JOIN servicecategorydynamic sc
+                     ON s.ServiceCategoryId = sc.ServiceCategoryId
 
                 WHERE b.UserId = @UserId
-
+                AND
+                (
+                    @Status IS NULL
+                    OR @Status = ''
+                    OR b.Status = @Status
+                )
+                AND
+                (
+                    @ScheduleDate IS NULL
+                    OR DATE(b.ScheduleDate) = DATE(@ScheduleDate)
+                )
                 AND
                 (
                     @Search IS NULL
@@ -377,6 +708,8 @@ namespace ahello_backend.Repositorys.Classes
 
                     OR b.Status
                         LIKE CONCAT('%', @Search, '%')
+                    OR sc.ServiceCategoryName
+                        LIKE CONCAT('%', @Search, '%')
                 );";
 
             var totalCount =
@@ -385,7 +718,9 @@ namespace ahello_backend.Repositorys.Classes
                     new
                     {
                         UserId = userId,
-                        Search = search
+                        Search = search,
+                        Status = status,
+                        ScheduleDate = scheduleDate
                     });
 
             var sql = @"
@@ -403,7 +738,8 @@ namespace ahello_backend.Repositorys.Classes
 
                     b.ServiceId,
                     s.ServiceTitle,
-
+                    s.ServiceCategoryId,
+                    sc.ServiceCategoryName,
                     b.ScheduleDate,
                     b.StartTime,
                     b.EndTime,
@@ -425,9 +761,22 @@ namespace ahello_backend.Repositorys.Classes
 
                 INNER JOIN services s
                     ON b.ServiceId = s.ServiceId
+                LEFT JOIN servicecategorydynamic sc
+                    ON s.ServiceCategoryId = sc.ServiceCategoryId
 
                 WHERE b.UserId = @UserId
+                AND
+                (
+                    @Status IS NULL
+                    OR @Status = ''
+                    OR b.Status = @Status
+                )
 
+                AND
+                (
+                    @ScheduleDate IS NULL
+                    OR DATE(b.ScheduleDate) = DATE(@ScheduleDate)
+                )
                 AND
                 (
                     @Search IS NULL
@@ -447,6 +796,8 @@ namespace ahello_backend.Repositorys.Classes
 
                     OR b.Status
                         LIKE CONCAT('%', @Search, '%')
+                    OR sc.ServiceCategoryName
+                        LIKE CONCAT('%', @Search, '%')
                 )
 
                 ORDER BY b.BookingId DESC
@@ -460,6 +811,8 @@ namespace ahello_backend.Repositorys.Classes
                     {
                         UserId = userId,
                         Search = search,
+                        Status = status,
+                        ScheduleDate = scheduleDate,
                         PageSize = pageSize,
                         Offset = (pageNumber - 1) * pageSize
                     });
@@ -476,7 +829,8 @@ namespace ahello_backend.Repositorys.Classes
             int clientId,
             int pageNumber,
             int pageSize,
-            string? search)
+            string? search, string? status,
+            DateTime? scheduleDate)
         {
             using var connection = _db.GetConnection();
 
@@ -496,6 +850,8 @@ namespace ahello_backend.Repositorys.Classes
 
                 INNER JOIN services s
                     ON b.ServiceId = s.ServiceId
+                LEFT JOIN servicecategorydynamic sc
+                     ON s.ServiceCategoryId = sc.ServiceCategoryId
 
                 WHERE b.ClientId = @ClientId
 
@@ -517,6 +873,8 @@ namespace ahello_backend.Repositorys.Classes
                         LIKE CONCAT('%', @Search, '%')
 
                     OR b.Status
+                        LIKE CONCAT('%', @Search, '%')
+                    OR sc.ServiceCategoryName
                         LIKE CONCAT('%', @Search, '%')
                 );";
 
@@ -544,7 +902,8 @@ namespace ahello_backend.Repositorys.Classes
 
                     b.ServiceId,
                     s.ServiceTitle,
-
+                    s.ServiceCategoryId,
+                    sc.ServiceCategoryName,
                     b.ScheduleDate,
                     b.StartTime,
                     b.EndTime,
@@ -566,8 +925,21 @@ namespace ahello_backend.Repositorys.Classes
 
                 INNER JOIN services s
                     ON b.ServiceId = s.ServiceId
-
+                LEFT JOIN servicecategorydynamic sc
+                     ON s.ServiceCategoryId = sc.ServiceCategoryId
                 WHERE b.ClientId = @ClientId
+                AND
+                (
+                    @Status IS NULL
+                    OR @Status = ''
+                    OR b.Status = @Status
+                )
+
+                AND
+                (
+                    @ScheduleDate IS NULL
+                    OR DATE(b.ScheduleDate) = DATE(@ScheduleDate)
+                )
 
                 AND
                 (
@@ -588,6 +960,8 @@ namespace ahello_backend.Repositorys.Classes
 
                     OR b.Status
                         LIKE CONCAT('%', @Search, '%')
+                    OR sc.ServiceCategoryName
+                        LIKE CONCAT('%', @Search, '%')
                 )
 
                 ORDER BY b.BookingId DESC
@@ -601,6 +975,8 @@ namespace ahello_backend.Repositorys.Classes
                     {
                         ClientId = clientId,
                         Search = search,
+                        Status = status,
+                        ScheduleDate = scheduleDate,
                         PageSize = pageSize,
                         Offset = (pageNumber - 1) * pageSize
                     });

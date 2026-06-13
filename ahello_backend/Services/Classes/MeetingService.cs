@@ -28,8 +28,8 @@ namespace ahello_backend.Services.Classes
             return await _repo.GetByRoomNameAsync(roomName);
         }
 
-        public async Task<PagedResult<Meeting>> GetByUserIdAsync( int userId,int pageNumber,int pageSize)
-            => await _repo.GetByUserIdAsync(userId,pageNumber,pageSize);
+        public async Task<PagedResult<Meeting>> GetByUserIdAsync(int userId,int pageNumber,int pageSize,string? status,DateTime? startDate)
+            => await _repo.GetByUserIdAsync( userId,pageNumber,pageSize, status,startDate);
 
         public async Task<int> CreateAsync(MeetingPost model)
             => await _repo.CreateAsync(model);
@@ -41,36 +41,22 @@ namespace ahello_backend.Services.Classes
             => await _repo.DeleteAsync(meetingId);
         public async Task<bool> SendMeetingReminderAsync()
         {
-            var meetings = await _repo.GetAllAsync();
-
+            // ✅ Only fetch meetings that actually need a reminder — DB-filtered
+            var meetings = await _repo.GetPendingRemindersAsync();
             var now = DateTime.Now;
 
             foreach (var meeting in meetings)
             {
-                // ✅ Skip completed meetings
-                if (meeting.Status == "Completed")
-                    continue;
+                int minutesLeft = (int)Math.Round((meeting.StartTime - now).TotalMinutes);
 
-                // ✅ Skip already sent reminders
-                if (meeting.ReminderSent)
-                    continue;
+                // ✅ Mark FIRST — prevents double-send if job ticks again before email completes
+                await _repo.UpdateReminderSentAsync(meeting.MeetingId);
 
-                // ✅ Time window: 10 mins to 5 mins before start
-                var fromTime = meeting.StartTime.AddMinutes(-10);
-                var toTime = meeting.StartTime.AddMinutes(-5);
-
-                if (now >= fromTime && now <= toTime)
-                {
-                    var sent = await _repo.SendMeetingReminderMailAsync(meeting);
-
-                    if (sent)
-                    {
-                        await _repo.UpdateReminderSentAsync(meeting.MeetingId);
-                    }
-                }
+                await _repo.SendMeetingReminderMailAsync(meeting, minutesLeft);
             }
 
             return true;
         }
+
     }
 }

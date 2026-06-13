@@ -5,7 +5,7 @@ namespace ahello_backend.Models.Form
     public class FormTemplatePut
     {
         public int UserId { get; set; }
-
+        public int ClientId { get; set; }
         public string Title { get; set; }
 
         public string Description { get; set; }

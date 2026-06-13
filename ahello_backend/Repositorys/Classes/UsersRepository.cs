@@ -229,7 +229,8 @@ namespace ahello_backend.Repositorys.Classes
                 LEFT JOIN reviews r
                     ON r.BookingId = b.BookingId
 
-                WHERE
+                WHERE s.IsActive = 1
+                AND
                 (
                     @search IS NULL
                     OR LOWER(u.FullName)
@@ -245,8 +246,13 @@ namespace ahello_backend.Repositorys.Classes
                         LIKE LOWER(CONCAT('%', @search, '%'))
                      
                       
-                      OR LOWER(sc.ServiceCategoryName)
-                     LIKE LOWER(CONCAT('%', @search, '%'))
+                     OR s.ServiceCategoryId IN
+                    (
+                        SELECT ServiceCategoryId
+                        FROM servicecategorydynamic
+                        WHERE LOWER(ServiceCategoryName)
+                        LIKE LOWER(CONCAT('%', @search, '%'))
+                    )
                 )
 
                 GROUP BY
@@ -284,7 +290,8 @@ namespace ahello_backend.Repositorys.Classes
                   LEFT JOIN servicecategorydynamic sc
                      ON sc.ServiceCategoryId = s.ServiceCategoryId
 
-                WHERE
+               WHERE s.IsActive = 1
+               AND
                 (
                     @search IS NULL
                     OR LOWER(u.FullName)
@@ -363,56 +370,65 @@ namespace ahello_backend.Repositorys.Classes
             };
         }
         public async Task<SearchResultDto> SearchUserServicesAsync(
-      string? keyword,
-      int pageNumber,
-      int pageSize)
+          string? keyword,
+          int pageNumber,
+          int pageSize)
         {
             using var conn = _db.GetConnection();
             var sql = @"
--- Result 1: Services (match on service fields only)
-SELECT
-    u.FullName,
-    c.CategoryName,
-    st.ServiceTypeName,
-    sc.ServiceCategoryName,
-    s.ServiceTitle,
-    s.Price
-FROM services s
-INNER JOIN users u ON u.UserId = s.UserId
-LEFT JOIN categories c ON c.CategoryId = u.CategoryId
-LEFT JOIN servicetypes st ON st.ServiceTypeId = s.ServiceTypeId
-LEFT JOIN servicecategorydynamic sc ON sc.ServiceCategoryId = s.ServiceCategoryId
-WHERE @Keyword IS NULL
-   OR LOWER(s.ServiceTitle) LIKE LOWER(CONCAT('%', @Keyword, '%'))
-   OR LOWER(sc.ServiceCategoryName) LIKE LOWER(CONCAT('%', @Keyword, '%'))
-   OR LOWER(st.ServiceTypeName) LIKE LOWER(CONCAT('%', @Keyword, '%'))
-ORDER BY s.ServiceId DESC
-LIMIT @PageSize OFFSET @Offset;
+                -- Result 1: Services (match on service fields only)
+                SELECT
+                    u.FullName,
+                    c.CategoryName,
+                    st.ServiceTypeName,
+                    sc.ServiceCategoryName,
+                    s.ServiceTitle,
+                    s.Price
+                FROM services s
+                INNER JOIN users u ON u.UserId = s.UserId
+                LEFT JOIN categories c ON c.CategoryId = u.CategoryId
+                LEFT JOIN servicetypes st ON st.ServiceTypeId = s.ServiceTypeId
+                LEFT JOIN servicecategorydynamic sc ON sc.ServiceCategoryId = s.ServiceCategoryId
+                WHERE s.IsActive = 1
+                AND
+                (
+                   @Keyword IS NULL
+                   OR LOWER(s.ServiceTitle) LIKE LOWER(CONCAT('%', @Keyword, '%'))
+                   OR LOWER(sc.ServiceCategoryName) LIKE LOWER(CONCAT('%', @Keyword, '%'))
+                   OR LOWER(st.ServiceTypeName) LIKE LOWER(CONCAT('%', @Keyword, '%'))
+                )
+                ORDER BY s.ServiceId DESC
+                LIMIT @PageSize OFFSET @Offset;
 
--- Result 2: Experts (one row per expert)
-SELECT
-    u.FullName,
-    MAX(sc.ServiceCategoryName) AS ServiceCategoryName
-FROM services s
-INNER JOIN users u ON u.UserId = s.UserId
-LEFT JOIN servicecategorydynamic sc ON sc.ServiceCategoryId = s.ServiceCategoryId
-WHERE @Keyword IS NOT NULL
-  AND LOWER(u.FullName) LIKE LOWER(CONCAT('%', @Keyword, '%'))
-GROUP BY u.UserId, u.FullName
-LIMIT 5;
+                -- Result 2: Experts (one row per expert)
+                SELECT
+                    u.FullName,
+                    MAX(sc.ServiceCategoryName) AS ServiceCategoryName
+                FROM services s
+                INNER JOIN users u ON u.UserId = s.UserId
+                LEFT JOIN servicecategorydynamic sc ON sc.ServiceCategoryId = s.ServiceCategoryId
+                WHERE s.IsActive = 1
+                AND @Keyword IS NOT NULL
+                AND LOWER(u.FullName) LIKE LOWER(CONCAT('%', @Keyword, '%'))
+                GROUP BY u.UserId, u.FullName
+                LIMIT 5;
 
--- Result 3: Total count for services
-SELECT COUNT(*)
-FROM services s
-INNER JOIN users u ON u.UserId = s.UserId
-LEFT JOIN categories c ON c.CategoryId = u.CategoryId
-LEFT JOIN servicetypes st ON st.ServiceTypeId = s.ServiceTypeId
-LEFT JOIN servicecategorydynamic sc ON sc.ServiceCategoryId = s.ServiceCategoryId
-WHERE @Keyword IS NULL
-   OR LOWER(s.ServiceTitle) LIKE LOWER(CONCAT('%', @Keyword, '%'))
-   OR LOWER(sc.ServiceCategoryName) LIKE LOWER(CONCAT('%', @Keyword, '%'))
-   OR LOWER(st.ServiceTypeName) LIKE LOWER(CONCAT('%', @Keyword, '%'));
-";
+                -- Result 3: Total count for services
+                SELECT COUNT(*)
+                FROM services s
+                INNER JOIN users u ON u.UserId = s.UserId
+                LEFT JOIN categories c ON c.CategoryId = u.CategoryId
+                LEFT JOIN servicetypes st ON st.ServiceTypeId = s.ServiceTypeId
+                LEFT JOIN servicecategorydynamic sc ON sc.ServiceCategoryId = s.ServiceCategoryId
+                WHERE s.IsActive = 1
+                AND
+                (
+                   @Keyword IS NULL
+                   OR LOWER(s.ServiceTitle) LIKE LOWER(CONCAT('%', @Keyword, '%'))
+                   OR LOWER(sc.ServiceCategoryName) LIKE LOWER(CONCAT('%', @Keyword, '%'))
+                   OR LOWER(st.ServiceTypeName) LIKE LOWER(CONCAT('%', @Keyword, '%'))
+                )
+                ";
 
             var multi = await conn.QueryMultipleAsync(sql, new
             {
