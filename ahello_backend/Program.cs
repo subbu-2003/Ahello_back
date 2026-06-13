@@ -131,7 +131,7 @@ builder.Services.AddSingleton<IEmailRepository, EmailRepository>();
 
 builder.Services.AddHostedService<
     MeetingReminderBackgroundService>();
-builder.Services.AddHostedService<NoShowDetectorService>();
+//builder.Services.AddHostedService<NoShowDetectorService>();
 
 // =====================================================
 // BUILD APP

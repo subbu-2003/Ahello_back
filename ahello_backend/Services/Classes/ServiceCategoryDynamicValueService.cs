@@ -50,5 +50,13 @@ namespace ahello_backend.Services.Classes
             return await _repository.GetByIdAsync(
                 serviceCategoryId);
         }
+        public async Task<bool> UpdateStatusAsync(
+        int serviceCategoryId,
+        ServiceCategoryStatusUpdate model)
+        {
+            return await _repository.UpdateStatusAsync(
+                serviceCategoryId,
+                model);
+        }
     }
 }

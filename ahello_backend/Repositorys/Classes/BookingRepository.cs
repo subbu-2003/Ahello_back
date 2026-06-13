@@ -428,6 +428,8 @@ namespace ahello_backend.Repositorys.Classes
                 {
                     try
                     {
+                        Console.WriteLine($"[RescheduleEmail] Sending to: {capturedEmail}");
+
                         await _emailRepository.SendRescheduleConfirmationEmailAsync(
                             capturedEmail,
                             capturedName,
@@ -435,10 +437,14 @@ namespace ahello_backend.Repositorys.Classes
                             capturedDate,
                             capturedTime);
 
+                        Console.WriteLine("[RescheduleEmail] Confirmation email sent");
+
                         await _emailRepository.SendMeetingInviteEmailAsync(
                             capturedEmail,
                             capturedName,
                             capturedLink);
+
+                        Console.WriteLine("[RescheduleEmail] Meeting invite email sent");
                     }
                     catch (Exception ex)
                     {
@@ -922,6 +928,18 @@ namespace ahello_backend.Repositorys.Classes
                 LEFT JOIN servicecategorydynamic sc
                      ON s.ServiceCategoryId = sc.ServiceCategoryId
                 WHERE b.ClientId = @ClientId
+                AND
+                (
+                    @Status IS NULL
+                    OR @Status = ''
+                    OR b.Status = @Status
+                )
+
+                AND
+                (
+                    @ScheduleDate IS NULL
+                    OR DATE(b.ScheduleDate) = DATE(@ScheduleDate)
+                )
 
                 AND
                 (
@@ -957,6 +975,8 @@ namespace ahello_backend.Repositorys.Classes
                     {
                         ClientId = clientId,
                         Search = search,
+                        Status = status,
+                        ScheduleDate = scheduleDate,
                         PageSize = pageSize,
                         Offset = (pageNumber - 1) * pageSize
                     });

@@ -1,9 +1,8 @@
-﻿using ahello_backend.DbContexts;
+using ahello_backend.DbContexts;
 using ahello_backend.Models.Form;
 using ahello_backend.Models.Forms;
 using ahello_backend.Repositorys.Interfaces;
 using Dapper;
-using MySqlX.XDevAPI;
 
 namespace ahello_backend.Repositorys.Classes
 {
@@ -16,13 +15,15 @@ namespace ahello_backend.Repositorys.Classes
             _db = db;
         }
 
-        public async Task<IEnumerable<FormDynamicGetResponse>> GetAllAsync()
+        public async Task<IEnumerable<FormDynamicGetResponse>>
+            GetAllAsync()
         {
             using var connection = _db.GetConnection();
 
             var forms = (await connection.QueryAsync<FormDynamicGetResponse>(
-           @"SELECT * FROM forms ORDER BY FormId DESC"))
-          .ToList();
+                @"SELECT *
+                  FROM forms
+                  ORDER BY FormId DESC")).ToList();
 
             foreach (var form in forms)
             {
@@ -116,53 +117,55 @@ namespace ahello_backend.Repositorys.Classes
             return form;
         }
 
-        public async Task<IEnumerable<FormDynamicGetResponse>>
-            GetByUserIdAsync(int userId)
+        public async Task<IEnumerable<FormDynamicGetResponse>> GetByUserIdAsync(int userId)
         {
             using var connection = _db.GetConnection();
 
-            var forms = (await connection.QueryAsync <FormDynamicGetResponse>(
+            var forms = (await connection.QueryAsync<FormDynamicGetResponse>(
                 @"SELECT *
-                  FROM forms
-                  WHERE UserId = @UserId 
-                  ORDER BY FormId DESC",
+          FROM forms
+          WHERE UserId = @UserId
+            AND IsActive = 1
+          ORDER BY FormId DESC",
                 new { UserId = userId })).ToList();
 
             foreach (var form in forms)
             {
                 var fields = await connection.QueryAsync<FormDynamicFieldResponse>(
                     @"SELECT
-                    ff.FormFieldId,
-                    ff.FieldName,
-                    ff.FieldCode,
-                    ff.Placeholder,
-                    ff.Description,
-                    ff.IsRequired,
-                    ff.DataTypeId,
-                    dt.DataTypeName
-                FROM formfields ff
-                LEFT JOIN datatypes dt
-                    ON ff.DataTypeId = dt.DataTypeId
-                WHERE ff.FormId = @FormId
-                ORDER BY ff.FormFieldId",
+                ff.FormFieldId,
+                ff.FieldName,
+                ff.FieldCode,
+                ff.Placeholder,
+                ff.Description,
+                ff.IsRequired,
+                ff.DataTypeId,
+                ff.IsActive,
+                dt.DataTypeName
+              FROM formfields ff
+              LEFT JOIN datatypes dt
+                  ON ff.DataTypeId = dt.DataTypeId
+              WHERE ff.FormId = @FormId
+                AND ff.IsActive = 1
+              ORDER BY ff.FormFieldId",
                     new { FormId = form.FormId });
 
                 form.Fields = fields.ToList();
 
                 var dropdowns = await connection.QueryAsync<FormDropdownOptionResponse>(
                     @"SELECT DISTINCT
-                        FormDropDownId,
-                        FormFieldId,
-                        FormId,
-                        OptionValue,
-                        OptionLabel,
-                        IsActive
-                    FROM formdropdownoptions
-                    WHERE FormId = @FormId",
+                FormDropDownId,
+                FormFieldId,
+                FormId,
+                OptionValue,
+                OptionLabel,
+                IsActive
+              FROM formdropdownoptions
+              WHERE FormId = @FormId
+                AND IsActive = 1",
                     new { FormId = form.FormId });
 
-                form.DropdownOptions =
-                    dropdowns.ToList();
+                form.DropdownOptions = dropdowns.ToList();
             }
 
             return forms;
@@ -171,46 +174,24 @@ namespace ahello_backend.Repositorys.Classes
         public async Task<int> CreateAsync(FormDynamicPost model)
         {
             using var connection = _db.GetConnection();
-
             connection.Open();
-
             using var tx = connection.BeginTransaction();
 
             try
             {
                 var formSql = @"
             INSERT INTO forms
-            (
-                UserId,
-                ClientId,
-                Title,
-                Description,
-                IsActive,
-                CreatedAt,
-                CreatedBy
-            )
+            (UserId, Title, Description, IsActive, CreatedAt, CreatedBy)
             VALUES
-            (
-                @UserId,
-                @ClientId,
-                @Title,
-                @Description,
-                @IsActive,
-                NOW(),
-                @CreatedBy
-            );
-
+            (@UserId, @Title, @Description, @IsActive, NOW(), @CreatedBy);
             SELECT LAST_INSERT_ID();";
 
-                var formId = await connection.ExecuteScalarAsync<int>(
-                    formSql,
-                    model,
-                    tx);
+                var formId = await connection.ExecuteScalarAsync<int>(formSql, model, tx);
 
-                // Save Field Values
-                if (model.Fields != null && model.Fields.Any())
+                // NO if check — directly loop
+                foreach (var field in model.Fields)
                 {
-                    var fieldSql = @"
+                    await connection.ExecuteAsync(@"
                 INSERT INTO formfieldvalues
                 (
                     FormId,
@@ -230,71 +211,57 @@ namespace ahello_backend.Repositorys.Classes
                     @CreatedBy,
                     CURRENT_TIMESTAMP
                 FROM formfields ff
-                WHERE ff.FormFieldId = @FormFieldId;";
-
-                    foreach (var field in model.Fields)
-                    {
-                        await connection.ExecuteAsync(
-                            fieldSql,
-                            new
-                            {
-                                FormId = formId,
-                                FormFieldId = field.FormFieldId,
-                                FieldValue = field.FieldValue,
-                                model.CreatedBy
-                            },
-                            tx);
-                    }
-
-                    // Save Dropdown Options
-                    var dropdownSql = @"
-                INSERT INTO formdropdownoptions
-                (
-                    FormFieldId,
-                    FormId,
-                    OptionValue,
-                    OptionLabel,
-                    IsActive,
-                    CreatedDate,
-                    CreatedBy
-                )
-                VALUES
-                (
-                    @FormFieldId,
-                    @FormId,
-                    @OptionValue,
-                    @OptionLabel,
-                    @IsActive,
-                    NOW(),
-                    @CreatedBy
-                );";
-
-                    foreach (var field in model.Fields)
-                    {
-                        if (field.DropDownOptions != null &&
-                            field.DropDownOptions.Any())
+                WHERE ff.FormFieldId = @FormFieldId;",
+                        new
                         {
-                            foreach (var option in field.DropDownOptions)
-                            {
-                                await connection.ExecuteAsync(
-                                    dropdownSql,
-                                    new
-                                    {
-                                        FormFieldId = field.FormFieldId,
-                                        FormId = formId,
-                                        option.OptionValue,
-                                        option.OptionLabel,
-                                        option.IsActive,
-                                        model.CreatedBy
-                                    },
-                                    tx);
-                            }
+                            FormId = formId,
+                            FormFieldId = field.FormFieldId,
+                            FieldValue = field.FieldValue,
+                            CreatedBy = model.CreatedBy.ToString()
+                        },
+                        tx);
+
+                    // Dropdown
+                    if (field.DropDownOptions != null && field.DropDownOptions.Any())
+                    {
+                        foreach (var option in field.DropDownOptions)
+                        {
+                            await connection.ExecuteAsync(@"
+                        INSERT INTO formdropdownoptions
+                        (
+                            FormFieldId,
+                            FormId,
+                            OptionValue,
+                            OptionLabel,
+                            IsActive,
+                            CreatedDate,
+                            CreatedBy
+                        )
+                        VALUES
+                        (
+                            @FormFieldId,
+                            @FormId,
+                            @OptionValue,
+                            @OptionLabel,
+                            @IsActive,
+                            NOW(),
+                            @CreatedBy
+                        );",
+                                new
+                                {
+                                    FormFieldId = field.FormFieldId,
+                                    FormId = formId,
+                                    option.OptionValue,
+                                    option.OptionLabel,
+                                    option.IsActive,
+                                    CreatedBy = model.CreatedBy.ToString()
+                                },
+                                tx);
                         }
                     }
                 }
 
                 tx.Commit();
-
                 return formId;
             }
             catch
@@ -322,7 +289,6 @@ namespace ahello_backend.Repositorys.Classes
                     UPDATE forms
                     SET
                         UserId = @UserId,
-                        ClientId = @ClientId,
                         Title = @Title,
                         Description = @Description,
                         IsActive = @IsActive,
@@ -337,7 +303,6 @@ namespace ahello_backend.Repositorys.Classes
                     {
                         FormId = formId,
                         model.UserId,
-                        model.ClientId,
                         model.Title,
                         model.Description,
                         model.IsActive,
@@ -476,7 +441,7 @@ namespace ahello_backend.Repositorys.Classes
                 await connection.ExecuteAsync(
                     @"DELETE FROM formfieldvalues
                       WHERE FormId = @FormId",
-                    new { FormId = formId},
+                    new { FormId = formId },
                     tx);
 
                 await connection.ExecuteAsync(
@@ -489,7 +454,7 @@ namespace ahello_backend.Repositorys.Classes
                 var rows =
                     await connection.ExecuteAsync(
                     @"DELETE FROM forms
-                      WHERE FormId = @FormId ",
+                      WHERE FormId = @FormId",
                     new { FormId = formId },
                     tx);
 
@@ -516,7 +481,7 @@ namespace ahello_backend.Repositorys.Classes
                 var formId = await connection.ExecuteScalarAsync<int>(
                     @"INSERT INTO forms
             (
-                UserId, 
+                UserId,
                 Title,
                 Description,
                 IsActive,
@@ -652,8 +617,7 @@ namespace ahello_backend.Repositorys.Classes
             var form = await connection.QueryFirstOrDefaultAsync<FormDynamicGetResponse>(
                 @"SELECT *
           FROM forms
-          WHERE FormId = @FormId ",
-
+          WHERE FormId = @FormId",
                 new { FormId = formId });
 
             if (form == null)
@@ -710,7 +674,8 @@ namespace ahello_backend.Repositorys.Classes
 
             return form;
         }
-       public async Task<bool> UpdateFormTemplateAsync(int formId,
+       public async Task<bool> UpdateFormTemplateAsync(
+    int formId,
     FormTemplatePut model)
 {
     using var connection = _db.GetConnection();

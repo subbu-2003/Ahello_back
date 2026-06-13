@@ -2,6 +2,7 @@
 {
     public class ServiceCategoryDynamicPut
     {
+        public bool IsActive { get; set; }
         public string ModifiedBy { get; set; }
 
         public List<ServiceCategoryDynamicFieldPut>? Fields { get; set; }

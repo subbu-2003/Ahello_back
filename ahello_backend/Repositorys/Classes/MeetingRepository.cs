@@ -122,7 +122,7 @@ namespace ahello_backend.Repositorys.Classes
         int userId,
         int pageNumber,
         int pageSize, string? status,
-        DateTime? createdDate)
+        DateTime? startDate)
         {
             using var connection = _db.GetConnection();
 
@@ -131,67 +131,89 @@ namespace ahello_backend.Repositorys.Classes
             FROM meetings m
             INNER JOIN bookings b
             ON m.BookingId = b.BookingId
-            WHERE b.UserId = @UserId";
+            WHERE b.UserId = @UserId
+            AND
+            (
+                @Status IS NULL
+                OR @Status = ''
+                OR m.Status = @Status
+            )
+
+           AND
+            (
+                @StartDate IS NULL
+                OR DATE(m.StartTime) = DATE(@StartDate)
+            )";
+
 
             var totalCount =
                 await connection.ExecuteScalarAsync<int>(
                     countSql,
-                    new { UserId = userId });
+                    new { UserId = userId,
+                        Status = status,
+                        StartDate = startDate,
+                        PageSize = pageSize,
+                        Offset = (pageNumber - 1) * pageSize
+                    });
 
-            var sql = @"
-                SELECT
-                    m.MeetingId,
+                    var sql = @"
+                        SELECT
+                            m.MeetingId,
 
-            b.UserId,
-            u.FullName AS UserName,
+                    b.UserId,
+                    u.FullName AS UserName,
 
-            b.ClientId,
-            cu.FullName AS ClientName,
+                    b.ClientId,
+                    cu.FullName AS ClientName,
 
-            m.BookingId,
-            s.ServiceId,
-            s.ServiceTitle,
+                    m.BookingId,
+                    s.ServiceId,
+                    s.ServiceTitle,
 
-            s.ServiceCategoryId,
-            sc.ServiceCategoryName,
-            m.StartTime,
-            m.EndTime,
-            m.MeetingLink,
-            m.Status
+                    s.ServiceCategoryId,
+                    sc.ServiceCategoryName,
+                    m.StartTime,
+                    m.EndTime,
+                    m.MeetingLink,
+                    m.Status,
+                    m.CreatedAt,
+                    m.CreatedBy,
+                    m.ModifiedAt,
+                    m.ModifiedBy
 
-        FROM meetings m
+                FROM meetings m
 
-        INNER JOIN bookings b
-            ON m.BookingId = b.BookingId
+                INNER JOIN bookings b
+                    ON m.BookingId = b.BookingId
 
-        INNER JOIN users u
-            ON b.UserId = u.UserId
+                INNER JOIN users u
+                    ON b.UserId = u.UserId
 
-        INNER JOIN users cu
-            ON b.ClientId = cu.UserId
-        INNER JOIN services s
-            ON b.ServiceId = s.ServiceId
+                INNER JOIN users cu
+                    ON b.ClientId = cu.UserId
+                INNER JOIN services s
+                    ON b.ServiceId = s.ServiceId
 
-        LEFT JOIN servicecategorydynamic sc
-            ON s.ServiceCategoryId = sc.ServiceCategoryId
+                LEFT JOIN servicecategorydynamic sc
+                    ON s.ServiceCategoryId = sc.ServiceCategoryId
 
-        WHERE b.UserId = @UserId
-        AND
-        (
-            @Status IS NULL
-            OR @Status = ''
-            OR m.Status = @Status
-        )
+                WHERE b.UserId = @UserId
+                AND
+                (
+                    @Status IS NULL
+                    OR @Status = ''
+                    OR m.Status = @Status
+                )
 
-        AND
-        (
-            @CreatedDate IS NULL
-            OR DATE(m.CreatedAt) = DATE(@CreatedDate)
-        )
+               AND
+                (
+                    @StartDate IS NULL
+                    OR DATE(m.StartTime) = DATE(@StartDate)
+                )
 
-        ORDER BY m.MeetingId DESC
+                ORDER BY m.MeetingId DESC
 
-        LIMIT @PageSize OFFSET @Offset";
+                LIMIT @PageSize OFFSET @Offset";
 
             var meetings =
                 await connection.QueryAsync<Meeting>(
@@ -200,7 +222,7 @@ namespace ahello_backend.Repositorys.Classes
                     {
                         UserId = userId,
                         Status = status,
-                        CreatedDate = createdDate,
+                        StartDate = startDate,
                         PageSize = pageSize,
                         Offset = (pageNumber - 1) * pageSize
                     });

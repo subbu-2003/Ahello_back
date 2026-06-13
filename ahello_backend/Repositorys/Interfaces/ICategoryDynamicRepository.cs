@@ -16,5 +16,7 @@ namespace ahello_backend.Repositorys.Interfaces
         Task<PagedCategoryDynamicResponse> GetAllPagedAsync(
         int pageNumber,
         int pageSize, string? search = null);
+        Task<bool> UpdateStatusAsync(
+        int categoryId, bool isActive,string modifiedBy);
     }
 }

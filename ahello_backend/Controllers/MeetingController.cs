@@ -213,7 +213,7 @@ namespace ahello_backend.Controllers
             int pageNumber = 1,
             int pageSize = 10,
             string? status = null,
-            DateTime? createdDate = null)
+            DateTime? startDate = null)
         {
             try
             {
@@ -222,7 +222,7 @@ namespace ahello_backend.Controllers
                         userId,
                         pageNumber,
                         pageSize, status,
-                        createdDate);
+                        startDate);
 
                 return Ok(result);
             }
