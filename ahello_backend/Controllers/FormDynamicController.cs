@@ -12,10 +12,14 @@ namespace ahello_backend.Controllers
         : ControllerBase
     {
         private readonly IFormDynamicService _service;
+        private readonly IWebHostEnvironment _env;
+        private readonly FileUploadService _fileUpload;
 
-        public FormDynamicController(IFormDynamicService service)
+        public FormDynamicController(IFormDynamicService service, IWebHostEnvironment env, FileUploadService fileUpload)
         {
             _service = service;
+            _env = env;
+            _fileUpload = fileUpload;
         }
 
         [HttpGet]
@@ -47,28 +51,91 @@ namespace ahello_backend.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create(FormDynamicPost model)
+        public async Task<IActionResult> Create([FromForm] FormDynamicPost model)
         {
-            var id = await _service.CreateAsync(model);
-
-            return Ok(new
+            try
             {
-                Success = true,
-                Message = "Form created successfully",
-                FormId = id
-            });
+                var rootPath = _env.WebRootPath
+                    ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+
+                // Step 1 - File save first
+                string? fileUrl = null;
+                if (model.FieldFile != null && model.FieldFile.Length > 0)
+                {
+                    if (model.FieldFile.Length > 5 * 1024 * 1024)
+                        return BadRequest(new { Success = false, Message = "File size must be less than 5 MB." });
+
+                    var folderPath = Path.Combine(rootPath, "form-files");
+                    if (!Directory.Exists(folderPath))
+                        Directory.CreateDirectory(folderPath);
+
+                    var fileName = $"{Guid.NewGuid()}{Path.GetExtension(model.FieldFile.FileName)}";
+                    var filePath = Path.Combine(folderPath, fileName);
+
+                    await using var stream = new FileStream(filePath, FileMode.Create);
+                    await model.FieldFile.CopyToAsync(stream);
+
+                    fileUrl = $"/form-files/{fileName}";
+                }
+
+                // Step 2 - Fields build pannu from flat swagger values
+                var dropdowns = new List<FormDropdownOptionPost>();
+
+                if (!string.IsNullOrWhiteSpace(model.DropDownOptionsJson)
+                    && model.DropDownOptionsJson != "string")
+                {
+                    try
+                    {
+                        dropdowns = System.Text.Json.JsonSerializer.Deserialize<List<FormDropdownOptionPost>>(
+                            model.DropDownOptionsJson,
+                            new System.Text.Json.JsonSerializerOptions
+                            {
+                                PropertyNameCaseInsensitive = true
+                            }) ?? new();
+                    }
+                    catch { dropdowns = new(); }
+                }
+
+                // Always build Fields from flat values — ignore swagger Fields array
+                model.Fields = new List<FormDynamicFieldPost>
+        {
+            new FormDynamicFieldPost
+            {
+                FormFieldId = model.FormFieldId,
+                FieldValue = fileUrl ?? model.FieldValue ?? "",
+                DropDownOptions = dropdowns
+            }
+        };
+
+                var id = await _service.CreateAsync(model);
+                return Ok(new { Success = true, Message = "Form created successfully", FormId = id });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Success = false, Message = ex.Message });
+            }
         }
-
         [HttpPut("{formId}")]
-        public async Task<IActionResult> Update(int formId, FormDynamicPut model)
+        public async Task<IActionResult> Update(int formId, [FromForm] FormDynamicPut model)
         {
-            var result = await _service.UpdateAsync(formId, model);
-
-            return Ok(new
+            try
             {
-                Success = result,
-                Message = "Form updated successfully"
-            });
+                var result = await _service.UpdateAsync(formId, model);
+
+                return Ok(new
+                {
+                    Success = result,
+                    Message = "Form updated successfully"
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
         }
 
         [HttpDelete("{formId}")]
