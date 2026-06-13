@@ -3,7 +3,7 @@
     public class ServiceCategoryDynamicGetResponse
     {
         public int ServiceCategoryId { get; set; }
-
+        public bool IsActive { get; set; }
         public string ServiceCategoryName { get; set; }
 
         public List<ServiceCategoryDynamicFieldResponse>? Fields { get; set; }

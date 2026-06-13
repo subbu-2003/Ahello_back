@@ -213,5 +213,40 @@ namespace ahello_backend.Controllers
                 });
             }
         }
+        [HttpPut("{id}/status")]
+        public async Task<IActionResult> UpdateStatus(
+    int id,
+    [FromBody] ServiceCategoryStatusUpdate model)
+        {
+            try
+            {
+                var result = await _service.UpdateStatusAsync(
+                    id,
+                    model);
+
+                if (!result)
+                {
+                    return NotFound(new
+                    {
+                        Success = false,
+                        Message = "Service Category not found"
+                    });
+                }
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Status updated successfully"
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+        }
     }
 }

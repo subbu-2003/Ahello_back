@@ -16,5 +16,7 @@ namespace ahello_backend.Repositorys.Interfaces
 
         Task<ServiceCategoryDynamicGetResponse> GetByIdAsync(
             int serviceCategoryId);
+        Task<bool> UpdateStatusAsync(
+        int serviceCategoryId,ServiceCategoryStatusUpdate model);
     }
 }
