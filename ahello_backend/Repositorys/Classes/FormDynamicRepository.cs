@@ -117,53 +117,55 @@ namespace ahello_backend.Repositorys.Classes
             return form;
         }
 
-        public async Task<IEnumerable<FormDynamicGetResponse>>
-            GetByUserIdAsync(int userId)
+        public async Task<IEnumerable<FormDynamicGetResponse>> GetByUserIdAsync(int userId)
         {
             using var connection = _db.GetConnection();
 
-            var forms = (await connection.QueryAsync <FormDynamicGetResponse>(
+            var forms = (await connection.QueryAsync<FormDynamicGetResponse>(
                 @"SELECT *
-                  FROM forms
-                  WHERE UserId = @UserId
-                  ORDER BY FormId DESC",
+          FROM forms
+          WHERE UserId = @UserId
+            AND IsActive = 1
+          ORDER BY FormId DESC",
                 new { UserId = userId })).ToList();
 
             foreach (var form in forms)
             {
                 var fields = await connection.QueryAsync<FormDynamicFieldResponse>(
                     @"SELECT
-                    ff.FormFieldId,
-                    ff.FieldName,
-                    ff.FieldCode,
-                    ff.Placeholder,
-                    ff.Description,
-                    ff.IsRequired,
-                    ff.DataTypeId,
-                    dt.DataTypeName
-                FROM formfields ff
-                LEFT JOIN datatypes dt
-                    ON ff.DataTypeId = dt.DataTypeId
-                WHERE ff.FormId = @FormId
-                ORDER BY ff.FormFieldId",
+                ff.FormFieldId,
+                ff.FieldName,
+                ff.FieldCode,
+                ff.Placeholder,
+                ff.Description,
+                ff.IsRequired,
+                ff.DataTypeId,
+                ff.IsActive,
+                dt.DataTypeName
+              FROM formfields ff
+              LEFT JOIN datatypes dt
+                  ON ff.DataTypeId = dt.DataTypeId
+              WHERE ff.FormId = @FormId
+                AND ff.IsActive = 1
+              ORDER BY ff.FormFieldId",
                     new { FormId = form.FormId });
 
                 form.Fields = fields.ToList();
 
                 var dropdowns = await connection.QueryAsync<FormDropdownOptionResponse>(
                     @"SELECT DISTINCT
-                        FormDropDownId,
-                        FormFieldId,
-                        FormId,
-                        OptionValue,
-                        OptionLabel,
-                        IsActive
-                    FROM formdropdownoptions
-                    WHERE FormId = @FormId",
+                FormDropDownId,
+                FormFieldId,
+                FormId,
+                OptionValue,
+                OptionLabel,
+                IsActive
+              FROM formdropdownoptions
+              WHERE FormId = @FormId
+                AND IsActive = 1",
                     new { FormId = form.FormId });
 
-                form.DropdownOptions =
-                    dropdowns.ToList();
+                form.DropdownOptions = dropdowns.ToList();
             }
 
             return forms;
