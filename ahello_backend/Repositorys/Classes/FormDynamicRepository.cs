@@ -172,44 +172,24 @@ namespace ahello_backend.Repositorys.Classes
         public async Task<int> CreateAsync(FormDynamicPost model)
         {
             using var connection = _db.GetConnection();
-
             connection.Open();
-
             using var tx = connection.BeginTransaction();
 
             try
             {
                 var formSql = @"
             INSERT INTO forms
-            (
-                UserId,
-                Title,
-                Description,
-                IsActive,
-                CreatedAt,
-                CreatedBy
-            )
+            (UserId, Title, Description, IsActive, CreatedAt, CreatedBy)
             VALUES
-            (
-                @UserId,
-                @Title,
-                @Description,
-                @IsActive,
-                NOW(),
-                @CreatedBy
-            );
-
+            (@UserId, @Title, @Description, @IsActive, NOW(), @CreatedBy);
             SELECT LAST_INSERT_ID();";
 
-                var formId = await connection.ExecuteScalarAsync<int>(
-                    formSql,
-                    model,
-                    tx);
+                var formId = await connection.ExecuteScalarAsync<int>(formSql, model, tx);
 
-                // Save Field Values
-                if (model.Fields != null && model.Fields.Any())
+                // NO if check — directly loop
+                foreach (var field in model.Fields)
                 {
-                    var fieldSql = @"
+                    await connection.ExecuteAsync(@"
                 INSERT INTO formfieldvalues
                 (
                     FormId,
@@ -229,71 +209,57 @@ namespace ahello_backend.Repositorys.Classes
                     @CreatedBy,
                     CURRENT_TIMESTAMP
                 FROM formfields ff
-                WHERE ff.FormFieldId = @FormFieldId;";
-
-                    foreach (var field in model.Fields)
-                    {
-                        await connection.ExecuteAsync(
-                            fieldSql,
-                            new
-                            {
-                                FormId = formId,
-                                FormFieldId = field.FormFieldId,
-                                FieldValue = field.FieldValue,
-                                model.CreatedBy
-                            },
-                            tx);
-                    }
-
-                    // Save Dropdown Options
-                    var dropdownSql = @"
-                INSERT INTO formdropdownoptions
-                (
-                    FormFieldId,
-                    FormId,
-                    OptionValue,
-                    OptionLabel,
-                    IsActive,
-                    CreatedDate,
-                    CreatedBy
-                )
-                VALUES
-                (
-                    @FormFieldId,
-                    @FormId,
-                    @OptionValue,
-                    @OptionLabel,
-                    @IsActive,
-                    NOW(),
-                    @CreatedBy
-                );";
-
-                    foreach (var field in model.Fields)
-                    {
-                        if (field.DropDownOptions != null &&
-                            field.DropDownOptions.Any())
+                WHERE ff.FormFieldId = @FormFieldId;",
+                        new
                         {
-                            foreach (var option in field.DropDownOptions)
-                            {
-                                await connection.ExecuteAsync(
-                                    dropdownSql,
-                                    new
-                                    {
-                                        FormFieldId = field.FormFieldId,
-                                        FormId = formId,
-                                        option.OptionValue,
-                                        option.OptionLabel,
-                                        option.IsActive,
-                                        model.CreatedBy
-                                    },
-                                    tx);
-                            }
+                            FormId = formId,
+                            FormFieldId = field.FormFieldId,
+                            FieldValue = field.FieldValue,
+                            CreatedBy = model.CreatedBy.ToString()
+                        },
+                        tx);
+
+                    // Dropdown
+                    if (field.DropDownOptions != null && field.DropDownOptions.Any())
+                    {
+                        foreach (var option in field.DropDownOptions)
+                        {
+                            await connection.ExecuteAsync(@"
+                        INSERT INTO formdropdownoptions
+                        (
+                            FormFieldId,
+                            FormId,
+                            OptionValue,
+                            OptionLabel,
+                            IsActive,
+                            CreatedDate,
+                            CreatedBy
+                        )
+                        VALUES
+                        (
+                            @FormFieldId,
+                            @FormId,
+                            @OptionValue,
+                            @OptionLabel,
+                            @IsActive,
+                            NOW(),
+                            @CreatedBy
+                        );",
+                                new
+                                {
+                                    FormFieldId = field.FormFieldId,
+                                    FormId = formId,
+                                    option.OptionValue,
+                                    option.OptionLabel,
+                                    option.IsActive,
+                                    CreatedBy = model.CreatedBy.ToString()
+                                },
+                                tx);
                         }
                     }
                 }
 
                 tx.Commit();
-
                 return formId;
             }
             catch
