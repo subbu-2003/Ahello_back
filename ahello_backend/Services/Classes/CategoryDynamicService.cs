@@ -31,5 +31,9 @@ namespace ahello_backend.Services.Classes
         int pageNumber,
         int pageSize, string? search = null)
     => _repository.GetAllPagedAsync(pageNumber, pageSize,search);
+        public Task<bool> UpdateStatusAsync(
+        int categoryId, bool isActive,string modifiedBy)
+    => _repository.UpdateStatusAsync(
+        categoryId,isActive, modifiedBy);
     }
 }

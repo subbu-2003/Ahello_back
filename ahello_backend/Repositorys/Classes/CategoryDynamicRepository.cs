@@ -23,7 +23,8 @@ namespace ahello_backend.Repositorys.Classes
                     CategoryId,
                     CategoryName,
                     CreatedBy,
-                    CreatedAt
+                    CreatedAt,
+                    IsActive
                   FROM categories
                   ORDER BY CategoryId DESC")).ToList();
 
@@ -56,7 +57,8 @@ namespace ahello_backend.Repositorys.Classes
                     CategoryId,
                     CategoryName,
                     CreatedBy,
-                    CreatedAt
+                    CreatedAt,
+                     IsActive
                   FROM categories
                   WHERE CategoryId = @CategoryId",
                 new { CategoryId = categoryId });
@@ -95,12 +97,14 @@ namespace ahello_backend.Repositorys.Classes
                     INSERT INTO categories
                     (
                         CategoryName,
+                        IsActive,
                         CreatedAt,
                         CreatedBy
                     )
                     VALUES
                     (
                         @CategoryName,
+                        @IsActive,
                         NOW(),
                         @CreatedBy
                     );
@@ -112,6 +116,7 @@ namespace ahello_backend.Repositorys.Classes
                     new
                     {
                         model.CategoryName,
+                        model.IsActive,
                         model.CreatedBy
                     },
                     tx);
@@ -180,6 +185,7 @@ namespace ahello_backend.Repositorys.Classes
                     UPDATE categories
                     SET
                         CategoryName = @CategoryName,
+                        IsActive = @IsActive,
                         ModifiedAt = NOW(),
                         ModifiedBy = @ModifiedBy
                     WHERE CategoryId = @CategoryId";
@@ -190,6 +196,7 @@ namespace ahello_backend.Repositorys.Classes
                     {
                         CategoryId = categoryId,
                         model.CategoryName,
+                        model.IsActive,
                         model.ModifiedBy
                     },
                     tx);
@@ -297,39 +304,39 @@ namespace ahello_backend.Repositorys.Classes
 
             var offset = (pageNumber - 1) * pageSize;
 
-            var whereClause = "";
+            var whereClause = "WHERE c.IsActive = 1";
 
             if (!string.IsNullOrWhiteSpace(search))
             {
-                whereClause = @"
-            WHERE CategoryName LIKE @Search";
+                whereClause += " AND CategoryName LIKE @Search";
             }
 
             var totalRecords = await connection.ExecuteScalarAsync<int>(
-                $@"SELECT COUNT(*)
-           FROM categories
-           {whereClause}",
-                new
-                {
-                    Search = $"%{search}%"
-                });
+             $@"SELECT COUNT(*)
+               FROM categories c
+               {whereClause}",
+             new
+             {
+                 Search = $"%{search}%"
+             });
 
             var categories = (await connection.QueryAsync<CategoryDynamicGetResponse>(
-                $@"SELECT
-                CategoryId,
-                CategoryName,
-                CreatedBy,
-                CreatedAt
-           FROM categories
-           {whereClause}
-           ORDER BY CategoryId DESC
-           LIMIT @PageSize OFFSET @Offset",
-                new
-                {
-                    Search = $"%{search}%",
-                    PageSize = pageSize,
-                    Offset = offset
-                })).ToList();
+            $@"SELECT
+                    c.CategoryId,
+                    c.CategoryName,
+                    c.CreatedBy,
+                    c.CreatedAt,
+                    c.IsActive
+               FROM categories c
+               {whereClause}
+               ORDER BY c.CategoryId DESC
+               LIMIT @PageSize OFFSET @Offset",
+            new
+            {
+                Search = $"%{search}%",
+                PageSize = pageSize,
+                Offset = offset
+            })).ToList();
 
             foreach (var category in categories)
             {
@@ -355,6 +362,29 @@ namespace ahello_backend.Repositorys.Classes
                 PageSize = pageSize,
                 Data = categories
             };
+        }
+        public async Task<bool> UpdateStatusAsync(
+        int categoryId,
+        bool isActive,
+        string modifiedBy)
+        {
+            using var connection = _db.GetConnection();
+
+            var rows = await connection.ExecuteAsync(
+                @"UPDATE categories
+          SET
+              IsActive = @IsActive,
+              ModifiedAt = NOW(),
+              ModifiedBy = @ModifiedBy
+          WHERE CategoryId = @CategoryId",
+                new
+                {
+                    CategoryId = categoryId,
+                    IsActive = isActive,
+                    ModifiedBy = modifiedBy
+                });
+
+            return rows > 0;
         }
     }
 }

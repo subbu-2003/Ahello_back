@@ -3,7 +3,7 @@
     public class CategoryDynamicPut
     {
         public string CategoryName { get; set; }
-
+        public bool IsActive { get; set; }
         public string ModifiedBy { get; set; }
 
         public List<CategoryDynamicFieldPut> Fields { get; set; }
