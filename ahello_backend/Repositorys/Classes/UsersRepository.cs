@@ -229,7 +229,8 @@ namespace ahello_backend.Repositorys.Classes
                 LEFT JOIN reviews r
                     ON r.BookingId = b.BookingId
 
-                WHERE
+                WHERE s.IsActive = 1
+                AND
                 (
                     @search IS NULL
                     OR LOWER(u.FullName)
@@ -289,7 +290,8 @@ namespace ahello_backend.Repositorys.Classes
                   LEFT JOIN servicecategorydynamic sc
                      ON sc.ServiceCategoryId = s.ServiceCategoryId
 
-                WHERE
+               WHERE s.IsActive = 1
+               AND
                 (
                     @search IS NULL
                     OR LOWER(u.FullName)
