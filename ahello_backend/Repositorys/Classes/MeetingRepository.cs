@@ -131,12 +131,28 @@ namespace ahello_backend.Repositorys.Classes
             FROM meetings m
             INNER JOIN bookings b
             ON m.BookingId = b.BookingId
-            WHERE b.UserId = @UserId";
+            WHERE b.UserId = @UserId
+            AND
+            (
+                @Status IS NULL
+                OR @Status = ''
+                OR m.Status = @Status
+            )
+
+            AND
+            (
+                @CreatedDate IS NULL
+                OR DATE(m.CreatedAt) = DATE(@CreatedDate)
+            )";
+
 
             var totalCount =
                 await connection.ExecuteScalarAsync<int>(
                     countSql,
-                    new { UserId = userId });
+                    new { UserId = userId,
+                        Status = status,
+                        CreatedDate = createdDate
+                    });
 
             var sql = @"
                 SELECT
@@ -157,7 +173,11 @@ namespace ahello_backend.Repositorys.Classes
             m.StartTime,
             m.EndTime,
             m.MeetingLink,
-            m.Status
+            m.Status,
+            m.CreatedAt,
+            m.CreatedBy,
+            m.ModifiedAt,
+            m.ModifiedBy
 
         FROM meetings m
 
