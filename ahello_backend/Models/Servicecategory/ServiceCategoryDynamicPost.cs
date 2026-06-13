@@ -3,7 +3,7 @@
     public class ServiceCategoryDynamicPost
     {
         public int ServiceCategoryId { get; set; }
-
+        public bool IsActive { get; set; } = true;
         public string CreatedBy { get; set; }
 
         public List<ServiceCategoryDynamicFieldPost>? Fields { get; set; }

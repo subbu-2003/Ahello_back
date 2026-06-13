@@ -27,6 +27,20 @@ namespace ahello_backend.Repositorys.Classes
 
             try
             {
+                // ADD HERE
+                await connection.ExecuteAsync(
+                @"UPDATE servicecategorydynamic
+                SET IsActive = @IsActive,
+              ModifiedBy = @CreatedBy,
+              ModifiedAt = NOW()
+              WHERE ServiceCategoryId = @ServiceCategoryId",
+                new
+                {
+                    model.ServiceCategoryId,
+                    model.IsActive,
+                    model.CreatedBy
+                },
+                tx);
                 if (model.Fields != null && model.Fields.Any())
                 {
                     var sql = @"
@@ -134,9 +148,11 @@ namespace ahello_backend.Repositorys.Classes
                 (await connection.QueryAsync<
                     ServiceCategoryDynamicGetResponse>(
                 @"SELECT
-                    ServiceCategoryId,
-                    ServiceCategoryName
-                  FROM servicecategorydynamic"))
+                ServiceCategoryId,
+                ServiceCategoryName,
+                IsActive
+            FROM servicecategorydynamic
+            WHERE IsActive = 1"))
                 .ToList();
 
             foreach (var category in categories)
@@ -207,11 +223,12 @@ namespace ahello_backend.Repositorys.Classes
                 await connection.QueryFirstOrDefaultAsync<
                     ServiceCategoryDynamicGetResponse>(
                 @"SELECT
-                    ServiceCategoryId,
-                    ServiceCategoryName
-                  FROM servicecategorydynamic
-                  WHERE ServiceCategoryId =
-                        @ServiceCategoryId",
+                ServiceCategoryId,
+                ServiceCategoryName,
+                IsActive
+                FROM servicecategorydynamic
+                WHERE ServiceCategoryId = @ServiceCategoryId
+                AND IsActive = 1",
                 new
                 {
                     ServiceCategoryId = serviceCategoryId
@@ -286,6 +303,19 @@ namespace ahello_backend.Repositorys.Classes
             connection.Open();
 
             using var tx = connection.BeginTransaction();
+            await connection.ExecuteAsync(
+            @"UPDATE servicecategorydynamic
+              SET IsActive = @IsActive,
+                  ModifiedBy = @ModifiedBy,
+                  ModifiedAt = NOW()
+              WHERE ServiceCategoryId = @ServiceCategoryId",
+            new
+            {
+                ServiceCategoryId = serviceCategoryId,
+                model.IsActive,
+                model.ModifiedBy
+            },
+            tx);
 
             try
             {
@@ -446,6 +476,27 @@ namespace ahello_backend.Repositorys.Classes
                 tx.Rollback();
                 throw;
             }
+        }
+        public async Task<bool> UpdateStatusAsync(
+        int serviceCategoryId,
+        ServiceCategoryStatusUpdate model)
+        {
+            using var connection = _db.GetConnection();
+
+            var rowsAffected = await connection.ExecuteAsync(
+                @"UPDATE servicecategorydynamic
+          SET IsActive = @IsActive,
+              ModifiedBy = @ModifiedBy,
+              ModifiedAt = NOW()
+          WHERE ServiceCategoryId = @ServiceCategoryId",
+                new
+                {
+                    ServiceCategoryId = serviceCategoryId,
+                    model.IsActive,
+                    model.ModifiedBy
+                });
+
+            return rowsAffected > 0;
         }
     }
 }
