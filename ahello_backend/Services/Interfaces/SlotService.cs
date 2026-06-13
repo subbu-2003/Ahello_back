@@ -320,12 +320,12 @@ namespace ahello_backend.Services.Classes
             });
 
             var bookedSql = @"
-                SELECT StartTime, ScheduleDate AS SlotDate
-                FROM bookings
-                WHERE UserId    = @UserId
-                  AND ServiceId = @ServiceId
-                  AND Status    IN ('Pending', 'Confirmed')
-                  AND ScheduleDate = @Date";
+    SELECT StartTime, EndTime, ScheduleDate AS SlotDate
+    FROM bookings
+    WHERE UserId    = @UserId
+      AND ServiceId = @ServiceId
+      AND Status    IN ('Pending', 'Confirmed')
+      AND ScheduleDate = @Date";
 
             var booked = await connection.QueryAsync<SlotResult>(bookedSql, new
             {
@@ -334,14 +334,14 @@ namespace ahello_backend.Services.Classes
                 Date = date.Date
             });
 
-            var bookedSet = booked
-                .Select(b => $"{date:yyyy-MM-dd}_{b.StartTime}")
-                .ToHashSet();
+            //var bookedSet = booked
+            //    .Select(b => $"{date:yyyy-MM-dd}_{b.StartTime}")
+            //    .ToHashSet();
 
             var blockDates = await FetchBlockDates(connection, userId, serviceId, date, date);
 
             var slots = new List<SlotResult>();
-            var dateKey = date.ToString("yyyy-MM-dd");
+            //var dateKey = date.ToString("yyyy-MM-dd");
 
             foreach (var window in windows.Where(w => MatchesDate(w, date)))
             {
@@ -350,7 +350,11 @@ namespace ahello_backend.Services.Classes
                 {
                     var slotEnd = current + TimeSpan.FromMinutes(durationMinutes);
 
-                    if (!bookedSet.Contains($"{dateKey}_{current}") &&
+                    var isBooked = booked.Any(b =>
+    current < b.EndTime &&
+    slotEnd > b.StartTime);
+
+                    if (!isBooked &&
                         !IsBlockedSlot(current, slotEnd, date, blockDates))
                     {
                         slots.Add(new SlotResult
