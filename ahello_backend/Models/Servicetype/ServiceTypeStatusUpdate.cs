@@ -1,8 +1,7 @@
 ﻿namespace ahello_backend.Models.Servicetype
 {
-    public class ServiceTypePut
+    public class ServiceTypeStatusUpdate
     {
-        public string ServiceTypeName { get; set; }
         public bool IsActive { get; set; }
         public string ModifiedBy { get; set; }
     }

@@ -34,7 +34,22 @@ namespace ahello_backend.Controllers
                 });
             }
         }
+        [HttpGet("paged")]
+        public async Task<IActionResult> GetPaged(
+        int pageNumber = 1,
+        int pageSize = 10,
+        string? search = null,
+        DateTime? createdDate = null)
+        {
+            var result = await _service.
+                GetPagedAsync(
+                pageNumber,
+                pageSize,
+                search,
+                createdDate);
 
+            return Ok(result);
+        }
         [HttpGet("{serviceTypeId}")]
         public async Task<IActionResult> GetById(
             int serviceTypeId)
@@ -192,6 +207,30 @@ namespace ahello_backend.Controllers
                     Message = errorMessage
                 });
             }
+        }
+        [HttpPut("{serviceTypeId}/status")]
+        public async Task<IActionResult> UpdateStatus(
+        int serviceTypeId,
+        ServiceTypeStatusUpdate model)
+        {
+            var result = await _service.UpdateStatusAsync(
+                serviceTypeId,
+                model);
+
+            if (!result)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "Status update failed"
+                });
+            }
+
+            return Ok(new
+            {
+                Success = true,
+                Message = "Status updated successfully"
+            });
         }
     }
 }

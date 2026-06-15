@@ -1,11 +1,12 @@
-﻿using ahello_backend.Models.Servicetype;
+﻿using ahello_backend.Models.Pagination;
+using ahello_backend.Models.Servicetype;
 
 namespace ahello_backend.Services.Interfaces
 {
     public interface IServiceTypeService
     {
         Task<IEnumerable<ServiceType>> GetAllAsync();
-
+        Task<PagedResult<ServiceType>> GetPagedAsync(int pageNumber,int pageSize,string? search,DateTime? createdDate);
         Task<ServiceType> GetByIdAsync(int serviceTypeId);
 
         Task<int> CreateAsync(ServiceTypePost model);
@@ -15,5 +16,6 @@ namespace ahello_backend.Services.Interfaces
             ServiceTypePut model);
 
         Task<bool> DeleteAsync(int serviceTypeId);
+        Task<bool> UpdateStatusAsync(int serviceTypeId,ServiceTypeStatusUpdate model);
     }
 }
