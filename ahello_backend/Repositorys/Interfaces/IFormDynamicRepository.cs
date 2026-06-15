@@ -10,7 +10,7 @@ namespace ahello_backend.Repositorys.Interfaces
 
         Task<FormDynamicGetResponse> GetByIdAsync(int formId);
 
-        Task<IEnumerable<FormDynamicGetResponse>> GetByUserIdAsync(int userId);
+        Task<IEnumerable<FormDynamicGetResponse>>GetByUserIdAsync(FormSearchRequest model);
 
         Task<int> CreateAsync(FormDynamicPost model);
 
@@ -21,5 +21,6 @@ namespace ahello_backend.Repositorys.Interfaces
         Task<FormDynamicGetResponse> GetSubmittedFormAsync(int formId);
         Task<bool> UpdateFormTemplateAsync(int formId, FormTemplatePut model);
         Task<bool> SubmitFormAsync(FormSubmitPost model);
+        Task<bool> UpdateFormStatusAsync(FormStatusUpdateRequest model);
     }
 }

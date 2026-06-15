@@ -117,22 +117,59 @@ namespace ahello_backend.Repositorys.Classes
             return form;
         }
 
-        public async Task<IEnumerable<FormDynamicGetResponse>> GetByUserIdAsync(int userId)
+        public async Task<IEnumerable<FormDynamicGetResponse>>
+       GetByUserIdAsync(FormSearchRequest model)
         {
             using var connection = _db.GetConnection();
 
             var forms = (await connection.QueryAsync<FormDynamicGetResponse>(
-                @"SELECT *
-          FROM forms
-          WHERE UserId = @UserId
-            AND IsActive = 1
-          ORDER BY FormId DESC",
-                new { UserId = userId })).ToList();
+                @"
+        SELECT DISTINCT f.*
+        FROM forms f
+        LEFT JOIN formfields ff
+            ON f.FormId = ff.FormId
+
+        LEFT JOIN formfieldvalues ffv
+            ON ff.FormFieldId = ffv.FormFieldId
+        WHERE f.UserId = @UserId
+
+        AND (@IsActive IS NULL
+             OR f.IsActive = @IsActive)
+
+        AND (@Date IS NULL
+             OR DATE(f.CreatedAt) = DATE(@Date))
+
+        AND (
+                @SearchText IS NULL
+                OR @SearchText = ''
+
+                OR f.Title LIKE CONCAT('%', @SearchText, '%')
+                OR f.Description LIKE CONCAT('%', @SearchText, '%')
+
+                OR ff.FieldName LIKE CONCAT('%', @SearchText, '%')
+                OR ff.FieldCode LIKE CONCAT('%', @SearchText, '%')
+                OR ff.Description LIKE CONCAT('%', @SearchText, '%')
+                OR ff.Placeholder LIKE CONCAT('%', @SearchText, '%')
+
+                OR ffv.FieldCode LIKE CONCAT('%', @SearchText, '%')
+                OR ffv.FieldValue LIKE CONCAT('%', @SearchText, '%')
+            )
+
+        ORDER BY f.FormId DESC
+        ",
+                new
+                {
+                    model.UserId,
+                    model.SearchText,
+                    model.IsActive,
+                    model.Date
+                })).ToList();
 
             foreach (var form in forms)
             {
                 var fields = await connection.QueryAsync<FormDynamicFieldResponse>(
-                    @"SELECT
+                    @"
+            SELECT
                 ff.FormFieldId,
                 ff.FieldName,
                 ff.FieldCode,
@@ -142,27 +179,28 @@ namespace ahello_backend.Repositorys.Classes
                 ff.DataTypeId,
                 ff.IsActive,
                 dt.DataTypeName
-              FROM formfields ff
-              LEFT JOIN datatypes dt
-                  ON ff.DataTypeId = dt.DataTypeId
-              WHERE ff.FormId = @FormId
-                AND ff.IsActive = 1
-              ORDER BY ff.FormFieldId",
+            FROM formfields ff
+            LEFT JOIN datatypes dt
+                ON ff.DataTypeId = dt.DataTypeId
+            WHERE ff.FormId = @FormId
+              AND ff.IsActive = 1
+            ORDER BY ff.FormFieldId",
                     new { FormId = form.FormId });
 
                 form.Fields = fields.ToList();
 
                 var dropdowns = await connection.QueryAsync<FormDropdownOptionResponse>(
-                    @"SELECT DISTINCT
+                    @"
+            SELECT DISTINCT
                 FormDropDownId,
                 FormFieldId,
                 FormId,
                 OptionValue,
                 OptionLabel,
                 IsActive
-              FROM formdropdownoptions
-              WHERE FormId = @FormId
-                AND IsActive = 1",
+            FROM formdropdownoptions
+            WHERE FormId = @FormId
+              AND IsActive = 1",
                     new { FormId = form.FormId });
 
                 form.DropdownOptions = dropdowns.ToList();
@@ -864,8 +902,8 @@ namespace ahello_backend.Repositorys.Classes
     {
         tx.Rollback();
         throw;
-    }
-}
+            }
+        }
         public async Task<bool> SubmitFormAsync(FormSubmitPost model)
         {
             using var connection = _db.GetConnection();
@@ -958,6 +996,28 @@ namespace ahello_backend.Repositorys.Classes
                 tx.Rollback();
                 throw;
             }
+        }
+        public async Task<bool> UpdateFormStatusAsync(FormStatusUpdateRequest model)
+        {
+            using var connection = _db.GetConnection();
+
+            var rows = await connection.ExecuteAsync(
+                @"
+        UPDATE forms
+        SET
+            IsActive = @IsActive,
+            ModifiedAt = NOW(),
+            ModifiedBy = @ModifiedBy
+        WHERE FormId = @FormId
+        ",
+                new
+                {
+                    model.FormId,
+                    model.IsActive,
+                    model.ModifiedBy
+                });
+
+            return rows > 0;
         }
     }
 }

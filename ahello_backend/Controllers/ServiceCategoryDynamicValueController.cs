@@ -36,6 +36,21 @@ namespace ahello_backend.Controllers
                 });
             }
         }
+        [HttpGet("get-all-with-status")]
+        public async Task<IActionResult> GetAllWithStatus(
+        int pageNumber = 1,
+        int pageSize = 10,
+        string? search = null,
+        DateTime? createdDate = null)
+        {
+            var result = await _service.GetAllWithStatusAsync(
+                pageNumber,
+                pageSize,
+                search,
+                createdDate);
+
+            return Ok(result);
+        }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
