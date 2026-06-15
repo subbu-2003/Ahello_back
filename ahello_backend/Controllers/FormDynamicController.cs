@@ -40,12 +40,22 @@ namespace ahello_backend.Controllers
 
             return Ok(data);
         }
-        [HttpGet("user/{userId}")]
-        public async Task<IActionResult> GetByUserId(int userId)
+        [HttpGet("user/search")]
+        public async Task<IActionResult> GetByUserId(
+            [FromQuery] int userId,
+            [FromQuery] string? searchText,
+            [FromQuery] bool? isActive,
+            [FromQuery] DateTime? date)
         {
-            var data =
-                await _service.GetByUserIdAsync(
-                    userId);
+            var model = new FormSearchRequest
+            {
+                UserId = userId,
+                SearchText = searchText,
+                IsActive = isActive,
+                Date = date
+            };
+
+            var data = await _service.GetByUserIdAsync(model);
 
             return Ok(data);
         }
@@ -221,6 +231,26 @@ namespace ahello_backend.Controllers
             {
                 Success = true,
                 Message = "Form submitted successfully"
+            });
+        }
+        [HttpPut("status")]
+        public async Task<IActionResult> UpdateStatus(
+    [FromBody] FormStatusUpdateRequest model)
+        {
+            var result =
+                await _service.UpdateFormStatusAsync(model);
+
+            if (!result)
+            {
+                return NotFound(new
+                {
+                    Message = "Form not found"
+                });
+            }
+
+            return Ok(new
+            {
+                Message = "Form status updated successfully"
             });
         }
     }

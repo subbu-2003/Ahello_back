@@ -29,9 +29,9 @@ namespace ahello_backend.Services.Classes
                 return await _repository.GetByIdAsync(formId);
             }
 
-            public async Task<IEnumerable<FormDynamicGetResponse>>GetByUserIdAsync(int userId)
+            public async Task<IEnumerable<FormDynamicGetResponse>>GetByUserIdAsync(FormSearchRequest model)
             {
-                return await _repository .GetByUserIdAsync(userId);
+                return await _repository.GetByUserIdAsync(model);
             }
 
             public async Task<int> CreateAsync(FormDynamicPost model)
@@ -67,6 +67,11 @@ namespace ahello_backend.Services.Classes
             {
                 return await _repository
                     .SubmitFormAsync(model);
+            }
+            public async Task<bool> UpdateFormStatusAsync(FormStatusUpdateRequest model)
+            {
+                return await _repository
+                    .UpdateFormStatusAsync(model);
             }
         }
     }
