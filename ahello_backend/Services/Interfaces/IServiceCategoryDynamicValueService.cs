@@ -1,4 +1,5 @@
-﻿using ahello_backend.Models.Servicecategory;
+﻿using ahello_backend.Models.Pagination;
+using ahello_backend.Models.Servicecategory;
 
 namespace ahello_backend.Services.Interfaces
 {
@@ -14,6 +15,8 @@ namespace ahello_backend.Services.Interfaces
 
         Task<IEnumerable<ServiceCategoryDynamicGetResponse>>
             GetAllAsync();
+        Task<PagedResult<ServiceCategoryDynamicGetResponse>>
+         GetAllWithStatusAsync(int pageNumber, int pageSize,string? search,DateTime? createdDate);
 
         Task<ServiceCategoryDynamicGetResponse>
             GetByIdAsync(int serviceCategoryId);

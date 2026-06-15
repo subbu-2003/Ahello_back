@@ -1,4 +1,6 @@
 ﻿using ahello_backend.DbContexts;
+using ahello_backend.Models.Pagination;
+using ahello_backend.Models.Service;
 using ahello_backend.Models.Servicecategory;
 using ahello_backend.Repositorys.Interfaces;
 using Dapper;
@@ -16,8 +18,7 @@ namespace ahello_backend.Repositorys.Classes
             _db = db;
         }
 
-        public async Task<int> CreateAsync(
-            ServiceCategoryDynamicPost model)
+        public async Task<int> CreateAsync(ServiceCategoryDynamicPost model)
         {
             using var connection = _db.GetConnection();
 
@@ -27,44 +28,60 @@ namespace ahello_backend.Repositorys.Classes
 
             try
             {
-                // ADD HERE
-                await connection.ExecuteAsync(
-                @"UPDATE servicecategorydynamic
-                SET IsActive = @IsActive,
-              ModifiedBy = @CreatedBy,
-              ModifiedAt = NOW()
-              WHERE ServiceCategoryId = @ServiceCategoryId",
-                new
-                {
-                    model.ServiceCategoryId,
-                    model.IsActive,
-                    model.CreatedBy
-                },
-                tx);
+                // Create Category First
+                var serviceCategoryId =
+                    await connection.ExecuteScalarAsync<int>(
+                    @"
+            INSERT INTO servicecategorydynamic
+            (
+                ServiceCategoryName,
+                IsActive,
+                CreatedBy,
+                CreatedAt
+            )
+            VALUES
+            (
+                @ServiceCategoryName,
+                @IsActive,
+                @CreatedBy,
+                NOW()
+            );
+
+            SELECT LAST_INSERT_ID();
+            ",
+                    new
+                    {
+                        model.ServiceCategoryName,
+                        model.IsActive,
+                        model.CreatedBy
+                    },
+                    tx);
+
+                // Insert Field Values
                 if (model.Fields != null && model.Fields.Any())
                 {
                     var sql = @"
-                    INSERT INTO servicecategoryfieldvalues
-                    (
-                        ServiceCategoryId,
-                        FieldCode,
-                        ServiceCategoryFieldId,
-                        FieldValue,
-                        CreatedDate,
-                        CreatedBy,
-                        CreatedAt
-                    )
-                    SELECT
-                        @ServiceCategoryId,
-                        scf.FieldCode,
-                        @ServiceCategoryFieldId,
-                        @FieldValue,
-                        NOW(),
-                        @CreatedBy,
-                        CURRENT_TIMESTAMP
-                    FROM servicecategoryfields scf
-                    WHERE scf.ServiceCategoryFieldId =
-                          @ServiceCategoryFieldId";
+            INSERT INTO servicecategoryfieldvalues
+            (
+                ServiceCategoryId,
+                FieldCode,
+                ServiceCategoryFieldId,
+                FieldValue,
+                CreatedDate,
+                CreatedBy,
+                CreatedAt
+            )
+            SELECT
+                @ServiceCategoryId,
+                scf.FieldCode,
+                @ServiceCategoryFieldId,
+                @FieldValue,
+                NOW(),
+                @CreatedBy,
+                NOW()
+            FROM servicecategoryfields scf
+            WHERE scf.ServiceCategoryFieldId =
+                  @ServiceCategoryFieldId";
 
                     foreach (var field in model.Fields)
                     {
@@ -72,7 +89,7 @@ namespace ahello_backend.Repositorys.Classes
                             sql,
                             new
                             {
-                                model.ServiceCategoryId,
+                                ServiceCategoryId = serviceCategoryId,
                                 field.ServiceCategoryFieldId,
                                 field.FieldValue,
                                 model.CreatedBy
@@ -80,29 +97,31 @@ namespace ahello_backend.Repositorys.Classes
                             tx);
                     }
                 }
+
+                // Insert Dropdown Options
                 if (model.Fields != null && model.Fields.Any())
                 {
                     var dropdownSql = @"
-                        INSERT INTO servicecategorydropdownoption
-                        (
-                            ServiceCategoryFieldId,
-                            ServiceCategoryId,
-                            OptionValue,
-                            OptionLabel,
-                            IsActive,
-                            CreatedDate,
-                            CreatedBy
-                        )
-                        VALUES
-                        (
-                            @ServiceCategoryFieldId,
-                            @ServiceCategoryId,
-                            @OptionValue,
-                            @OptionLabel,
-                            @IsActive,
-                            NOW(),
-                            @CreatedBy
-                        );";
+            INSERT INTO servicecategorydropdownoption
+            (
+                ServiceCategoryFieldId,
+                ServiceCategoryId,
+                OptionValue,
+                OptionLabel,
+                IsActive,
+                CreatedDate,
+                CreatedBy
+            )
+            VALUES
+            (
+                @ServiceCategoryFieldId,
+                @ServiceCategoryId,
+                @OptionValue,
+                @OptionLabel,
+                @IsActive,
+                NOW(),
+                @CreatedBy
+            )";
 
                     foreach (var field in model.Fields)
                     {
@@ -116,7 +135,7 @@ namespace ahello_backend.Repositorys.Classes
                                     new
                                     {
                                         field.ServiceCategoryFieldId,
-                                        model.ServiceCategoryId,
+                                        ServiceCategoryId = serviceCategoryId,
                                         option.OptionValue,
                                         option.OptionLabel,
                                         option.IsActive,
@@ -130,7 +149,7 @@ namespace ahello_backend.Repositorys.Classes
 
                 tx.Commit();
 
-                return model.ServiceCategoryId;
+                return serviceCategoryId;
             }
             catch
             {
@@ -213,7 +232,68 @@ namespace ahello_backend.Repositorys.Classes
 
             return categories;
         }
+        public async Task<PagedResult<ServiceCategoryDynamicGetResponse>> GetAllWithStatusAsync(
+    int pageNumber,
+    int pageSize,
+    string? search,
+    DateTime? createdDate)
+        {
+            using var connection = _db.GetConnection();
 
+            int offset = (pageNumber - 1) * pageSize;
+
+            var whereConditions = new List<string>();
+            var parameters = new DynamicParameters();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                whereConditions.Add("ServiceCategoryName LIKE @Search");
+                parameters.Add("Search", $"%{search}%");
+            }
+
+            if (createdDate.HasValue)
+            {
+                whereConditions.Add("DATE(CreatedAt) = @CreatedDate");
+                parameters.Add("CreatedDate", createdDate.Value.Date);
+            }
+
+            string whereClause = whereConditions.Any()
+                ? $"WHERE {string.Join(" AND ", whereConditions)}"
+                : "";
+
+            string countQuery = $@"
+        SELECT COUNT(*)
+        FROM ServiceCategoryDynamic
+        {whereClause};
+    ";
+
+            string dataQuery = $@"
+        SELECT *
+        FROM ServiceCategoryDynamic
+        {whereClause}
+        ORDER BY ServiceCategoryId DESC
+        LIMIT @PageSize OFFSET @Offset;
+    ";
+
+            parameters.Add("PageSize", pageSize);
+            parameters.Add("Offset", offset);
+
+            var totalRecords = await connection.ExecuteScalarAsync<int>(
+                countQuery,
+                parameters);
+
+            var data = await connection.QueryAsync<ServiceCategoryDynamicGetResponse>(
+                dataQuery,
+                parameters);
+
+            return new PagedResult<ServiceCategoryDynamicGetResponse>
+            {
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalCount = totalRecords,
+                Details = data.ToList()
+            };
+        }
         public async Task<ServiceCategoryDynamicGetResponse>
             GetByIdAsync(int serviceCategoryId)
         {
@@ -305,13 +385,15 @@ namespace ahello_backend.Repositorys.Classes
             using var tx = connection.BeginTransaction();
             await connection.ExecuteAsync(
             @"UPDATE servicecategorydynamic
-              SET IsActive = @IsActive,
+              SET ServiceCategoryName = @ServiceCategoryName,
+                 IsActive = @IsActive,
                   ModifiedBy = @ModifiedBy,
                   ModifiedAt = NOW()
               WHERE ServiceCategoryId = @ServiceCategoryId",
             new
             {
                 ServiceCategoryId = serviceCategoryId,
+                model.ServiceCategoryName,
                 model.IsActive,
                 model.ModifiedBy
             },
