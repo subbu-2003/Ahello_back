@@ -1,4 +1,6 @@
-﻿using ahello_backend.Models.Servicecategory;
+﻿using ahello_backend.Models.Pagination;
+using ahello_backend.Models.Service;
+using ahello_backend.Models.Servicecategory;
 using ahello_backend.Repositorys.Interfaces;
 using ahello_backend.Services.Interfaces;
 
@@ -37,7 +39,15 @@ namespace ahello_backend.Services.Classes
             return await _repository.DeleteAsync(
                 serviceCategoryId);
         }
-
+        public async Task<PagedResult<ServiceCategoryDynamicGetResponse>> GetAllWithStatusAsync(
+        int pageNumber,int pageSize,string? search, DateTime? createdDate)
+        {
+            return await _repository.GetAllWithStatusAsync(
+                pageNumber,
+                pageSize,
+                search,
+                createdDate);
+        }
         public async Task<IEnumerable<ServiceCategoryDynamicGetResponse>>
             GetAllAsync()
         {
