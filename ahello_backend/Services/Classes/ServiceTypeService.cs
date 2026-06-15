@@ -1,4 +1,5 @@
-﻿using ahello_backend.Models.Servicetype;
+﻿using ahello_backend.Models.Pagination;
+using ahello_backend.Models.Servicetype;
 using ahello_backend.Repositorys.Interfaces;
 using ahello_backend.Services.Interfaces;
 
@@ -18,7 +19,16 @@ namespace ahello_backend.Services.Classes
         {
             return await _repository.GetAllAsync();
         }
-
+        public async Task<PagedResult<ServiceType>> GetPagedAsync(
+        int pageNumber,int pageSize,string? search,
+        DateTime? createdDate)
+        {
+            return await _repository.GetPagedAsync(
+                pageNumber,
+                pageSize,
+                search,
+                createdDate);
+        }
         public async Task<ServiceType> GetByIdAsync(int serviceTypeId)
         {
             return await _repository.GetByIdAsync(serviceTypeId);
@@ -41,6 +51,12 @@ namespace ahello_backend.Services.Classes
         public async Task<bool> DeleteAsync(int serviceTypeId)
         {
             return await _repository.DeleteAsync(serviceTypeId);
+        }
+        public async Task<bool> UpdateStatusAsync(int serviceTypeId,ServiceTypeStatusUpdate model)
+        {
+            return await _repository.UpdateStatusAsync(
+                serviceTypeId,
+                model);
         }
     }
 }
