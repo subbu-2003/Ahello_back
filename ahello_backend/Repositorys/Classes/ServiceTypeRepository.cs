@@ -1,4 +1,5 @@
 ﻿using ahello_backend.DbContexts;
+using ahello_backend.Models.Pagination;
 using ahello_backend.Models.Servicetype;
 using ahello_backend.Repositorys.Interfaces;
 using Dapper;
@@ -27,11 +28,76 @@ namespace ahello_backend.Repositorys.Classes
                     ModifiedAt,
                     ModifiedBy
                 FROM servicetypes
+                WHERE IsActive = 1
                 ORDER BY ServiceTypeId DESC";
 
             return await connection.QueryAsync<ServiceType>(sql);
         }
+        public async Task<PagedResult<ServiceType>> GetPagedAsync(
+        int pageNumber,
+        int pageSize,
+        string? search,
+        DateTime? createdDate)
+        {
+            using var connection = _db.GetConnection();
 
+            var whereClause = " WHERE 1=1 ";
+
+            if (!string.IsNullOrEmpty(search))
+            {
+                whereClause += " AND ServiceTypeName LIKE @Search ";
+            }
+
+            if (createdDate.HasValue)
+            {
+                whereClause += " AND DATE(CreatedAt) = @CreatedDate ";
+            }
+
+            var totalQuery = $@"
+            SELECT COUNT(*)
+            FROM servicetypes
+            {whereClause}";
+
+            var totalRecords = await connection.ExecuteScalarAsync<int>(
+                totalQuery,
+                new
+                {
+                    Search = $"%{search}%",
+                    CreatedDate = createdDate?.Date
+                });
+
+            var sql = $@"
+            SELECT
+                ServiceTypeId,
+                ServiceTypeName,
+                IsActive,
+                CreatedAt,
+                CreatedBy,
+                ModifiedAt,
+                ModifiedBy
+            FROM servicetypes
+            {whereClause}
+            ORDER BY ServiceTypeId DESC
+            LIMIT @Offset,@PageSize";
+
+            var data = await connection.QueryAsync<ServiceType>(
+                sql,
+                new
+                {
+                    Search = $"%{search}%",
+                    CreatedDate = createdDate?.Date,
+                    Offset = (pageNumber - 1) * pageSize,
+                    PageSize = pageSize
+                });
+
+            return new PagedResult<ServiceType>
+            {
+                Details = data.ToList(),
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalCount = totalRecords
+            };
+        }
         public async Task<ServiceType> GetByIdAsync(int serviceTypeId)
         {
             using var connection = _db.GetConnection();
@@ -40,6 +106,7 @@ namespace ahello_backend.Repositorys.Classes
                 SELECT
                     ServiceTypeId,
                     ServiceTypeName,
+                    IsActive,
                     CreatedAt,
                     CreatedBy,
                     ModifiedAt,
@@ -78,13 +145,13 @@ namespace ahello_backend.Repositorys.Classes
             var sql = @"
                 INSERT INTO servicetypes
                 (
-                    ServiceTypeName,
+                    ServiceTypeName, IsActive,
                     CreatedAt,
                     CreatedBy
                 )
                 VALUES
                 (
-                    @ServiceTypeName,
+                    @ServiceTypeName, @IsActive,
                     NOW(),
                     @CreatedBy
                 );
@@ -124,6 +191,7 @@ namespace ahello_backend.Repositorys.Classes
                 UPDATE servicetypes
                 SET
                     ServiceTypeName = @ServiceTypeName,
+                    IsActive = @IsActive,
                     ModifiedAt = NOW(),
                     ModifiedBy = @ModifiedBy
                 WHERE ServiceTypeId = @ServiceTypeId";
@@ -153,6 +221,29 @@ namespace ahello_backend.Repositorys.Classes
                 new
                 {
                     ServiceTypeId = serviceTypeId
+                });
+
+            return rows > 0;
+        }
+        public async Task<bool> UpdateStatusAsync(int serviceTypeId,ServiceTypeStatusUpdate model)
+        {
+            using var connection = _db.GetConnection();
+
+            var sql = @"
+        UPDATE servicetypes
+        SET
+            IsActive = @IsActive,
+            ModifiedAt = NOW(),
+            ModifiedBy = @ModifiedBy
+        WHERE ServiceTypeId = @ServiceTypeId";
+
+            var rows = await connection.ExecuteAsync(
+                sql,
+                new
+                {
+                    ServiceTypeId = serviceTypeId,
+                    model.IsActive,
+                    model.ModifiedBy
                 });
 
             return rows > 0;
