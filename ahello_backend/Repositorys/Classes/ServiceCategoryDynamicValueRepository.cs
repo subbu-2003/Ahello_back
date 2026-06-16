@@ -233,10 +233,10 @@ namespace ahello_backend.Repositorys.Classes
             return categories;
         }
         public async Task<PagedResult<ServiceCategoryDynamicGetResponse>> GetAllWithStatusAsync(
-    int pageNumber,
-    int pageSize,
-    string? search,
-    DateTime? createdDate)
+        int pageNumber,
+        int pageSize,
+        string? search,
+        DateTime? createdDate)
         {
             using var connection = _db.GetConnection();
 
@@ -262,17 +262,17 @@ namespace ahello_backend.Repositorys.Classes
                 : "";
 
             string countQuery = $@"
-        SELECT COUNT(*)
-        FROM ServiceCategoryDynamic
-        {whereClause};
-    ";
+            SELECT COUNT(*)
+            FROM ServiceCategoryDynamic
+            {whereClause};
+        ";
 
-            string dataQuery = $@"
-        SELECT *
-        FROM ServiceCategoryDynamic
-        {whereClause}
-        ORDER BY ServiceCategoryId DESC
-        LIMIT @PageSize OFFSET @Offset;
+                string dataQuery = $@"
+            SELECT *
+            FROM ServiceCategoryDynamic
+            {whereClause}
+            ORDER BY ServiceCategoryId DESC
+            LIMIT @PageSize OFFSET @Offset;
     ";
 
             parameters.Add("PageSize", pageSize);
@@ -532,7 +532,7 @@ namespace ahello_backend.Repositorys.Classes
             {
                 await connection.ExecuteAsync(
                     @"DELETE FROM servicecategoryfieldvalues
-              WHERE ServiceCategoryId =
+                     WHERE ServiceCategoryId =
                     @ServiceCategoryId",
                     new
                     {
@@ -541,12 +541,17 @@ namespace ahello_backend.Repositorys.Classes
                     tx);
                 await connection.ExecuteAsync(
                     @"DELETE FROM servicecategorydropdownoption
-              WHERE ServiceCategoryId =
+                    WHERE ServiceCategoryId =
                     @ServiceCategoryId",
                     new
                     {
                         ServiceCategoryId = serviceCategoryId
                     },
+                    tx);
+                await connection.ExecuteAsync(
+                    @"DELETE FROM servicecategorydynamic
+                          WHERE ServiceCategoryId = @ServiceCategoryId",
+                    new { ServiceCategoryId = serviceCategoryId },
                     tx);
 
                 tx.Commit();
@@ -566,8 +571,8 @@ namespace ahello_backend.Repositorys.Classes
             using var connection = _db.GetConnection();
 
             var rowsAffected = await connection.ExecuteAsync(
-                @"UPDATE servicecategorydynamic
-          SET IsActive = @IsActive,
+              @"UPDATE servicecategorydynamic
+              SET IsActive = @IsActive,
               ModifiedBy = @ModifiedBy,
               ModifiedAt = NOW()
           WHERE ServiceCategoryId = @ServiceCategoryId",
