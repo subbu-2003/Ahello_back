@@ -202,6 +202,7 @@ namespace ahello_backend.Repositorys.Classes
                 {
                     ServiceTypeId = serviceTypeId,
                     model.ServiceTypeName,
+                    model.IsActive,
                     model.ModifiedBy
                 });
 

@@ -13,8 +13,10 @@ namespace ahello_backend.Services.Classes
             _repository = repository;
         }
 
-        public Task<IEnumerable<CategoryDynamicGetResponse>> GetAllAsync()
-            => _repository.GetAllAsync();
+        public Task<PagedCategoryDynamicResponse> GetAllAsync(int pageNumber, int pageSize,string? search = null,
+            DateTime? createdDate = null)
+            => _repository.GetAllAsync(
+                pageNumber, pageSize, search, createdDate);
 
         public Task<CategoryDynamicGetResponse> GetByIdAsync(int categoryId)
             => _repository.GetByIdAsync(categoryId);
