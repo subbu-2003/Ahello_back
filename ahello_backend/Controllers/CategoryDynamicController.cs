@@ -16,13 +16,20 @@ namespace ahello_backend.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll(
+        int pageNumber = 1,
+        int pageSize = 10,
+        string? search = null,
+        DateTime? createdDate = null)
         {
-            var data = await _service.GetAllAsync();
+            var data = await _service.GetAllAsync(
+                pageNumber,
+                pageSize,
+                search,
+                createdDate);
 
             return Ok(data);
         }
-
         [HttpGet("{categoryId}")]
         public async Task<IActionResult> GetById(int categoryId)
         {

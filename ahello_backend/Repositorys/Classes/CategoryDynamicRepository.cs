@@ -14,38 +14,83 @@ namespace ahello_backend.Repositorys.Classes
             _db = db;
         }
 
-        public async Task<IEnumerable<CategoryDynamicGetResponse>> GetAllAsync()
+        public async Task<PagedCategoryDynamicResponse> GetAllAsync(
+        int pageNumber,
+        int pageSize,
+        string? search = null,
+        DateTime? createdDate = null)
         {
             using var connection = _db.GetConnection();
 
+            var offset = (pageNumber - 1) * pageSize;
+
+            var whereClause = "WHERE 1=1";
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                whereClause += " AND c.CategoryName LIKE @Search";
+            }
+
+            if (createdDate.HasValue)
+            {
+                whereClause += " AND DATE(c.CreatedAt) = @CreatedDate";
+            }
+
+            var totalRecords = await connection.ExecuteScalarAsync<int>(
+                $@"SELECT COUNT(*)
+                   FROM categories c
+                   {whereClause}",
+                new
+                {
+                    Search = $"%{search}%",
+                    CreatedDate = createdDate?.Date
+                });
+
             var categories = (await connection.QueryAsync<CategoryDynamicGetResponse>(
-                @"SELECT 
-                    CategoryId,
-                    CategoryName,
-                    CreatedBy,
-                    CreatedAt,
-                    IsActive
-                  FROM categories
-                  ORDER BY CategoryId DESC")).ToList();
+                $@"SELECT
+                c.CategoryId,
+                c.CategoryName,
+                c.CreatedBy,
+                c.CreatedAt,
+                c.ModifiedBy,
+                c.ModifiedAt,
+                c.IsActive
+                  FROM categories c
+                  {whereClause}
+                  ORDER BY c.CategoryId DESC
+                  LIMIT @PageSize OFFSET @Offset",
+                new
+                {
+                    Search = $"%{search}%",
+                    CreatedDate = createdDate?.Date,
+                    PageSize = pageSize,
+                    Offset = offset
+                })).ToList();
 
             foreach (var category in categories)
             {
                 var fields = await connection.QueryAsync<CategoryDynamicFieldResponse>(
                     @"SELECT
-                        cf.CategoryFieldId,
-                        cf.FieldName,
-                        cf.FieldCode,
-                        cfv.FieldValue
-                      FROM categoryfieldvalues cfv
-                      INNER JOIN categoryfields cf
-                        ON cfv.CategoryFieldId = cf.CategoryFieldId
-                      WHERE cfv.CategoryId = @CategoryId",
+                cf.CategoryFieldId,
+                cf.FieldName,
+                cf.FieldCode,
+                cfv.FieldValue
+                FROM categoryfieldvalues cfv
+                INNER JOIN categoryfields cf
+                ON cfv.CategoryFieldId = cf.CategoryFieldId
+                 WHERE cfv.CategoryId = @CategoryId",
                     new { CategoryId = category.CategoryId });
 
                 category.Fields = fields.ToList();
             }
 
-            return categories;
+            return new PagedCategoryDynamicResponse
+            {
+                TotalRecords = totalRecords,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                Data = categories
+            };
         }
 
         public async Task<CategoryDynamicGetResponse> GetByIdAsync(int categoryId)
