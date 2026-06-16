@@ -4,7 +4,11 @@ namespace ahello_backend.Repositorys.Interfaces
 {
     public interface ICategoryDynamicRepository
     {
-        Task<IEnumerable<CategoryDynamicGetResponse>> GetAllAsync();
+        Task<PagedCategoryDynamicResponse> GetAllAsync(
+        int pageNumber,
+        int pageSize,
+        string? search = null,
+        DateTime? createdDate = null);
 
         Task<CategoryDynamicGetResponse> GetByIdAsync(int categoryId);
 
