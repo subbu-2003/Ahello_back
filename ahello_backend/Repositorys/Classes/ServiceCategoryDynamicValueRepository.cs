@@ -83,7 +83,7 @@ namespace ahello_backend.Repositorys.Classes
             WHERE scf.ServiceCategoryFieldId =
                   @ServiceCategoryFieldId";
 
-                    foreach (var field in model.Fields)
+                    foreach (var field in model.Fields.Where(x => x.ServiceCategoryFieldId > 0))
                     {
                         await connection.ExecuteAsync(
                             sql,
@@ -123,7 +123,7 @@ namespace ahello_backend.Repositorys.Classes
                 @CreatedBy
             )";
 
-                    foreach (var field in model.Fields)
+                    foreach (var field in model.Fields.Where(x => x.ServiceCategoryFieldId > 0))
                     {
                         if (field.DropDownOptions != null &&
                             field.DropDownOptions.Any())
@@ -267,13 +267,17 @@ namespace ahello_backend.Repositorys.Classes
             {whereClause};
         ";
 
-                string dataQuery = $@"
-            SELECT *
+            string dataQuery = $@"
+            SELECT
+                ServiceCategoryId,
+                ServiceCategoryName,
+                IsActive,
+                CreatedAt
             FROM ServiceCategoryDynamic
             {whereClause}
             ORDER BY ServiceCategoryId DESC
             LIMIT @PageSize OFFSET @Offset;
-    ";
+        ";
 
             parameters.Add("PageSize", pageSize);
             parameters.Add("Offset", offset);
@@ -444,19 +448,15 @@ namespace ahello_backend.Repositorys.Classes
                     WHERE scf.ServiceCategoryFieldId =
                           @ServiceCategoryFieldId";
 
-                    foreach (var field in model.Fields)
+                    foreach (var field in model.Fields.Where(x => x.ServiceCategoryFieldId > 0))
                     {
                         await connection.ExecuteAsync(
                             sql,
                             new
                             {
-                                ServiceCategoryId =
-                                    serviceCategoryId,
-
+                                ServiceCategoryId = serviceCategoryId,
                                 field.ServiceCategoryFieldId,
-
                                 field.FieldValue,
-
                                 model.ModifiedBy
                             },
                             tx);
@@ -486,7 +486,7 @@ namespace ahello_backend.Repositorys.Classes
                         @ModifiedBy
                     );";
 
-                    foreach (var field in model.Fields)
+                    foreach (var field in model.Fields.Where(x => x.ServiceCategoryFieldId > 0))
                     {
                         if (field.DropDownOptions != null &&
                             field.DropDownOptions.Any())
