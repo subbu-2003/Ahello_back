@@ -174,20 +174,69 @@ namespace ahello_backend.Repositorys.Classes
             }
         }
 
-        public async Task<IEnumerable<ServiceCategoryDynamicGetResponse>>
-            GetAllAsync()
+        public async Task<PagedResult<ServiceCategoryDynamicGetResponse>> GetAllAsync(
+        int pageNumber,
+        int pageSize,
+        string? search,
+        DateTime? createdDate)
         {
             using var connection = _db.GetConnection();
+
+            int offset = (pageNumber - 1) * pageSize;
+
+            var whereConditions = new List<string>
+{
+    "IsActive = 1"
+};
+
+            var parameters = new DynamicParameters();
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                whereConditions.Add(
+                    "LOWER(ServiceCategoryName) LIKE LOWER(@Search)");
+
+                parameters.Add(
+                    "Search",
+                    $"%{search}%");
+            }
+
+            if (createdDate.HasValue)
+            {
+                whereConditions.Add(
+                    "DATE(CreatedAt) = @CreatedDate");
+
+                parameters.Add(
+                    "CreatedDate",
+                    createdDate.Value.Date);
+            }
+
+            string whereClause =
+                $"WHERE {string.Join(" AND ", whereConditions)}";
+
+            parameters.Add("PageSize", pageSize);
+            parameters.Add("Offset", offset);
+
+            var totalRecords =
+                await connection.ExecuteScalarAsync<int>(
+                $@"SELECT COUNT(*)
+       FROM servicecategorydynamic
+       {whereClause}",
+                parameters);
 
             var categories =
                 (await connection.QueryAsync<
                     ServiceCategoryDynamicGetResponse>(
-                @"SELECT
-                ServiceCategoryId,
-                ServiceCategoryName,
-                IsActive
-            FROM servicecategorydynamic
-            WHERE IsActive = 1"))
+                $@"SELECT
+        ServiceCategoryId,
+        ServiceCategoryName,
+        IsActive,
+        CreatedAt
+      FROM servicecategorydynamic
+      {whereClause}
+      ORDER BY ServiceCategoryId DESC
+      LIMIT @PageSize OFFSET @Offset",
+                parameters))
                 .ToList();
 
             foreach (var category in categories)
@@ -246,7 +295,13 @@ namespace ahello_backend.Repositorys.Classes
                 category.DropdownOptions = dropdownOptions.ToList();
             }
 
-            return categories;
+            return new PagedResult<ServiceCategoryDynamicGetResponse>
+            {
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalCount = totalRecords,
+                Details = categories
+            };
         }
         public async Task<PagedResult<ServiceCategoryDynamicGetResponse>> GetAllWithStatusAsync(
         int pageNumber,

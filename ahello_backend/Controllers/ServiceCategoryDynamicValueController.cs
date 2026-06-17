@@ -19,11 +19,19 @@ namespace ahello_backend.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll(
+         int pageNumber = 1,
+         int pageSize = 10,
+         string? search = null,
+         DateTime? createdDate = null)
         {
             try
             {
-                var result = await _service.GetAllAsync();
+                var result = await _service.GetAllAsync(
+                    pageNumber,
+                    pageSize,
+                    search,
+                    createdDate);
 
                 return Ok(result);
             }

@@ -48,10 +48,17 @@ namespace ahello_backend.Services.Classes
                 search,
                 createdDate);
         }
-        public async Task<IEnumerable<ServiceCategoryDynamicGetResponse>>
-            GetAllAsync()
+        public async Task<PagedResult<ServiceCategoryDynamicGetResponse>> GetAllAsync(
+        int pageNumber,
+        int pageSize,
+        string? search,
+        DateTime? createdDate)
         {
-            return await _repository.GetAllAsync();
+            return await _repository.GetAllAsync(
+                pageNumber,
+                pageSize,
+                search,
+                createdDate);
         }
 
         public async Task<ServiceCategoryDynamicGetResponse>

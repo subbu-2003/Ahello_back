@@ -13,8 +13,11 @@ namespace ahello_backend.Services.Interfaces
 
         Task<bool> DeleteAsync(int serviceCategoryId);
 
-        Task<IEnumerable<ServiceCategoryDynamicGetResponse>>
-            GetAllAsync();
+        Task<PagedResult<ServiceCategoryDynamicGetResponse>> GetAllAsync(
+        int pageNumber,
+        int pageSize,
+        string? search,
+        DateTime? createdDate);
         Task<PagedResult<ServiceCategoryDynamicGetResponse>>
          GetAllWithStatusAsync(int pageNumber, int pageSize,string? search,DateTime? createdDate);
 
