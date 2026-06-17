@@ -23,11 +23,8 @@ namespace ahello_backend.Controllers
         {
             if (model.File != null && model.File.Length > 0)
             {
-                // Use your existing upload service
-                var filePath = await _fileUpload.SaveVideoAsync(model.File);
-
-                // Save file path in FieldValue
-                model.FieldValue = filePath;
+                model.FieldValue =
+                    await _fileUpload.SaveFileAsync(model.File, "form-files");
             }
 
             var id = await _service.CreateAsync(model);
