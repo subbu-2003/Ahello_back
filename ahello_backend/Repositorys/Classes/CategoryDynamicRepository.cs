@@ -138,23 +138,41 @@ namespace ahello_backend.Repositorys.Classes
 
             try
             {
-                var categorySql = @"
-                    INSERT INTO categories
-                    (
-                        CategoryName,
-                        IsActive,
-                        CreatedAt,
-                        CreatedBy
-                    )
-                    VALUES
-                    (
-                        @CategoryName,
-                        @IsActive,
-                        NOW(),
-                        @CreatedBy
-                    );
+                // Duplicate check using Trim + Lower
+                var exists = await connection.ExecuteScalarAsync<int>(
+                    @"SELECT COUNT(*)
+              FROM categories
+              WHERE LOWER(TRIM(CategoryName)) =
+                    LOWER(TRIM(@CategoryName))",
+                    new
+                    {
+                        model.CategoryName
+                    },
+                    tx);
 
-                    SELECT LAST_INSERT_ID();";
+                if (exists > 0)
+                {
+                    throw new ApplicationException(
+                        "Category name already exists");
+                }
+
+                var categorySql = @"
+            INSERT INTO categories
+            (
+                CategoryName,
+                IsActive,
+                CreatedAt,
+                CreatedBy
+            )
+            VALUES
+            (
+                @CategoryName,
+                @IsActive,
+                NOW(),
+                @CreatedBy
+            );
+
+            SELECT LAST_INSERT_ID();";
 
                 var categoryId = await connection.ExecuteScalarAsync<int>(
                     categorySql,
@@ -169,26 +187,26 @@ namespace ahello_backend.Repositorys.Classes
                 if (model.Fields != null && model.Fields.Any())
                 {
                     var fieldSql = @"
-                        INSERT INTO categoryfieldvalues
-                        (
-                            CategoryId,
-                            FieldCode,
-                            CategoryFieldId,
-                            FieldValue,
-                            CreatedDate,
-                            CreatedBy,
-                            CreatedAt
-                        )
-                        SELECT
-                            @CategoryId,
-                            cf.FieldCode,
-                            @CategoryFieldId,
-                            @FieldValue,
-                            NOW(),
-                            @CreatedBy,
-                            CURRENT_TIMESTAMP
-                        FROM categoryfields cf
-                        WHERE cf.CategoryFieldId = @CategoryFieldId;";
+                INSERT INTO categoryfieldvalues
+                (
+                    CategoryId,
+                    FieldCode,
+                    CategoryFieldId,
+                    FieldValue,
+                    CreatedDate,
+                    CreatedBy,
+                    CreatedAt
+                )
+                SELECT
+                    @CategoryId,
+                    cf.FieldCode,
+                    @CategoryFieldId,
+                    @FieldValue,
+                    NOW(),
+                    @CreatedBy,
+                    CURRENT_TIMESTAMP
+                FROM categoryfields cf
+                WHERE cf.CategoryFieldId = @CategoryFieldId;";
 
                     foreach (var field in model.Fields)
                     {

@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="en">
+ 
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    
+    <!-- ✅ PRIMARY SEO META TAGS -->
+    <title>AI vs Human Intelligence: Smart Collaboration for Future-Ready Businesses | E2o Technologies</title>
+    <meta name="description" content="Discover how AI and human intelligence work together to transform businesses. Learn about smart collaboration, automation, and the future of work with E2o Technologies' enterprise AI solutions." />
+    <meta name="keywords" content="AI vs Human Intelligence, Human AI Collaboration, Artificial Intelligence in Business, Future of Work, AI Automation, Digital Transformation, E2o Technologies, Enterprise AI Solutions, AI-Powered Workflow, Human-Centered AI, Intelligent Automation, AI Business Strategy" />
+    <meta name="author" content="E2o Technologies" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <link rel="canonical" href="https://e2o.in/ai-vs-human-intelligence" />
+
+    <!-- ✅ OPEN GRAPH (Facebook, LinkedIn) -->
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="AI vs Human Intelligence: Smart Collaboration for Future-Ready Businesses" />
+    <meta property="og:description" content="You don't need to choose between AI or humans. Discover how smart collaboration, continuous learning, and adaptive skills build sustainable, future-ready workforces." />
+    <meta property="og:url" content="https://e2o.in/ai-vs-human-intelligence" />
+    <meta property="og:site_name" content="E2o Technologies" />
+    <meta property="og:image" content="assets/img/blog/ai-data-analysis-team (1).jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="AI and Human Intelligence Collaboration" />
+    <meta property="article:published_time" content="2025-12-18T00:00:00+00:00" />
+    <meta property="article:modified_time" content="2025-12-18T00:00:00+00:00" />
+    <meta property="article:author" content="E2o Technologies" />
+    <meta property="article:section" content="Technology" />
+    <meta property="article:tag" content="Artificial Intelligence" />
+    <meta property="article:tag" content="Digital Transformation" />
+    <meta property="article:tag" content="Future of Work" />
+
+    <!-- ✅ TWITTER CARD -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="AI vs Human Intelligence: Smart Collaboration for the Future" />
+    <meta name="twitter:description" content="Human creativity and AI intelligence together shape the future of work. Learn how E2o Technologies enables smart collaboration." />
+    <meta name="twitter:image" content="assets/img/blog/ai-data-analysis-team (1).jpg" />
+    <meta name="twitter:image:alt" content="AI and Human Intelligence Working Together" />
+    <meta name="twitter:site" content="@E2oTech" />
+    <meta name="twitter:creator" content="@E2oTech" />
+
+    <!-- ✅ STRUCTURED DATA (Schema.org JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "headline": "AI vs Human Intelligence: Smart Collaboration for Future-Ready Businesses",
+      "alternativeHeadline": "You don't need to choose between AI or humans — smart collaboration is the key",
+      "image": {
+        "@type": "ImageObject",
+        "url": "assets/img/blog/ai-data-analysis-team (1).jpg",
+        "width": 1200,
+        "height": 630
+      },
+      "description": "Discover how AI and human intelligence collaborate to create smarter, future-ready businesses through automation, data-driven insights, and creative problem-solving.",
+      "datePublished": "2025-12-18T00:00:00+00:00",
+      "dateModified": "2025-12-18T00:00:00+00:00",
+      "author": {
+        "@type": "Organization",
+        "name": "E2o Technologies",
+        "url": "https://e2o.in",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://e2o.in/assets/img/logo_e2o.png"
+        }
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "E2o Technologies",
+        "url": "https://e2o.in",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://e2o.in/assets/img/logo_e2o.png",
+          "width": 200,
+          "height": 60
+        }
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://e2o.in/ai-vs-human-intelligence"
+      },
+      "keywords": "AI vs Human Intelligence, Human AI Collaboration, Artificial Intelligence in Business, Future of Work, AI Automation, Digital Transformation, Enterprise AI Solutions",
+      "articleSection": "Technology & Innovation",
+      "inLanguage": "en-US"
+    }
+    </script>
+
+    <!-- ✅ ORGANIZATION SCHEMA -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "E2o Technologies",
+      "url": "https://e2o.in",
+      "logo": "https://e2o.in/assets/img/logo_e2o.png",
+      "description": "Enterprise AI Solutions & Innovation Lab",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": "+91-9344723010",
+        "contactType": "Customer Service",
+        "email": "team@e2o.in",
+        "areaServed": "IN",
+        "availableLanguage": ["English", "Tamil"]
+      },
+      "sameAs": [
+        "https://www.linkedin.com/company/e2o-technologies",
+        "https://twitter.com/E2oTech",
+        "https://www.facebook.com/E2oTech",
+        "https://www.instagram.com/E2oTech"
+      ],
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Madurai",
+        "addressRegion": "Tamil Nadu",
+        "addressCountry": "IN"
+      }
+    }
+    </script>
+
+    <!-- ✅ BREADCRUMB SCHEMA -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://e2o.in"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Blog",
+          "item": "https://e2o.in/blog"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "AI vs Human Intelligence",
+          "item": "https://e2o.in/ai-vs-human-intelligence"
+        }
+      ]
+    }
+    </script>
+
+    <!-- ✅ ADDITIONAL SEO TAGS -->
+    <meta name="language" content="English" />
+    <meta name="revisit-after" content="7 days" />
+    <meta name="distribution" content="global" />
+    <meta name="rating" content="general" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    
+    <!-- Favicons -->
+    <link
+      rel="icon"
+      href="assets/img/logo_e2o.png"
+      media="(prefers-color-scheme: no-preference)"
+      type="image/png"
+    />
+    <link
+      rel="icon"
+      href="assets/img/favicon.png"
+      media="(prefers-color-scheme: dark)"
+      type="image/png"
+    />
+    <link
+      rel="icon"
+      href="assets/img/logo_e2o.png"
+      media="(prefers-color-scheme: light)"
+      type="image/png"
+    />
+    <link href="assets/img/apple-touch-icon.png" rel="apple-touch-icon" />
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&family=Inter:wght@100;200;300;400;500;600;700;800;900&family=Nunito:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Vendor CSS Files -->
+    <link
+      href="assets/vendor/bootstrap/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="assets/vendor/bootstrap-icons/bootstrap-icons.css"
+      rel="stylesheet"
+    />
+    <link href="assets/vendor/aos/aos.css" rel="stylesheet" />
+    <link
+      href="assets/vendor/glightbox/css/glightbox.min.css"
+      rel="stylesheet"
+    />
+    <link href="assets/vendor/swiper/swiper-bundle.min.css" rel="stylesheet" />
+
+    <!-- Main CSS File -->
+    <link href="assets/css/main.css" rel="stylesheet" />
+
+    <script src="assets/js/menu.js"></script>
+    
+    <!-- ✅ STRUCTURED DATA (Schema.org JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "headline": "AI vs Human Intelligence: Smart Collaboration for Future-Ready Businesses",
+      "alternativeHeadline": "You don't need to choose between AI or humans — smart collaboration is the key",
+      "image": {
+        "@type": "ImageObject",
+        "url": "assets/img/blog/ai-data-analysis-team (1).jpg",
+        "width": 1200,
+        "height": 630
+      },
+      "description": "Discover how AI and human intelligence collaborate to create smarter, future-ready businesses through automation, data-driven insights, and creative problem-solving.",
+      "datePublished": "2025-12-18T00:00:00+00:00",
+      "dateModified": "2025-12-18T00:00:00+00:00",
+      "author": {
+        "@type": "Organization",
+        "name": "E2o Technologies",
+        "url": "https://e2o.in",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "assets/img/logo_e2o.png"
+        }
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "E2o Technologies",
+        "url": "https://e2o.in",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "assets/img/logo_e2o.png",
+          "width": 200,
+          "height": 60
+        }
+      },
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://e2o.in/ai-vs-human-intelligence"
+      },
+      "keywords": "AI vs Human Intelligence, Human AI Collaboration, Artificial Intelligence in Business, Future of Work, AI Automation, Digital Transformation, Enterprise AI Solutions",
+      "articleSection": "Technology & Innovation",
+      "inLanguage": "en-US"
+    }
+    </script>
+
+    <!-- ✅ ORGANIZATION SCHEMA -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "E2o Technologies",
+      "url": "https://e2o.in",
+      "logo": "assets/img/logo_e2o.png",
+      "description": "Enterprise AI Solutions & Innovation Lab",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": "+91-9344723010",
+        "contactType": "Customer Service",
+        "email": "team@e2o.in",
+        "areaServed": "IN",
+        "availableLanguage": ["English", "Tamil"]
+      },
+      "sameAs": [
+        "https://www.linkedin.com/company/e2o-technologies",
+        "https://twitter.com/E2oTech",
+        "https://www.facebook.com/E2oTech",
+        "https://www.instagram.com/E2oTech"
+      ],
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Madurai",
+        "addressRegion": "Tamil Nadu",
+        "addressCountry": "IN"
+      }
+    }
+    </script>
+
+    <!-- ✅ BREADCRUMB SCHEMA -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": "https://e2o.in"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Blog",
+          "item": "https://e2o.in/blog"
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "AI vs Human Intelligence",
+          "item": "https://e2o.in/ai-vs-human-intelligence"
+        }
+      ]
+    }
+    </script>
+
+    <!-- ✅ ADDITIONAL SEO TAGS -->
+    <meta name="language" content="English" />
+    <meta name="revisit-after" content="7 days" />
+    <meta name="distribution" content="global" />
+    <meta name="rating" content="general" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    
+    <!-- Mobile Optimization -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    
+    <!-- Geo Tags -->
+    <meta name="geo.region" content="IN-TN" />
+    <meta name="geo.placename" content="Madurai" />
+    <meta name="geo.position" content="9.9252;78.1198" />
+    <meta name="ICBM" content="9.9252, 78.1198" />
+
+    <!-- =======================================================
+  * Template Name: iLanding
+  * Template URL: https://bootstrapmade.com/ilanding-bootstrap-landing-page-template/
+  * Updated: Nov 12 2024 with Bootstrap v5.3.3
+  * Author: BootstrapMade.com
+  * License: https://bootstrapmade.com/license/
+  ======================================================== -->
+  </head>
+  <style>
+    section, .section {
+    color: var(--default-color);
+    background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.7),
+    rgba(255, 255, 255, 0.7)
+  );
+    padding: 0px 0;
+    scroll-margin-top: 90px;
+    overflow: clip;
+}
+  </style>
+
+  <body class="service-details-page">
+    <div class="update-whatsapp-icon">
+      <a
+        href="https://wa.me/yourNumber"
+        target="_blank"
+        title="Chat on WhatsApp"
+      >
+        <img
+          src="assets/img/whatsapp.png"
+          alt="WhatsApp"
+          width="50"
+          height="50"
+        />
+      </a>
+    </div>
+
+   
+
+    <div id="navbar-container"></div>
+    <main class="main">
+      <!-- Service Details Section -->
+  <section id="service-details" class="service-details section" style="margin-top:130px;">
+  <style>
+    /* ===== BLOG DETAIL EXACT DESIGN ===== */
+
+    .blog-container {
+      max-width: 960px;
+      margin: auto;
+      font-family: "Georgia", "Times New Roman", serif;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-bottom: 20px;
+      font-size: 14px;
+      color: #555;
+      text-decoration: none;
+    }
+
+    .post-meta {
+      font-size: 13px;
+      color: #777;
+      margin-bottom: 18px;
+    }
+
+    .post-title {
+      font-size: 44px;
+      font-weight: 700;
+      line-height: 1.15;
+      text-align: center;
+      color: #0a1f44;
+      margin-bottom: 20px;
+    }
+
+    .post-subtitle {
+      max-width: 720px;
+      margin: 0 auto 30px;
+      font-size: 17px;
+      line-height: 1.6;
+      color: #555;
+      text-align: center;
+    }
+
+    .post-author {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 40px;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      color: #333;
+    }
+
+    .author-img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .post-image img {
+      width: 100%;
+      border-radius: 12px;
+      display: block;
+      margin-bottom: 45px;
+    }
+
+    .post-content {
+      font-family: Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.85;
+      color: #222;
+    }
+
+    .post-content h3 {
+      font-family: Georgia, serif;
+      font-size: 22px;
+      font-weight: 700;
+      margin-top: 35px;
+      margin-bottom: 12px;
+      color: #0a1f44;
+    }
+
+    .post-content p {
+      margin-bottom: 18px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .post-title {
+        font-size: 32px;
+      }
+
+      .post-subtitle {
+        font-size: 16px;
+      }
+    }
+  </style>
+
+  <div class="container blog-container">
+
+    <!-- Back -->
+    <a href="index.html#Blog" class="back-link">← Back to Blogs</a>
+
+    <!-- Date -->
+    <div class="post-meta text-center">
+     December 18 2025
+    </div>
+
+    <!-- Title -->
+    <h1 class="post-title" id="postTitle">
+      Ai or Human
+    </h1>
+
+    <!-- Subtitle -->
+    <p class="post-subtitle">
+      You don’t need to choose between AI or humans — smart collaboration, continuous learning, and adaptive skills are enough to build a sustainable and future-ready workforce.
+    </p>
+
+    <!-- Author -->
+    <div class="post-author">
+      <img src="assets/img/logos.png" class="author-img" alt="">
+      <div>
+         <strong>E2o Technologies</strong><br>
+  <small>Enterprise AI Solutions & Innovation Lab</small>
+      </div>
+    </div>
+
+    <!-- Featured Image -->
+    <div class="post-image">
+       <img id="postImage" alt="">
+    </div>
+
+   
+
+  </div>
+</section>
+
+<section id="introduction" class="service-details section">
+  <style>
+    /* ===== INTRODUCTION BLOG SECTION ===== */
+
+    #introduction .intro-container {
+      max-width: 900px;
+      margin: auto;
+      font-family: Arial, sans-serif;
+      color: #111;
+    }
+
+    #introduction h2 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 15px;
+    }
+
+    #introduction p {
+      font-size: 16px;
+      line-height: 1.8;
+      margin-bottom: 16px;
+      color: #222;
+    }
+
+    #introduction p strong {
+      font-weight: 700;
+    }
+
+    #introduction h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-top: 30px;
+      margin-bottom: 12px;
+    }
+
+    #introduction ul {
+      padding-left: 20px;
+      margin-bottom: 30px;
+    }
+
+    #introduction ul li {
+      font-size: 16px;
+      margin-bottom: 8px;
+      line-height: 1.6;
+    }
+
+    /* Image card */
+    .intro-image-card {
+      background: #f8f8f8;
+      border-radius: 16px;
+      padding: 30px;
+      display: flex;
+      justify-content: center;
+      margin-top: 40px;
+    }
+
+    .intro-image-card img {
+      max-width: 100%;
+      border-radius: 12px;
+      object-fit: cover;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      #introduction h2 {
+        font-size: 22px;
+      }
+
+      .intro-image-card {
+        padding: 20px;
+      }
+    }
+  </style>
+
+  <div class="container intro-container">
+
+    <h2>Introduction</h2>
+
+    <p>
+      In today’s digital era, human intelligence and artificial intelligence are no longer competitors—they are collaborators. Just as a skilled professional uses a laptop to turn ideas into reality, AI works alongside humans to enhance thinking, speed up decisions, and solve complex problems more efficiently.
+    </p>
+
+    <p>
+      Much like how advanced hospital management software streamlines healthcare operations, AI-powered tools developed and implemented by <strong>E2o Technologies</strong> help businesses improve productivity, accuracy, and decision-making. The real power lies not in replacing humans, but in combining human judgment with machine precision to achieve smarter outcomes.
+    </p>
+    <p>
+      As technology continues to evolve,<strong> E2o Technologies</strong> focuses on building intelligent solutions that empower people, transform workflows, and shape the future of work and innovation.
+    </p>
+
+    <h3>1. Start Your Day with Smart Human–AI Collaboration</h3>
+
+    <p>
+     Just like a nutritious breakfast fuels the body, a smart combination of human intelligence and AI boosts productivity and efficiency. When used together, they reduce workload and improve decision-making:
+    </p>
+
+   <ul class="custom-bullets">
+ <li>Clear human goals and creativity</li>
+  <li>AI-driven data analysis and insights</li>
+  <li>Automation of repetitive tasks</li>
+  <li>Smarter workflows powered by E2o Technologies</li>
+</ul>
+
+
+    <!-- Image Block -->
+    <div class="post-image">
+      <img src="assets/img/blog/ai-data-analysis-team (1).jpg" alt="Healthy Weight">
+    </div>
+
+
+
+    
+    <h3>2.  Balance Human Creativity with AI Intelligence</h3>
+
+    <p>
+      Human creativity and emotional intelligence bring innovation, while AI adds speed, accuracy, and data-driven support. Together, they help organizations make smarter and faster decisions:
+    </p>
+
+   <ul class="custom-bullets">
+  <li>Creative thinking and problem-solving</li>
+  <li>AI-powered analytics and predictions</li>
+  <li>Improved accuracy with reduced errors</li>
+  <li>Intelligent solutions developed by <strong> E2o Technologies</strong></li>
+</ul>
+
+
+<h3>3. Use AI to Simplify Work, Not Replace People</h3>
+
+    <p>
+       AI works best as a support system that enhances human capabilities. By automating routine tasks, professionals can focus on strategic, creative, and meaningful work:
+    </p>
+
+
+  <!-- Image Block -->
+    <div class="post-image">
+      <img src="assets/img/blog/robot-performing-ordinary-human-job.jpg" alt="Healthy Weight">
+    </div>
+
+
+
+
+  </div>
+</section>
+
+<section id="diet-consultation" class="service-details section">
+  <style>
+    /* ===== DIET CONSULTATION SECTION ===== */
+
+    #diet-consultation {
+      margin-top: 60px;
+      font-family: Arial, sans-serif;
+    }
+
+    /* Card */
+    .diet-card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 0 0 1px #eee;
+      margin-bottom: 40px;
+    }
+
+    .diet-card h4 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #111;
+    }
+
+    .diet-card p {
+      font-size: 14px;
+      color: #555;
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    /* Inputs */
+    .diet-card input {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 14px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      margin-bottom: 15px;
+    }
+
+    .diet-card input:focus {
+      outline: none;
+      border-color: #2563eb;
+    }
+
+    /* Button */
+    .diet-card button {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      padding: 10px 18px;
+      font-size: 14px;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+
+    .diet-card button:hover {
+      background: #1e4ed8;
+    }
+
+    /* Resources */
+    .resources h5 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: #111;
+    }
+
+    .resources p {
+      font-size: 14px;
+      color: #444;
+      margin-bottom: 12px;
+      line-height: 1.6;
+    }
+
+    .resources a {
+      display: block;
+      font-size: 14px;
+      color: #2563eb;
+      text-decoration: none;
+      margin-bottom: 8px;
+    }
+
+    .resources a:hover {
+      text-decoration: underline;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .diet-card {
+        padding: 20px;
+      }
+    }
+  </style>
+
+  <div class="container" style="max-width:900px;">
+
+    <!-- Free Diet Consultation Card -->
+    <div class="diet-card">
+      <h4>Free AI Consultation</h4>
+      <p>
+        Book a free 7-day trial of <strong>E2o AI Solutions</strong> —
+  intelligent technology designed by <strong>E2o Technologies</strong>
+  to help businesses combine human intelligence with AI-powered efficiency..
+      </p>
+
+      <div class="row">
+        <div class="col-md-6">
+          <input type="text" placeholder="Name">
+        </div>
+        <div class="col-md-6">
+          <input type="email" placeholder="Email">
+        </div>
+        <div class="col-md-6">
+          <input type="text" placeholder="Phone">
+        </div>
+        <div class="col-md-6">
+          <input type="number" placeholder="Company Name">
+        </div>
+      </div>
+
+      <button>Start Free Trial</button>
+    </div>
+
+    <!-- Useful Resources -->
+    <div class="resources">
+      <h5>Useful Resources</h5>
+<p>
+  These trusted technology and research resources are widely referenced by
+  enterprises, developers, and innovation teams exploring
+  <strong>AI vs Human Intelligence</strong>, human–AI collaboration,
+  and the future of work.
+</p>
+
+<a href="https://www.weforum.org/topics/artificial-intelligence/" target="_blank" rel="noopener">
+  World Economic Forum – Artificial Intelligence & Future of Work
+</a>
+
+<a href="https://ai.google/research/" target="_blank" rel="noopener">
+  Google AI Research – Human-Centered Artificial Intelligence
+</a>
+
+<a href="https://www.ibm.com/thought-leadership/artificial-intelligence" target="_blank" rel="noopener">
+  IBM Think – AI, Automation & Business Intelligence Insights
+</a>
+
+    </div>
+
+  </div>
+</section>
+
+
+
+
+      <!-- /Service Details Section -->
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="container footer-top">
+        <div class="row gy-4">
+          <div class="col-lg-4 col-md-6 footer-about">
+            <a
+              href="index.html"
+              class="logo_icon d-flex align-items-center me-auto me-xl-0"
+            >
+              <img
+                src="assets/img/logoe2o.png"
+                alt="E2o Technologies Logo"
+                style="height: 50px"
+              />
+            </a>
+            <div class="footer-contact pt-3">
+              <p>Madurai, Tamilnadu, India</p>
+              <p class="mt-3">
+                <strong>Phone:</strong> <span>9344723010 | 8973494369</span>
+              </p>
+              <p><strong>Email:</strong> <span>team@e2o.in</span></p>
+            </div>
+            <div class="social-links d-flex mt-4">
+              <a href=""><i class="bi bi-twitter-x"></i></a>
+              <a href=""><i class="bi bi-facebook"></i></a>
+              <a href=""><i class="bi bi-instagram"></i></a>
+              <a href=""><i class="bi bi-linkedin"></i></a>
+            </div>
+          </div>
+
+          <div class="col-lg-2 col-md-3 footer-links">
+            <h4>Useful Links</h4>
+            <ul>
+              <li><a href="index.html">Home</a></li>
+              <li><a href="index.html#about">About us</a></li>
+              <li><a href="index.html#services">Services</a></li>
+              <!-- <li><a href="index.html#testimonials">Testimonials</a></li> -->
+              <li><a href="index.html#contact">Contact</a></li>
+
+              <li><a href="updates">Updates</a></li>
+            </ul>
+          </div>
+
+           <div class="col-lg-2 col-md-3 footer-links">
+            <h4>Our Products</h4>
+            <ul>
+              <li>
+                <a href="pluso.html">PlusO – Hospital Management System (HMS)
+ </a>
+              </li>
+              <li><a href="tms.html">Travel Management System (TMS) </a></li>
+              <li><a href="crm.html">Organization CRM Management System</a></li>
+              <li><a href="oncall.html">OnCall Acting Drivers System</a></li>
+            </ul>
+          </div>
+          <div class="col-lg-2 col-md-3 footer-links">
+            <h4>Terms & Payments</h4>
+            <ul>
+              <li><a href="term_conditions.html">Terms</a></li>
+              <li><a href="privacy.html">Privacy</a></li>
+              <li><a href="payment.html">Payment Policy</a></li>
+              <li><a href="cancel.html">Cancellation & Refund Policy</a></li>
+              <li><a href="shipping.html">Shipping Policy</a></li>
+              <li><a href="desclaimer.html">Disclaimer</a></li>
+            </ul>
+          </div>
+
+          <!-- <div class="col-lg-2 col-md-3 footer-links">
+          <h4>Nobis illum</h4>
+          <ul>
+            <li><a href="#">Ipsam</a></li>
+            <li><a href="#">Laudantium dolorum</a></li>
+            <li><a href="#">Dinera</a></li>
+            <li><a href="#">Trodelas</a></li>
+            <li><a href="#">Flexo</a></li>
+          </ul>
+        </div> -->
+        </div>
+      </div>
+      <div class="container mt-4 pb-5">
+        <div
+          class="d-flex justify-content-between align-items-center flex-wrap text-center text-md-start"
+        >
+          <p class="mb-0">
+            © <span>Copyright</span>
+            <strong class="px-1 sitename">E2o Tech</strong>
+            <span>All Rights Reserved</span>
+          </p>
+
+          <div class="credits mb-0">
+            <p class="mb-0 me-3 text-dark">
+              Made with&nbsp;
+              <svg
+                class="bi bi-suit-heart-fill"
+                xmlns="http://www.w3.org/2000/svg"
+                width="12"
+                height="12"
+                fill="#fd0d0d"
+                viewBox="0 0 16 16"
+              >
+                <path
+                  d="M4 1c2.21 0 4 1.755 4 3.92C8 2.755 9.79 1 12 1s4 1.755 4 3.92c0 3.263-3.234 4.414-7.608 9.608a.513.513 0 0 1-.784 0C3.234 9.334 0 8.183 0 4.92 0 2.755 1.79 1 4 1z"
+                ></path>
+              </svg>
+              &nbsp;by&nbsp;
+              <a
+                class="fw-bold text-info"
+                href="https://e2o.in/"
+                target="_blank"
+                >E2o Tech</a
+              >
+            </p>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Scroll Top -->
+    <a
+      href="#"
+      id="scroll-top"
+      class="scroll-top d-flex align-items-center justify-content-center"
+      ><i class="bi bi-arrow-up-short"></i
+    ></a>
+
+    <!-- Vendor JS Files -->
+     <script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const serviceLinks = document.querySelectorAll(".service-link");
+    const serviceContents = document.querySelectorAll(".service-content");
+
+    serviceLinks.forEach(link => {
+      link.addEventListener("click", function (e) {
+        e.preventDefault();
+
+        // Remove 'active' from all links
+        serviceLinks.forEach(l => l.classList.remove("active"));
+
+        // Add 'active' to the clicked link
+        this.classList.add("active");
+
+        // Hide all service content sections
+        serviceContents.forEach(content => content.classList.add("d-none"));
+
+        // Show the selected one
+        const targetId = this.getAttribute("data-target");
+        const targetContent = document.getElementById(targetId);
+        if (targetContent) {
+          targetContent.classList.remove("d-none");
+        }
+
+        // Optional: scroll to the content (uncomment if needed)
+        // targetContent.scrollIntoView({ behavior: "smooth" });
+      });
+    });
+  });
+</script>
+
+    <script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/vendor/php-email-form/validate.js"></script>
+    <script src="assets/vendor/aos/aos.js"></script>
+    <script src="assets/vendor/glightbox/js/glightbox.min.js"></script>
+    <script src="assets/vendor/swiper/swiper-bundle.min.js"></script>
+    <script src="assets/vendor/purecounter/purecounter_vanilla.js"></script>
+
+    <script>
+  const params = new URLSearchParams(window.location.search);
+
+  document.getElementById("postTitle").innerText =
+    params.get("title");
+
+  document.getElementById("postImage").src =
+    params.get("image");
+</script>
+
+    
+
+
+    <!-- Main JS File -->
+    <script src="assets/js/main.js"></script>
+  </body>
+</html>
+
+
