@@ -5,7 +5,7 @@
         public int ServiceCategoryId { get; set; }
         public bool IsActive { get; set; }
         public string ServiceCategoryName { get; set; }
-
+        public DateTime CreatedAt { get; set; }
         public List<ServiceCategoryDynamicFieldResponse>? Fields { get; set; }
         public List<ServiceCategoryDropdownOptionResponse>? DropdownOptions { get; set; }
     }
