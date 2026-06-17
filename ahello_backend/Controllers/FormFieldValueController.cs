@@ -9,17 +9,27 @@ namespace ahello_backend.Controllers
     public class FormFieldValueController : ControllerBase
     {
         private readonly IFormFieldValueService _service;
+        private readonly FileUploadService _fileUpload;
 
         public FormFieldValueController(
-            IFormFieldValueService service)
+            IFormFieldValueService service, FileUploadService fileUpload)
         {
             _service = service;
+            _fileUpload = fileUpload;
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create(
-            CreateFormFieldValue model)
+        public async Task<IActionResult> Create([FromForm] CreateFormFieldValue model)
         {
+            if (model.File != null && model.File.Length > 0)
+            {
+                // Use your existing upload service
+                var filePath = await _fileUpload.SaveVideoAsync(model.File);
+
+                // Save file path in FieldValue
+                model.FieldValue = filePath;
+            }
+
             var id = await _service.CreateAsync(model);
 
             return Ok(new

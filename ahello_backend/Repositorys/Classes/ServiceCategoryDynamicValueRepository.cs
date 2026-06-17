@@ -28,6 +28,22 @@ namespace ahello_backend.Repositorys.Classes
 
             try
             {
+                // DUPLICATE CHECK HERE
+                var duplicateExists = await connection.ExecuteScalarAsync<int>(
+                    @"SELECT COUNT(*)
+                      FROM servicecategorydynamic
+                      WHERE LOWER(ServiceCategoryName) =
+                    LOWER(@ServiceCategoryName)",
+                    new
+                    {
+                        model.ServiceCategoryName
+                    },
+                    tx);
+
+                if (duplicateExists > 0)
+                {
+                    throw new Exception("Service Category Name already exists.");
+                }
                 // Create Category First
                 var serviceCategoryId =
                     await connection.ExecuteScalarAsync<int>(
@@ -83,7 +99,7 @@ namespace ahello_backend.Repositorys.Classes
             WHERE scf.ServiceCategoryFieldId =
                   @ServiceCategoryFieldId";
 
-                    foreach (var field in model.Fields)
+                    foreach (var field in model.Fields.Where(x => x.ServiceCategoryFieldId > 0))
                     {
                         await connection.ExecuteAsync(
                             sql,
@@ -123,7 +139,7 @@ namespace ahello_backend.Repositorys.Classes
                 @CreatedBy
             )";
 
-                    foreach (var field in model.Fields)
+                    foreach (var field in model.Fields.Where(x => x.ServiceCategoryFieldId > 0))
                     {
                         if (field.DropDownOptions != null &&
                             field.DropDownOptions.Any())
@@ -267,13 +283,17 @@ namespace ahello_backend.Repositorys.Classes
             {whereClause};
         ";
 
-                string dataQuery = $@"
-            SELECT *
+            string dataQuery = $@"
+            SELECT
+                ServiceCategoryId,
+                ServiceCategoryName,
+                IsActive,
+                CreatedAt
             FROM ServiceCategoryDynamic
             {whereClause}
             ORDER BY ServiceCategoryId DESC
             LIMIT @PageSize OFFSET @Offset;
-    ";
+        ";
 
             parameters.Add("PageSize", pageSize);
             parameters.Add("Offset", offset);
@@ -282,16 +302,64 @@ namespace ahello_backend.Repositorys.Classes
                 countQuery,
                 parameters);
 
-            var data = await connection.QueryAsync<ServiceCategoryDynamicGetResponse>(
-                dataQuery,
-                parameters);
+            var data = (await connection.QueryAsync<ServiceCategoryDynamicGetResponse>(
+            dataQuery,
+            parameters)).ToList();
+            foreach (var category in data)
+            {
+                var fields =
+                    await connection.QueryAsync<ServiceCategoryDynamicFieldResponse>(
+                    @"SELECT
+                    scf.ServiceCategoryFieldId,
+                    scf.FieldName,
+                    scf.FieldCode,
+                    scf.Placeholder,
+                    scf.IsRequired,
+                    scf.DataTypeId,
+                    scfv.FieldValue
+                    FROM servicecategoryfieldvalues scfv
+                    INNER JOIN servicecategoryfields scf
+                    ON scfv.ServiceCategoryFieldId =
+                       scf.ServiceCategoryFieldId
+                     WHERE scfv.ServiceCategoryId =
+                      @ServiceCategoryId",
+                    new
+                    {
+                        category.ServiceCategoryId
+                    });
 
+                category.Fields = fields.ToList();
+
+                var dropdownOptions =
+                    await connection.QueryAsync<ServiceCategoryDropdownOptionResponse>(
+                    @"SELECT DISTINCT
+                    scdo.ServiceCategoryDropDownId,
+                    scdo.ServiceCategoryFieldId,
+                    scdo.ServiceCategoryId,
+                    scdo.OptionValue,
+                    scdo.OptionLabel,
+                    scdo.IsActive
+                FROM servicecategorydropdownoption scdo
+                INNER JOIN servicecategoryfieldvalues scfv
+                    ON scdo.ServiceCategoryFieldId =
+                       scfv.ServiceCategoryFieldId
+                   AND scdo.ServiceCategoryId =
+                       scfv.ServiceCategoryId
+                WHERE scdo.ServiceCategoryId =
+                      @ServiceCategoryId",
+                    new
+                    {
+                        category.ServiceCategoryId
+                    });
+
+                category.DropdownOptions = dropdownOptions.ToList();
+            }
             return new PagedResult<ServiceCategoryDynamicGetResponse>
             {
                 PageNumber = pageNumber,
                 PageSize = pageSize,
                 TotalCount = totalRecords,
-                Details = data.ToList()
+                Details = data
             };
         }
         public async Task<ServiceCategoryDynamicGetResponse>
@@ -383,7 +451,27 @@ namespace ahello_backend.Repositorys.Classes
             connection.Open();
 
             using var tx = connection.BeginTransaction();
-            await connection.ExecuteAsync(
+            try
+            {
+                // DUPLICATE CHECK
+                var duplicateExists = await connection.ExecuteScalarAsync<int>(
+                    @"SELECT COUNT(*)
+              FROM servicecategorydynamic
+              WHERE LOWER(ServiceCategoryName) =
+                    LOWER(@ServiceCategoryName)
+              AND ServiceCategoryId <> @ServiceCategoryId",
+                    new
+                    {
+                        model.ServiceCategoryName,
+                        ServiceCategoryId = serviceCategoryId
+                    },
+                    tx);
+
+                if (duplicateExists > 0)
+                {
+                    throw new Exception("Service Category Name already exists.");
+                }
+                await connection.ExecuteAsync(
             @"UPDATE servicecategorydynamic
               SET ServiceCategoryName = @ServiceCategoryName,
                  IsActive = @IsActive,
@@ -399,29 +487,29 @@ namespace ahello_backend.Repositorys.Classes
             },
             tx);
 
-            try
-            {
-                await connection.ExecuteAsync(
-                    @"DELETE FROM servicecategoryfieldvalues
+                try
+                {
+                    await connection.ExecuteAsync(
+                        @"DELETE FROM servicecategoryfieldvalues
                       WHERE ServiceCategoryId =
                             @ServiceCategoryId",
-                    new
-                    {
-                        ServiceCategoryId = serviceCategoryId
-                    },
-                    tx);
-                 await connection.ExecuteAsync(
-                @"DELETE FROM servicecategorydropdownoption
+                        new
+                        {
+                            ServiceCategoryId = serviceCategoryId
+                        },
+                        tx);
+                    await connection.ExecuteAsync(
+                   @"DELETE FROM servicecategorydropdownoption
                   WHERE ServiceCategoryId =
                         @ServiceCategoryId",
-                new
-                {
-                    ServiceCategoryId = serviceCategoryId
-                },
-                tx);
-                if (model.Fields != null && model.Fields.Any())
-                {
-                    var sql = @"
+                   new
+                   {
+                       ServiceCategoryId = serviceCategoryId
+                   },
+                   tx);
+                    if (model.Fields != null && model.Fields.Any())
+                    {
+                        var sql = @"
                     INSERT INTO servicecategoryfieldvalues
                     (
                         ServiceCategoryId,
@@ -444,27 +532,23 @@ namespace ahello_backend.Repositorys.Classes
                     WHERE scf.ServiceCategoryFieldId =
                           @ServiceCategoryFieldId";
 
-                    foreach (var field in model.Fields)
-                    {
-                        await connection.ExecuteAsync(
-                            sql,
-                            new
-                            {
-                                ServiceCategoryId =
-                                    serviceCategoryId,
-
-                                field.ServiceCategoryFieldId,
-
-                                field.FieldValue,
-
-                                model.ModifiedBy
-                            },
-                            tx);
+                        foreach (var field in model.Fields.Where(x => x.ServiceCategoryFieldId > 0))
+                        {
+                            await connection.ExecuteAsync(
+                                sql,
+                                new
+                                {
+                                    ServiceCategoryId = serviceCategoryId,
+                                    field.ServiceCategoryFieldId,
+                                    field.FieldValue,
+                                    model.ModifiedBy
+                                },
+                                tx);
+                        }
                     }
-                }
-                if (model.Fields != null && model.Fields.Any())
-                {
-                    var dropdownSql = @"
+                    if (model.Fields != null && model.Fields.Any())
+                    {
+                        var dropdownSql = @"
                     INSERT INTO servicecategorydropdownoption
                     (
                         ServiceCategoryFieldId,
@@ -486,32 +570,38 @@ namespace ahello_backend.Repositorys.Classes
                         @ModifiedBy
                     );";
 
-                    foreach (var field in model.Fields)
-                    {
-                        if (field.DropDownOptions != null &&
-                            field.DropDownOptions.Any())
+                        foreach (var field in model.Fields.Where(x => x.ServiceCategoryFieldId > 0))
                         {
-                            foreach (var option in field.DropDownOptions)
+                            if (field.DropDownOptions != null &&
+                                field.DropDownOptions.Any())
                             {
-                                await connection.ExecuteAsync(
-                                    dropdownSql,
-                                    new
-                                    {
-                                        field.ServiceCategoryFieldId,
-                                        ServiceCategoryId = serviceCategoryId,
-                                        option.OptionValue,
-                                        option.OptionLabel,
-                                        option.IsActive,
-                                        model.ModifiedBy
-                                    },
-                                    tx);
+                                foreach (var option in field.DropDownOptions)
+                                {
+                                    await connection.ExecuteAsync(
+                                        dropdownSql,
+                                        new
+                                        {
+                                            field.ServiceCategoryFieldId,
+                                            ServiceCategoryId = serviceCategoryId,
+                                            option.OptionValue,
+                                            option.OptionLabel,
+                                            option.IsActive,
+                                            model.ModifiedBy
+                                        },
+                                        tx);
+                                }
                             }
                         }
                     }
-                }
-                tx.Commit();
+                    tx.Commit();
 
-                return true;
+                    return true;
+                }
+                catch
+                {
+                    tx.Rollback();
+                    throw;
+                }
             }
             catch
             {
