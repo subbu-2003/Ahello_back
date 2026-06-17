@@ -8,8 +8,9 @@
 
         public int FormFieldId { get; set; }
 
-        public string FieldValue { get; set; }
+        public string? FieldValue { get; set; }
 
         public string CreatedBy { get; set; }
+        public IFormFile? File { get; set; }
     }
 }
