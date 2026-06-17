@@ -237,7 +237,7 @@ namespace ahello_backend.Repositorys.Classes
                         LIKE LOWER(CONCAT('%', @search, '%'))
 
                     OR LOWER(s.ServiceTitle)
-                        LIKE LOWER(CONCAT('%', @search, '%'))
+                        LIKE LOWER(CONCAT(@search, '%'))
 
                     OR LOWER(c.CategoryName)
                         LIKE LOWER(CONCAT('%', @search, '%'))
@@ -298,7 +298,7 @@ namespace ahello_backend.Repositorys.Classes
                         LIKE LOWER(CONCAT('%', @search, '%'))
 
                     OR LOWER(s.ServiceTitle)
-                        LIKE LOWER(CONCAT('%', @search, '%'))
+                        LIKE LOWER(CONCAT(@search, '%'))
 
                     OR LOWER(c.CategoryName)
                         LIKE LOWER(CONCAT('%', @search, '%'))
@@ -342,22 +342,25 @@ namespace ahello_backend.Repositorys.Classes
                     CategoryId = g.Key.CategoryId,
                     CategoryName = g.Key.CategoryName,
 
-                Services = g.Take(1).Select(s => new UserServiceItem
-                {
-                    ServiceId = s.ServiceId,
-                    ServiceTypeId = s.ServiceTypeId,
-                    ServiceTypeName = s.ServiceTypeName,
-                    ServiceCategoryId = s.ServiceCategoryId,
-                    ServiceCategoryName = s.ServiceCategoryName,
-                    ServiceTitle = s.ServiceTitle,
-                    ShortDescription = s.ShortDescription,
-                    Price = s.Price,
-                    Duration = s.Duration,
-                    IntroVideo = s.IntroVideo,
-                    ThumbnailImage = s.ThumbnailImage,
-                    AverageRating = s.AverageRating
-                })
-                .ToList()
+                    Services = (string.IsNullOrWhiteSpace(search)
+                            ? g.Take(1)
+                            : g)
+                    .Select(s => new UserServiceItem
+                    {
+                        ServiceId = s.ServiceId,
+                        ServiceTypeId = s.ServiceTypeId,
+                        ServiceTypeName = s.ServiceTypeName,
+                        ServiceCategoryId = s.ServiceCategoryId,
+                        ServiceCategoryName = s.ServiceCategoryName,
+                        ServiceTitle = s.ServiceTitle,
+                        ShortDescription = s.ShortDescription,
+                        Price = s.Price,
+                        Duration = s.Duration,
+                        IntroVideo = s.IntroVideo,
+                        ThumbnailImage = s.ThumbnailImage,
+                        AverageRating = s.AverageRating
+                    })
+                    .ToList()
                 })
                 .Skip(offset)
                 .Take(pageSize)
