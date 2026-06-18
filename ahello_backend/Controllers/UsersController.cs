@@ -13,7 +13,7 @@ namespace backend_AHLLO.Controllers
 
 
         public UsersController(IUsersService service, IWebHostEnvironment env)
-        {
+        {   
             _service = service;
             _env = env;
         }
