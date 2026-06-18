@@ -244,23 +244,18 @@ namespace ahello_backend.Repositorys.Classes
             user.Fields = fields.ToList();
 
             var dropdownOptions =
-            await connection.QueryAsync<UserDropdownOptionResponse>(
-            @"SELECT DISTINCT
-                udo.UserDropDownId,
-                udo.UserFieldId,
-                udo.UserId,
-                udo.OptionValue,
-                udo.OptionLabel,
-                udo.IsActive
-
-            FROM userdropdownoptions udo
-
-            INNER JOIN userfieldvalues ufv
-                ON udo.UserFieldId = ufv.UserFieldId
-                AND udo.UserId = ufv.UserId
-
-            WHERE udo.UserId = @UserId",
-            new { UserId = user.UserId });
+await connection.QueryAsync<UserDropdownOptionResponse>(
+@"SELECT
+    UserDropDownId,
+    UserFieldId,
+    UserId,
+    OptionValue,
+    OptionLabel,
+    IsActive
+FROM userdropdownoptions
+WHERE UserId = @UserId
+AND IsActive = 1",
+new { UserId = user.UserId });
 
             user.DropdownOptions = dropdownOptions.ToList();
 
@@ -623,59 +618,56 @@ namespace ahello_backend.Repositorys.Classes
                             tx);
                     }
                 }
+                // Delete old dropdowns
                 await connection.ExecuteAsync(
-    @"DELETE FROM userdropdownoptions
-      WHERE UserId = @UserId",
-    new { UserId = userId },
-    tx);
+                @"DELETE FROM userdropdownoptions
+  WHERE UserId = @UserId",
+                new { UserId = userId },
+                tx);
 
-if (model.Fields != null && model.Fields.Any())
-{
-    var dropdownSql = @"
-        INSERT INTO userdropdownoptions
-        (
-            UserFieldId,
-            UserId,
-            OptionValue,
-            OptionLabel,
-            IsActive,
-            CreatedDate,
-            CreatedBy
-        )
-        VALUES
-        (
-            @UserFieldId,
-            @UserId,
-            @OptionValue,
-            @OptionLabel,
-            @IsActive,
-            NOW(),
-            @ModifiedBy
-        );";
-
-    foreach (var field in model.Fields)
-    {
-        if (field.DropDownOptions != null &&
-            field.DropDownOptions.Any())
-        {
-            foreach (var option in field.DropDownOptions)
-            {
-                await connection.ExecuteAsync(
-                    dropdownSql,
-                    new
+                // Insert new dropdowns
+                if (model.Fields != null)
+                {
+                    foreach (var field in model.Fields)
                     {
-                        UserFieldId = field.UserFieldId,
-                        UserId = userId,
-                        option.OptionValue,
-                        option.OptionLabel,
-                        option.IsActive,
-                        model.ModifiedBy
-                    },
-                    tx);
-            }
-        }
-    }
-}
+                        if (field.DropDownOptions != null)
+                        {
+                            foreach (var option in field.DropDownOptions)
+                            {
+                                await connection.ExecuteAsync(
+                                @"INSERT INTO userdropdownoptions
+                (
+                    UserFieldId,
+                    UserId,
+                    OptionValue,
+                    OptionLabel,
+                    IsActive,
+                    CreatedDate,
+                    CreatedBy
+                )
+                VALUES
+                (
+                    @UserFieldId,
+                    @UserId,
+                    @OptionValue,
+                    @OptionLabel,
+                    1,
+                    NOW(),
+                    @ModifiedBy
+                )",
+                                new
+                                {
+                                    UserFieldId = field.UserFieldId,
+                                    UserId = userId,
+                                    OptionValue = option.OptionValue,
+                                    OptionLabel = option.OptionLabel,
+                                    ModifiedBy = model.ModifiedBy
+                                },
+                                tx);
+                            }
+                        }
+                    }
+                }
                 tx.Commit();
 
                 return true;
