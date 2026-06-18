@@ -136,20 +136,14 @@ namespace ahello_backend.Repositorys.Classes
 
         public async Task<bool> DeleteAsync(int categoryFieldId, string modifiedBy)
         {
-            var sql = @"UPDATE CategoryFields
-                        SET
-                            IsActive = 0,
-                            ModifiedBy = @ModifiedBy
-                        WHERE CategoryFieldId = @CategoryFieldId";
+            var sql = @"DELETE FROM CategoryFields
+                WHERE CategoryFieldId = @CategoryFieldId";
 
             using var connection = _db.GetConnection();
 
-            var rows = await connection.ExecuteAsync(sql,
-                new
-                {
-                    CategoryFieldId = categoryFieldId,
-                    ModifiedBy = modifiedBy
-                });
+            var rows = await connection.ExecuteAsync(
+                sql,
+                new { CategoryFieldId = categoryFieldId });
 
             return rows > 0;
         }

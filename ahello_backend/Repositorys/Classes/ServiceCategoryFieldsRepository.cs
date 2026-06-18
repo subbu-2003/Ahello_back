@@ -22,8 +22,7 @@ namespace ahello_backend.Repositorys.Classes
             string duplicateQuery = @"
             SELECT COUNT(*)
             FROM ServiceCategoryFields
-            WHERE ServiceCategoryId = @ServiceCategoryId
-            AND LOWER(FieldName) = LOWER(@FieldName)
+            WHERE  LOWER(FieldName) = LOWER(@FieldName)
             AND IsActive = 1
         ";
 
@@ -31,7 +30,6 @@ namespace ahello_backend.Repositorys.Classes
                 duplicateQuery,
                 new
                 {
-                    model.ServiceCategoryId,
                     model.FieldName
                 });
 
@@ -42,7 +40,6 @@ namespace ahello_backend.Repositorys.Classes
             string query = @"
                 INSERT INTO ServiceCategoryFields
                 (
-                    ServiceCategoryId,
                     FieldName,
                     FieldCode,
                     Placeholder,
@@ -53,7 +50,6 @@ namespace ahello_backend.Repositorys.Classes
                 )
                 VALUES
                 (
-                    @ServiceCategoryId,
                     @FieldName,
                     @FieldCode,
                     @Placeholder,
@@ -76,8 +72,7 @@ namespace ahello_backend.Repositorys.Classes
             string duplicateQuery = @"
         SELECT COUNT(*)
         FROM ServiceCategoryFields
-        WHERE ServiceCategoryId = @ServiceCategoryId
-        AND LOWER(FieldName) = LOWER(@FieldName)
+        WHERE  LOWER(FieldName) = LOWER(@FieldName)
         AND ServiceCategoryFieldId != @ServiceCategoryFieldId
         AND IsActive = 1
     ";
@@ -86,7 +81,6 @@ namespace ahello_backend.Repositorys.Classes
                 duplicateQuery,
                 new
                 {
-                    model.ServiceCategoryId,
                     model.FieldName,
                     model.ServiceCategoryFieldId
                 });
@@ -98,7 +92,6 @@ namespace ahello_backend.Repositorys.Classes
             string query = @"
                 UPDATE ServiceCategoryFields
                 SET
-                    ServiceCategoryId = @ServiceCategoryId,
                     FieldName = @FieldName,
                     FieldCode = @FieldCode,
                     Placeholder = @Placeholder,
