@@ -3,6 +3,7 @@ using ahello_backend.Models.Bookings;
 using ahello_backend.Models.Meeting;
 using ahello_backend.Models.Pagination;
 using ahello_backend.Repositorys.Interfaces;
+using ahello_backend.Services.Classes;
 using Dapper;
 using System.Globalization;
 
@@ -15,19 +16,22 @@ namespace ahello_backend.Repositorys.Classes
         private readonly IEmailRepository _emailRepository;
         private readonly IUserSlotRepository _userSlotRepo;
         private readonly IServiceRepository _serviceRepository;
+        private readonly HundredMsService _hundredMsService;
 
         public BookingRepository(
          DbContext db,
          DbContextConnection dbConn,
          IUserSlotRepository userSlotRepo,
          IServiceRepository serviceRepository,
-         IEmailRepository emailRepository)
+         IEmailRepository emailRepository,
+         HundredMsService hundredMsService)
         {
             _db = db;
             _dbConn = dbConn;
-        _userSlotRepo =  userSlotRepo;
-        _serviceRepository = serviceRepository;
-        _emailRepository = emailRepository;
+            _userSlotRepo = userSlotRepo;
+            _serviceRepository = serviceRepository;
+            _emailRepository = emailRepository;
+            _hundredMsService = hundredMsService;
         }
 
         public async Task<int> CreateAsync(BookingPost model)
@@ -75,15 +79,18 @@ namespace ahello_backend.Repositorys.Classes
 
                 bookingId = await connection.ExecuteScalarAsync<int>(bookingSql, model, tx);
 
-                meetingLink = GenerateMiroTalkLink(bookingId);
+                // ✅ Create 100ms room and generate Ahllo meeting link
+                var roomId = await _hundredMsService.CreateRoomAsync(bookingId);
+
+                meetingLink = GenerateAhlloMeetingLink(bookingId);
                 meetingStartTime = model.ScheduleDate.Date.Add(model.StartTime);
                 var meetingEndTime = model.ScheduleDate.Date.Add(model.EndTime);
 
                 await connection.ExecuteAsync(@"
                 INSERT INTO meetings
-                (UserId, BookingId, StartTime, EndTime, MeetingLink, Status, CreatedAt, CreatedBy)
+                (UserId, BookingId, StartTime, EndTime, MeetingLink, RoomId, Status, CreatedAt, CreatedBy)
                 VALUES
-                (@UserId, @BookingId, @StartTime, @EndTime, @MeetingLink, 'Pending', NOW(), @CreatedBy);",
+                (@UserId, @BookingId, @StartTime, @EndTime, @MeetingLink, @RoomId, 'Pending', NOW(), @CreatedBy);",
                     new
                     {
                         model.UserId,
@@ -91,6 +98,7 @@ namespace ahello_backend.Repositorys.Classes
                         StartTime = meetingStartTime,
                         EndTime = meetingEndTime,
                         MeetingLink = meetingLink,
+                        RoomId = roomId,
                         model.CreatedBy
                     }, tx);
 
@@ -150,21 +158,13 @@ namespace ahello_backend.Repositorys.Classes
             return bookingId;
         }
 
-        // MIROTALK LINK GENERATOR
-        private string GenerateMiroTalkLink(
-            int bookingId)
+        // AHLLO MEETING LINK GENERATOR
+        private string GenerateAhlloMeetingLink(int bookingId)
         {
-            var uniqueId =
-                Guid.NewGuid().ToString("N")[..8];
-
-            var roomName =
-                $"ahllo-{bookingId}-{uniqueId}";
-
-            return
-                $"https://ahllo.com/meeting/join/{roomName}";
+            var uniqueId = Guid.NewGuid().ToString("N")[..8];
+            var roomName = $"ahllo-{bookingId}-{uniqueId}";
+            return $"https://ahllo.com/meeting/join/{roomName}";
         }
-
-
 
         public async Task<int> RescheduleAsync(
         int oldBookingId,
@@ -247,7 +247,6 @@ namespace ahello_backend.Repositorys.Classes
 
                 // ======================================================
                 // 4. Mark old booking as Rescheduled
-                // For auto no-show, reason is stored in reschedules table
                 // ======================================================
                 await connection.ExecuteAsync(@"
                 UPDATE bookings
@@ -304,9 +303,11 @@ namespace ahello_backend.Repositorys.Classes
                     tx);
 
                 // ======================================================
-                // 6. Create fresh meeting link
+                // 6. Create 100ms room and fresh Ahllo meeting link
                 // ======================================================
-                var newMeetingLink = GenerateMiroTalkLink(newBookingId);
+                var newRoomId = await _hundredMsService.CreateRoomAsync(newBookingId);
+
+                var newMeetingLink = GenerateAhlloMeetingLink(newBookingId);
                 var newMeetingStart = newDate.Date.Add(newStart);
                 var newMeetingEnd = newDate.Date.Add(newEnd);
 
@@ -318,6 +319,7 @@ namespace ahello_backend.Repositorys.Classes
                 StartTime,
                 EndTime,
                 MeetingLink,
+                RoomId,
                 Status,
                 CreatedAt,
                 CreatedBy
@@ -329,6 +331,7 @@ namespace ahello_backend.Repositorys.Classes
                 @StartTime,
                 @EndTime,
                 @MeetingLink,
+                @RoomId,
                 'Pending',
                 NOW(),
                 @CreatedBy
@@ -340,6 +343,7 @@ namespace ahello_backend.Repositorys.Classes
                         StartTime = newMeetingStart,
                         EndTime = newMeetingEnd,
                         MeetingLink = newMeetingLink,
+                        RoomId = newRoomId,
                         CreatedBy = rescheduledBy
                     },
                     tx);
@@ -462,15 +466,9 @@ namespace ahello_backend.Repositorys.Classes
             }
         }
 
-
-        public async Task<BookingModalGet>
-    GetBookingModal(
-        int serviceId
-    )
+        public async Task<BookingModalGet> GetBookingModal(int serviceId)
         {
-            var service =
-                await _serviceRepository
-                    .GetById(serviceId);
+            var service = await _serviceRepository.GetById(serviceId);
 
             if (service == null)
             {
@@ -490,7 +488,6 @@ namespace ahello_backend.Repositorys.Classes
                 ExpertImage = service.ProfileUrl
             };
         }
-
 
         public async Task<IEnumerable<BookingRead>> GetAllAsync()
         {
@@ -530,12 +527,10 @@ namespace ahello_backend.Repositorys.Classes
 
                 ORDER BY b.BookingId DESC";
 
-            return await connection.QueryAsync<BookingRead>(
-                sql);
+            return await connection.QueryAsync<BookingRead>(sql);
         }
 
-        public async Task<BookingRead> GetByIdAsync(
-            int bookingId)
+        public async Task<BookingRead> GetByIdAsync(int bookingId)
         {
             using var connection = _db.GetConnection();
 
@@ -575,21 +570,16 @@ namespace ahello_backend.Repositorys.Classes
 
             return await connection.QueryFirstOrDefaultAsync<BookingRead>(
                 sql,
-                new
-                {
-                    BookingId = bookingId
-                });
+                new { BookingId = bookingId });
         }
 
-        public async Task<bool> UpdateAsync(
-            BookingPut model)
+        public async Task<bool> UpdateAsync(BookingPut model)
         {
             using var connection = _db.GetConnection();
 
             if (model.UserId == model.ClientId)
             {
-                throw new Exception(
-                    "UserId and ClientId cannot be same.");
+                throw new Exception("UserId and ClientId cannot be same.");
             }
 
             var sql = @"
@@ -610,26 +600,18 @@ namespace ahello_backend.Repositorys.Classes
 
                 WHERE BookingId = @BookingId";
 
-            var rows =
-                await connection.ExecuteAsync(
-                    sql,
-                    model);
+            var rows = await connection.ExecuteAsync(sql, model);
+
             // IF BOOKING REJECTED OR CANCELLED
-            if (
-                model.Status == "Rejected"
-                || model.Status == "Cancelled"
-            )
+            if (model.Status == "Rejected" || model.Status == "Cancelled")
             {
-                await _userSlotRepo.MarkAsUnbooked(
-                    model.SlotId
-                );
+                await _userSlotRepo.MarkAsUnbooked(model.SlotId);
             }
 
             return rows > 0;
         }
 
-        public async Task<bool> DeleteAsync(
-            int bookingId)
+        public async Task<bool> DeleteAsync(int bookingId)
         {
             using var connection = _db.GetConnection();
 
@@ -637,13 +619,9 @@ namespace ahello_backend.Repositorys.Classes
                 DELETE FROM bookings
                 WHERE BookingId = @BookingId";
 
-            var rows =
-                await connection.ExecuteAsync(
-                    sql,
-                    new
-                    {
-                        BookingId = bookingId
-                    });
+            var rows = await connection.ExecuteAsync(
+                sql,
+                new { BookingId = bookingId });
 
             return rows > 0;
         }
@@ -712,16 +690,15 @@ namespace ahello_backend.Repositorys.Classes
                         LIKE CONCAT('%', @Search, '%')
                 );";
 
-            var totalCount =
-                await connection.ExecuteScalarAsync<int>(
-                    countSql,
-                    new
-                    {
-                        UserId = userId,
-                        Search = search,
-                        Status = status,
-                        ScheduleDate = scheduleDate
-                    });
+            var totalCount = await connection.ExecuteScalarAsync<int>(
+                countSql,
+                new
+                {
+                    UserId = userId,
+                    Search = search,
+                    Status = status,
+                    ScheduleDate = scheduleDate
+                });
 
             var sql = @"
                 SELECT
@@ -804,18 +781,17 @@ namespace ahello_backend.Repositorys.Classes
 
                 LIMIT @PageSize OFFSET @Offset;";
 
-            var data =
-                await connection.QueryAsync<BookingRead>(
-                    sql,
-                    new
-                    {
-                        UserId = userId,
-                        Search = search,
-                        Status = status,
-                        ScheduleDate = scheduleDate,
-                        PageSize = pageSize,
-                        Offset = (pageNumber - 1) * pageSize
-                    });
+            var data = await connection.QueryAsync<BookingRead>(
+                sql,
+                new
+                {
+                    UserId = userId,
+                    Search = search,
+                    Status = status,
+                    ScheduleDate = scheduleDate,
+                    PageSize = pageSize,
+                    Offset = (pageNumber - 1) * pageSize
+                });
 
             return new PagedResult<BookingRead>
             {
@@ -878,14 +854,13 @@ namespace ahello_backend.Repositorys.Classes
                         LIKE CONCAT('%', @Search, '%')
                 );";
 
-            var totalCount =
-                await connection.ExecuteScalarAsync<int>(
-                    countSql,
-                    new
-                    {
-                        ClientId = clientId,
-                        Search = search
-                    });
+            var totalCount = await connection.ExecuteScalarAsync<int>(
+                countSql,
+                new
+                {
+                    ClientId = clientId,
+                    Search = search
+                });
 
             var sql = @"
                 SELECT
@@ -968,18 +943,17 @@ namespace ahello_backend.Repositorys.Classes
 
                 LIMIT @PageSize OFFSET @Offset;";
 
-            var data =
-                await connection.QueryAsync<BookingRead>(
-                    sql,
-                    new
-                    {
-                        ClientId = clientId,
-                        Search = search,
-                        Status = status,
-                        ScheduleDate = scheduleDate,
-                        PageSize = pageSize,
-                        Offset = (pageNumber - 1) * pageSize
-                    });
+            var data = await connection.QueryAsync<BookingRead>(
+                sql,
+                new
+                {
+                    ClientId = clientId,
+                    Search = search,
+                    Status = status,
+                    ScheduleDate = scheduleDate,
+                    PageSize = pageSize,
+                    Offset = (pageNumber - 1) * pageSize
+                });
 
             return new PagedResult<BookingRead>
             {

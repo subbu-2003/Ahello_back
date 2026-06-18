@@ -119,154 +119,158 @@ namespace ahello_backend.Repositorys.Classes
         }
 
         public async Task<PagedResult<Meeting>> GetByUserIdAsync(
-        int userId,
-        int pageNumber,
-        int pageSize, string? status,
-        DateTime? startDate)
+      int userId,
+      int pageNumber,
+      int pageSize,
+      string? status,
+      DateTime? startDate)
         {
             using var connection = _db.GetConnection();
 
             var countSql = @"
-            SELECT COUNT(*)
-            FROM meetings m
-            INNER JOIN bookings b
+        SELECT COUNT(*)
+        FROM meetings m
+        INNER JOIN bookings b ON m.BookingId = b.BookingId
+        WHERE b.UserId = @UserId
+        AND
+        (
+            @Status IS NULL
+            OR @Status = ''
+            OR m.Status = @Status
+        )
+        AND
+        (
+            @StartDate IS NULL
+            OR DATE(m.StartTime) = DATE(@StartDate)
+        );";
+
+            var totalCount = await connection.ExecuteScalarAsync<int>(
+                countSql,
+                new
+                {
+                    UserId = userId,
+                    Status = status,
+                    StartDate = startDate
+                });
+
+            var sql = @"
+        SELECT
+            m.MeetingId,
+
+            b.UserId,
+            u.FullName AS UserName,
+            u.Email AS Email,
+
+            b.ClientId,
+            cu.FullName AS ClientName,
+            cu.Email AS ClientEmail,
+
+            m.BookingId,
+
+            s.ServiceId,
+            s.ServiceTitle,
+            s.ServiceCategoryId,
+            sc.ServiceCategoryName,
+
+            m.StartTime,
+            m.EndTime,
+            m.MeetingLink,
+            m.RoomId,
+            m.Status,
+            m.ReminderSent,
+            m.LastReminderSent,
+
+            m.CreatedAt,
+            m.CreatedBy,
+            m.ModifiedAt,
+            m.ModifiedBy
+
+        FROM meetings m
+
+        INNER JOIN bookings b
             ON m.BookingId = b.BookingId
-            WHERE b.UserId = @UserId
-            AND
-            (
-                @Status IS NULL
-                OR @Status = ''
-                OR m.Status = @Status
-            )
 
-           AND
-            (
-                @StartDate IS NULL
-                OR DATE(m.StartTime) = DATE(@StartDate)
-            )";
+        INNER JOIN users u
+            ON b.UserId = u.UserId
 
+        INNER JOIN users cu
+            ON b.ClientId = cu.UserId
 
-            var totalCount =
-                await connection.ExecuteScalarAsync<int>(
-                    countSql,
-                    new { UserId = userId,
-                        Status = status,
-                        StartDate = startDate,
-                        PageSize = pageSize,
-                        Offset = (pageNumber - 1) * pageSize
-                    });
+        INNER JOIN services s
+            ON b.ServiceId = s.ServiceId
 
-                    var sql = @"
-                        SELECT
-                            m.MeetingId,
+        LEFT JOIN servicecategorydynamic sc
+            ON s.ServiceCategoryId = sc.ServiceCategoryId
 
-                    b.UserId,
-                    u.FullName AS UserName,
+        WHERE b.UserId = @UserId
+        AND
+        (
+            @Status IS NULL
+            OR @Status = ''
+            OR m.Status = @Status
+        )
+        AND
+        (
+            @StartDate IS NULL
+            OR DATE(m.StartTime) = DATE(@StartDate)
+        )
 
-                    b.ClientId,
-                    cu.FullName AS ClientName,
+        ORDER BY m.MeetingId DESC
 
-                    m.BookingId,
-                    s.ServiceId,
-                    s.ServiceTitle,
+        LIMIT @PageSize OFFSET @Offset;";
 
-                    s.ServiceCategoryId,
-                    sc.ServiceCategoryName,
-                    m.StartTime,
-                    m.EndTime,
-                    m.MeetingLink,
-                    m.Status,
-                    m.CreatedAt,
-                    m.CreatedBy,
-                    m.ModifiedAt,
-                    m.ModifiedBy
-
-                FROM meetings m
-
-                INNER JOIN bookings b
-                    ON m.BookingId = b.BookingId
-
-                INNER JOIN users u
-                    ON b.UserId = u.UserId
-
-                INNER JOIN users cu
-                    ON b.ClientId = cu.UserId
-                INNER JOIN services s
-                    ON b.ServiceId = s.ServiceId
-
-                LEFT JOIN servicecategorydynamic sc
-                    ON s.ServiceCategoryId = sc.ServiceCategoryId
-
-                WHERE b.UserId = @UserId
-                AND
-                (
-                    @Status IS NULL
-                    OR @Status = ''
-                    OR m.Status = @Status
-                )
-
-               AND
-                (
-                    @StartDate IS NULL
-                    OR DATE(m.StartTime) = DATE(@StartDate)
-                )
-
-                ORDER BY m.MeetingId DESC
-
-                LIMIT @PageSize OFFSET @Offset";
-
-            var meetings =
-                await connection.QueryAsync<Meeting>(
-                    sql,
-                    new
-                    {
-                        UserId = userId,
-                        Status = status,
-                        StartDate = startDate,
-                        PageSize = pageSize,
-                        Offset = (pageNumber - 1) * pageSize
-                    });
+            var meetings = await connection.QueryAsync<Meeting>(
+                sql,
+                new
+                {
+                    UserId = userId,
+                    Status = status,
+                    StartDate = startDate,
+                    PageSize = pageSize,
+                    Offset = (pageNumber - 1) * pageSize
+                });
 
             return new PagedResult<Meeting>
             {
                 TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
                 Details = meetings
             };
         }
-
         public async Task<int> CreateAsync(MeetingPost model)
         {
             using var connection = _db.GetConnection();
 
             var sql = @"
-                INSERT INTO meetings
-                (
-                    UserId,
-                    BookingId,
-                    StartTime,
-                    EndTime,
-                    MeetingLink,
-                    Status,
-                    CreatedAt,
-                    CreatedBy
-                )
-                VALUES
-                (
-                    @UserId,
-                    @BookingId,
-                    @StartTime,
-                    @EndTime,
-                    @MeetingLink,
-                    @Status,
-                    NOW(),
-                    @CreatedBy
-                );
+        INSERT INTO meetings
+        (
+            UserId,
+            BookingId,
+            StartTime,
+            EndTime,
+            MeetingLink,
+            RoomId,
+            Status,
+            CreatedAt,
+            CreatedBy
+        )
+        VALUES
+        (
+            @UserId,
+            @BookingId,
+            @StartTime,
+            @EndTime,
+            @MeetingLink,
+            @RoomId,
+            @Status,
+            NOW(),
+            @CreatedBy
+        );
 
-                SELECT LAST_INSERT_ID();";
+        SELECT LAST_INSERT_ID();";
 
-            return await connection.ExecuteScalarAsync<int>(
-                sql,
-                model);
+            return await connection.ExecuteScalarAsync<int>(sql, model);
         }
 
         public async Task<Meeting> GetByRoomNameAsync(string roomName)
@@ -275,23 +279,30 @@ namespace ahello_backend.Repositorys.Classes
 
             // Step 1: Fetch the meeting by room name only (no time/status filter here)
             var sql = @"
-        SELECT
-            m.MeetingId,
-            m.UserId,
-            m.BookingId,
-            m.StartTime,
-            m.EndTime,
-            m.MeetingLink,
-            m.Status,
-            u.FullName  AS UserName,
-            u.Email,
-            cu.FullName AS ClientName,
-            cu.Email    AS ClientEmail
-        FROM meetings m
-        INNER JOIN bookings b  ON m.BookingId  = b.BookingId
-        INNER JOIN users u     ON m.UserId     = u.UserId
-        INNER JOIN users cu    ON b.ClientId   = cu.UserId
-        WHERE m.MeetingLink LIKE @RoomName";
+    SELECT
+        m.MeetingId,
+        m.UserId,
+        m.BookingId,
+        m.StartTime,
+        m.EndTime,
+        m.MeetingLink,
+        m.RoomId,
+        m.Status,
+        m.ReminderSent,
+        m.LastReminderSent,
+
+        u.FullName AS UserName,
+        u.Email AS Email,
+
+        cu.FullName AS ClientName,
+        cu.Email AS ClientEmail
+
+    FROM meetings m
+    INNER JOIN bookings b ON m.BookingId = b.BookingId
+    INNER JOIN users u ON m.UserId = u.UserId
+    INNER JOIN users cu ON b.ClientId = cu.UserId
+
+    WHERE m.MeetingLink LIKE @RoomName;";
 
             var meeting = await connection.QueryFirstOrDefaultAsync<Meeting>(
                 sql,
@@ -300,7 +311,8 @@ namespace ahello_backend.Repositorys.Classes
             if (meeting == null) return null;
 
             // Step 2: Auto-complete if EndTime has passed
-            if (DateTime.Now > meeting.EndTime && meeting.Status != "Completed")
+            var istNow = DateTime.UtcNow.AddHours(5).AddMinutes(30);
+            if (istNow > meeting.EndTime && meeting.Status != "Completed")
             {
                 await connection.ExecuteAsync(@"
             UPDATE meetings
@@ -320,17 +332,18 @@ namespace ahello_backend.Repositorys.Classes
             using var connection = _db.GetConnection();
 
             var sql = @"
-                UPDATE meetings
-                SET
-                    UserId = @UserId,
-                    BookingId = @BookingId,
-                    StartTime = @StartTime,
-                    EndTime = @EndTime,
-                    MeetingLink = @MeetingLink,
-                    Status = @Status,
-                    ModifiedAt = NOW(),
-                    ModifiedBy = @ModifiedBy
-                WHERE MeetingId = @MeetingId";
+        UPDATE meetings
+        SET
+            UserId = @UserId,
+            BookingId = @BookingId,
+            StartTime = @StartTime,
+            EndTime = @EndTime,
+            MeetingLink = @MeetingLink,
+            RoomId = @RoomId,
+            Status = @Status,
+            ModifiedAt = NOW(),
+            ModifiedBy = @ModifiedBy
+        WHERE MeetingId = @MeetingId;";
 
             var rows = await connection.ExecuteAsync(sql, model);
 

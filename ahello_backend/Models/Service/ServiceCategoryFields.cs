@@ -4,7 +4,7 @@
     {
         public int ServiceCategoryFieldId { get; set; }
 
-        public int ServiceCategoryId { get; set; }
+        //public int ServiceCategoryId { get; set; }
 
         public string FieldName { get; set; } = string.Empty;
 

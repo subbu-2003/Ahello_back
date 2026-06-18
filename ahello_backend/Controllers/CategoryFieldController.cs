@@ -130,11 +130,12 @@ namespace ahello_backend.Controllers
                     Message = "Category field deleted successfully"
                 });
             }
-            catch
+            catch (Exception ex)
             {
                 return BadRequest(new
                 {
-                    Message = "Something went wrong"
+                    Message = ex.Message,
+                    InnerException = ex.InnerException?.Message
                 });
             }
         }

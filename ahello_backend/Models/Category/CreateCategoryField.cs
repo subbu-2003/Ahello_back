@@ -2,7 +2,7 @@
 {
     public class CreateCategoryField
     {
-        public int CategoryId { get; set; }
+        //public int CategoryId { get; set; } = 0;
 
         public string FieldName { get; set; }
 

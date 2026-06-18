@@ -570,101 +570,135 @@ new { UserId = user.UserId });
                     return false;
                 }
 
-                await connection.ExecuteAsync(
-                    @"DELETE FROM userfieldvalues
-                      WHERE UserId = @UserId",
-                    new { UserId = userId },
+                //await connection.ExecuteAsync(
+                //    @"DELETE FROM userfieldvalues
+                //      WHERE UserId = @UserId",
+                //    new { UserId = userId },
+                //    tx);
+
+                foreach (var field in model.Fields)
+                {
+                    var exists = await connection.ExecuteScalarAsync<int>(
+                    @"SELECT COUNT(*)
+                      FROM userfieldvalues
+                      WHERE UserId = @UserId
+                      AND UserFieldId = @UserFieldId",
+                    new
+                    {
+                        UserId = userId,
+                        UserFieldId = field.UserFieldId
+                    },
                     tx);
 
-                if (model.Fields != null && model.Fields.Any())
-                {
-                    var fieldSql = @"
-                        INSERT INTO userfieldvalues
-                        (
-                            UserId,
-                            FieldCode,
-                            UserFieldId,
-                            FieldValue,
-                            CreatedDate,
-                            CreatedBy,
-                            CreatedAt
-                        )
-                        SELECT
-                            @UserId,
-                            uf.FieldCode,
-                            @UserFieldId,
-                            @FieldValue,
-                            NOW(),
-                            @ModifiedBy,
-                            CURRENT_TIMESTAMP
-                        FROM userfields uf
-                        WHERE uf.UserFieldId = @UserFieldId;";
-
-                    foreach (var field in model.Fields)
+                    if (exists > 0)
                     {
                         await connection.ExecuteAsync(
-                            fieldSql,
+                        @"UPDATE userfieldvalues
+                          SET FieldValue = @FieldValue
+                          WHERE UserId = @UserId
+                          AND UserFieldId = @UserFieldId",
+                        new
+                        {
+                            UserId = userId,
+                            UserFieldId = field.UserFieldId,
+                            FieldValue = field.FieldValue
+                        },
+                        tx);
+                    }
+                    else
+                    {
+                        await connection.ExecuteAsync(
+                        @"INSERT INTO userfieldvalues
+                          (
+                              UserId,
+                              UserFieldId,
+                              FieldValue,
+                              CreatedDate,
+                              CreatedBy
+                          )
+                          VALUES
+                          (
+                              @UserId,
+                              @UserFieldId,
+                              @FieldValue,
+                              NOW(),
+                              @ModifiedBy
+                          )",
+                        new
+                        {
+                            UserId = userId,
+                            UserFieldId = field.UserFieldId,
+                            FieldValue = field.FieldValue,
+                            model.ModifiedBy
+                        },
+                        tx);
+                    }
+                }
+                //// Delete old dropdowns
+                //await connection.ExecuteAsync(
+                //@"DELETE FROM userdropdownoptions
+                //    WHERE UserId = @UserId",
+                //new { UserId = userId },
+                //tx);
+
+                // Insert new dropdowns
+                foreach (var field in model.Fields)
+                {
+                    foreach (var option in field.DropDownOptions)
+                    {
+                        if (option.UserDropDownId.HasValue)
+                        {
+                           var affected = await connection.ExecuteAsync(
+                            @"UPDATE userdropdownoptions
+                            SET
+                                OptionValue = @OptionValue,
+                                OptionLabel = @OptionLabel,
+                                IsActive = @IsActive,
+                                ModifiedDate = NOW(),
+                                ModifiedBy = @ModifiedBy
+                            WHERE UserDropDownId = @UserDropDownId",
                             new
                             {
-                                UserId = userId,
-                                UserFieldId = field.UserFieldId,
-                                FieldValue =
-                                string.IsNullOrWhiteSpace(field.FieldValue)
-                                ? (object)DBNull.Value
-                                : field.FieldValue,
-
+                                option.OptionValue,
+                                option.OptionLabel,
+                                option.IsActive,
+                                option.UserDropDownId,
                                 model.ModifiedBy
                             },
                             tx);
-                    }
-                }
-                // Delete old dropdowns
-                await connection.ExecuteAsync(
-                @"DELETE FROM userdropdownoptions
-  WHERE UserId = @UserId",
-                new { UserId = userId },
-                tx);
-
-                // Insert new dropdowns
-                if (model.Fields != null)
-                {
-                    foreach (var field in model.Fields)
-                    {
-                        if (field.DropDownOptions != null)
+                        }
+                        else
                         {
-                            foreach (var option in field.DropDownOptions)
+                            await connection.ExecuteAsync(
+                            @"INSERT INTO userdropdownoptions
+                              (
+                                  UserFieldId,
+                                  UserId,
+                                  OptionValue,
+                                  OptionLabel,
+                                  IsActive,
+                                  CreatedDate,
+                                  CreatedBy
+                              )
+                              VALUES
+                              (
+                                  @UserFieldId,
+                                  @UserId,
+                                  @OptionValue,
+                                  @OptionLabel,
+                                  1,
+                                  NOW(),
+                                  @ModifiedBy
+                              )",
+                            new
                             {
-                                await connection.ExecuteAsync(
-                                @"INSERT INTO userdropdownoptions
-                (
-                    UserFieldId,
-                    UserId,
-                    OptionValue,
-                    OptionLabel,
-                    IsActive,
-                    CreatedDate,
-                    CreatedBy
-                )
-                VALUES
-                (
-                    @UserFieldId,
-                    @UserId,
-                    @OptionValue,
-                    @OptionLabel,
-                    1,
-                    NOW(),
-                    @ModifiedBy
-                )",
-                                new
-                                {
-                                    UserFieldId = field.UserFieldId,
-                                    UserId = userId,
-                                    OptionValue = option.OptionValue,
-                                    OptionLabel = option.OptionLabel,
-                                    ModifiedBy = model.ModifiedBy
-                                },
-                                tx);
-                            }
+                                UserFieldId = field.UserFieldId,
+                                UserId = userId,
+                                option.OptionValue,
+                                option.OptionLabel,
+                                model.ModifiedBy
+                            },
+                            tx);
                         }
                     }
                 }
