@@ -47,6 +47,7 @@ builder.Services.AddHttpClient();
 // =====================================================
 
 builder.Services.AddSingleton(new EmailCon());
+builder.Services.AddHttpClient<HundredMsService>();
 
 
 

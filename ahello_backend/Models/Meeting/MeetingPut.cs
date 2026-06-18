@@ -7,6 +7,7 @@
         public int UserId { get; set; }
 
         public int BookingId { get; set; }
+        public string? RoomId { get; set; }
 
         public DateTime StartTime { get; set; }
         public DateTime? EndTime { get; set; }
