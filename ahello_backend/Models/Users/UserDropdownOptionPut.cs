@@ -2,6 +2,7 @@
 {
     public class UserDropdownOptionPut
     {
+        public int? UserDropDownId { get; set; }
         public string? OptionValue { get; set; }
 
         public string? OptionLabel { get; set; }

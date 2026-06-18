@@ -21,15 +21,14 @@ namespace ahello_backend.Repositorys.Classes
             var duplicateSql = @"
         SELECT COUNT(1)
         FROM CategoryFields
-        WHERE CategoryId = @CategoryId
-        AND IsActive = 1
+        WHERE  IsActive = 1
         AND LOWER(TRIM(FieldName)) = LOWER(TRIM(@FieldName))";
 
             var isExists = await connection.ExecuteScalarAsync<int>(
                 duplicateSql,
                 new
                 {
-                    model.CategoryId,
+                   
                     model.FieldName
                 });
 
@@ -40,7 +39,7 @@ namespace ahello_backend.Repositorys.Classes
 
             var sql = @"INSERT INTO CategoryFields
                 (
-                    CategoryId,
+                   
                     FieldName,
                     FieldCode,
                     Placeholder,
@@ -51,7 +50,7 @@ namespace ahello_backend.Repositorys.Classes
                 )
                 VALUES
                 (
-                    @CategoryId,
+                   
                     @FieldName,
                     @FieldCode,
                     @Placeholder,
@@ -73,8 +72,7 @@ namespace ahello_backend.Repositorys.Classes
             var duplicateSql = @"
         SELECT COUNT(1)
         FROM CategoryFields
-        WHERE CategoryId = @CategoryId
-        AND IsActive = 1
+        WHERE  IsActive = 1
         AND CategoryFieldId <> @CategoryFieldId
         AND LOWER(TRIM(FieldName)) = LOWER(TRIM(@FieldName))";
 
@@ -82,8 +80,7 @@ namespace ahello_backend.Repositorys.Classes
                 duplicateSql,
                 new
                 {
-                    model.CategoryFieldId,
-                    model.CategoryId,
+                    model.CategoryFieldId, 
                     model.FieldName
                 });
 
@@ -94,7 +91,6 @@ namespace ahello_backend.Repositorys.Classes
 
             var sql = @"UPDATE CategoryFields
                 SET
-                    CategoryId = @CategoryId,
                     FieldName = @FieldName,
                     FieldCode = @FieldCode,
                     Placeholder = @Placeholder,
@@ -113,8 +109,7 @@ namespace ahello_backend.Repositorys.Classes
         {
             var sql = @"SELECT *
                         FROM CategoryFields
-                        WHERE CategoryId = @CategoryId
-                        AND IsActive = 1
+                        WHERE  IsActive = 1
                         ORDER BY CategoryFieldId DESC";
 
             using var connection = _db.GetConnection();
