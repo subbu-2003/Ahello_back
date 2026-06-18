@@ -1,6 +1,8 @@
-﻿using ahello_backend.Models.Meeting;
+﻿using ahello_backend.DbContexts;
+using ahello_backend.Models.Meeting;
 using ahello_backend.Services.Classes;
 using ahello_backend.Services.Interfaces;
+using Dapper;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ahello_backend.Controllers
@@ -10,14 +12,85 @@ namespace ahello_backend.Controllers
     public class MeetingController : ControllerBase
     {
         private readonly IMeetingService _service;
+        private readonly HundredMsService _hundredMsService;
         private readonly IBookingService _bookingService;
+        private readonly DbContextConnection _dbConn;
 
-        public MeetingController(IMeetingService service, IBookingService bookingService)
+        public MeetingController(
+            IMeetingService service,
+            IBookingService bookingService,
+            HundredMsService hundredMsService,
+            DbContextConnection dbConn)
         {
             _service = service;
             _bookingService = bookingService;
+            _hundredMsService = hundredMsService;
+            _dbConn = dbConn;
         }
 
+        // GET /api/Meeting/token/{roomName}?userId=4
+        [HttpGet("token/{roomName}")]
+        public async Task<IActionResult> GetMeetingToken(
+            string roomName,
+            [FromQuery] int userId)
+        {
+            if (userId <= 0)
+                return BadRequest(new { message = "Invalid userId." });
+
+            try
+            {
+                // 1. Fetch meeting row by roomName from MeetingLink column
+                using var connection = _dbConn.GetMyConnection();
+                await connection.OpenAsync();
+
+                var meeting = await connection.QueryFirstOrDefaultAsync<dynamic>(@"
+                    SELECT
+                        m.RoomId,
+                        b.UserId,
+                        b.ClientId,
+                        b.Status
+                    FROM meetings m
+                    INNER JOIN bookings b ON m.BookingId = b.BookingId
+                    WHERE m.MeetingLink LIKE CONCAT('%', @RoomName, '%')
+                    AND m.Status = 'Pending'
+                    LIMIT 1",
+                    new { RoomName = roomName });
+
+                if (meeting == null)
+                    return NotFound(new { message = "Meeting not found or no longer active." });
+
+                string roomId = meeting.RoomId;
+                int expertId = (int)meeting.UserId;
+                int clientId = (int)meeting.ClientId;
+
+                // 2. Determine role
+                string role;
+                if (userId == expertId)
+                    role = "host";
+                else if (userId == clientId)
+                    role = "guest";
+                else
+                    return StatusCode(403, new { message = "You are not part of this meeting." });
+
+                // 3. Generate 100ms auth token
+                var token = _hundredMsService.GenerateAuthToken(
+                    roomId,
+                    role,
+                    userId.ToString());
+
+                return Ok(new
+                {
+                    token,
+                    roomId,
+                    role
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[TokenError] {ex.Message}");
+                return StatusCode(500, new { message = "Failed to generate meeting token." });
+            }
+        }
 
         [HttpGet]
         public async Task<IActionResult> GetAll()
@@ -77,7 +150,6 @@ namespace ahello_backend.Controllers
             {
                 // 1. Fetch meeting
                 var meeting = await _service.GetByRoomNameAsync(roomName);
-
                 if (meeting == null)
                     return NotFound(new
                     {
@@ -118,7 +190,9 @@ namespace ahello_backend.Controllers
                     });
 
                 // 6. Block if too early, more than 10 minutes before start
-                if (DateTime.Now < meeting.StartTime.AddMinutes(-10))
+                // 6. Block if too early, more than 10 minutes before start
+                var istNow = DateTime.UtcNow.AddHours(5).AddMinutes(30);
+                if (istNow < meeting.StartTime.AddMinutes(-10))
                     return StatusCode(425, new
                     {
                         allowed = false,
@@ -127,7 +201,7 @@ namespace ahello_backend.Controllers
                     });
 
                 // 7. Block if meeting end time passed
-                if (DateTime.Now > meeting.EndTime)
+                if (istNow > meeting.EndTime)
                     return StatusCode(410, new
                     {
                         allowed = false,
@@ -136,7 +210,6 @@ namespace ahello_backend.Controllers
 
                 // 8. Fetch booking and verify user belongs to it
                 var booking = await _bookingService.GetByIdAsync(meeting.BookingId);
-
                 if (booking == null)
                     return NotFound(new
                     {
@@ -180,7 +253,7 @@ namespace ahello_backend.Controllers
                         reason = "This booking was marked as no-show."
                     });
 
-                // 10. Payment check, uncomment when payments go live
+                // 10. Payment check — uncomment when payments go live
                 // if (booking.PaymentStatus != "Paid")
                 //     return StatusCode(402, new
                 //     {
@@ -217,12 +290,12 @@ namespace ahello_backend.Controllers
         {
             try
             {
-                var result =
-                    await _service.GetByUserIdAsync(
-                        userId,
-                        pageNumber,
-                        pageSize, status,
-                        startDate);
+                var result = await _service.GetByUserIdAsync(
+                    userId,
+                    pageNumber,
+                    pageSize,
+                    status,
+                    startDate);
 
                 return Ok(result);
             }
@@ -242,7 +315,6 @@ namespace ahello_backend.Controllers
             try
             {
                 var id = await _service.CreateAsync(model);
-
                 return Ok(new
                 {
                     Success = true,
@@ -253,17 +325,10 @@ namespace ahello_backend.Controllers
             {
                 string errorMessage = ex.Message;
 
-                // Foreign Key Error
                 if (ex.Message.Contains("FOREIGN KEY"))
-                {
                     errorMessage = "Invalid BookingId. Booking does not exist.";
-                }
-
-                // Duplicate Error
                 else if (ex.Message.Contains("Duplicate"))
-                {
                     errorMessage = "Duplicate data already exists.";
-                }
 
                 return StatusCode(500, new
                 {
@@ -278,9 +343,7 @@ namespace ahello_backend.Controllers
         {
             try
             {
-                var result =
-                    await _service.UpdateAsync(model);
-
+                var result = await _service.UpdateAsync(model);
                 return Ok(new
                 {
                     Success = true,
@@ -291,17 +354,10 @@ namespace ahello_backend.Controllers
             {
                 string errorMessage = ex.Message;
 
-                // Foreign Key Error
                 if (ex.Message.Contains("FOREIGN KEY"))
-                {
                     errorMessage = "Invalid BookingId. Booking does not exist.";
-                }
-
-                // Duplicate Error
                 else if (ex.Message.Contains("Duplicate"))
-                {
                     errorMessage = "Duplicate data already exists.";
-                }
 
                 return StatusCode(500, new
                 {
@@ -316,9 +372,7 @@ namespace ahello_backend.Controllers
         {
             try
             {
-                var result =
-                    await _service.DeleteAsync(meetingId);
-
+                var result = await _service.DeleteAsync(meetingId);
                 return Ok(new
                 {
                     Success = true,
@@ -330,9 +384,7 @@ namespace ahello_backend.Controllers
                 string errorMessage = ex.Message;
 
                 if (ex.Message.Contains("FOREIGN KEY"))
-                {
                     errorMessage = "This meeting is already in use.";
-                }
 
                 return StatusCode(500, new
                 {

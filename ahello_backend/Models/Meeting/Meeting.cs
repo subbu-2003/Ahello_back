@@ -9,7 +9,8 @@
 
         public int ClientId { get; set; }
         public string? ClientName { get; set; }
-        public string ClientEmail { get; set; }
+        public string? RoomId { get; set; }
+        public string? ClientEmail { get; set; }
         public int BookingId { get; set; }
         public int ServiceId { get; set; }
 
