@@ -102,8 +102,8 @@ namespace ahello_backend.Controllers
 
         [HttpPut("{userId}")]
         public async Task<IActionResult> Update(
-    int userId,
-    [FromForm] UserDynamicPut model)
+        int userId,
+        [FromForm] UserDynamicPut model)
         {
             if (model.ProfileFile != null &&
                 model.ProfileFile.Length > 0)
