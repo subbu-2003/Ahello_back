@@ -953,5 +953,138 @@ VALUES
                 Details = data
             };
         }
+        public async Task<List<ServiceWiseClientGet>> GetClientsServiceWiseAsync(
+    int userId,
+    int pageNumber,
+    int pageSize,
+    string? search,
+    string? bookingStatus,
+    DateTime? lastBookingDate)
+        {
+            using var connection = _db.GetConnection();
+
+            var sql = @"
+        SELECT
+            s.ServiceId,
+            s.ServiceTitle,
+
+            c.UserId AS ClientId,
+            c.FullName AS ClientName,
+            c.Email,
+
+            MAX(b.ScheduleDate) AS LastBookingDate,
+
+    SUBSTRING_INDEX(
+        GROUP_CONCAT(
+            b.StartTime
+            ORDER BY b.ScheduleDate DESC, b.StartTime DESC
+        ),
+        ',',
+        1
+    ) AS StartTime,
+
+    SUBSTRING_INDEX(
+        GROUP_CONCAT(
+            b.EndTime
+            ORDER BY b.ScheduleDate DESC, b.StartTime DESC
+        ),
+        ',',
+        1
+    ) AS EndTime,
+
+    SUBSTRING_INDEX(
+        GROUP_CONCAT(
+            b.Status
+            ORDER BY b.ScheduleDate DESC, b.StartTime DESC
+        ),
+        ',',
+        1
+    ) AS BookingStatus
+
+        FROM bookings b
+
+        INNER JOIN services s
+            ON s.ServiceId = b.ServiceId
+
+        INNER JOIN users c
+            ON c.UserId = b.ClientId
+
+        WHERE b.UserId = @UserId
+
+AND (
+    @Search IS NULL
+    OR @Search = ''
+    OR c.FullName LIKE CONCAT('%', @Search, '%')
+    OR c.Email LIKE CONCAT('%', @Search, '%')
+    OR s.ServiceTitle LIKE CONCAT('%', @Search, '%')
+)
+
+AND (
+    @BookingStatus IS NULL
+    OR @BookingStatus = ''
+    OR b.Status = @BookingStatus
+)
+
+AND (
+    @LastBookingDate IS NULL
+    OR DATE(b.ScheduleDate) = DATE(@LastBookingDate)
+)
+
+        GROUP BY
+            s.ServiceId,
+            s.ServiceTitle,
+            c.UserId,
+            c.FullName,
+            c.Email
+
+        ORDER BY
+            s.ServiceId DESC,
+            LastBookingDate DESC;
+    ";
+
+            var rows = await connection.QueryAsync<ServiceWiseClientRow>(
+    sql,
+    new
+    {
+        UserId = userId,
+        Search = search,
+        BookingStatus = bookingStatus,
+        LastBookingDate = lastBookingDate
+    });
+
+            var result = rows
+    .GroupBy(x => new
+    {
+        x.ServiceId,
+        x.ServiceTitle
+    })
+    .Select(g => new ServiceWiseClientGet
+    {
+        ServiceId = g.Key.ServiceId,
+        ServiceTitle = g.Key.ServiceTitle,
+        TotalClients = g.Count(),
+
+        Clients = g.Select(x => new ServiceClientGet
+        {
+            ClientId = x.ClientId,
+            ClientName = x.ClientName,
+            Email = x.Email,
+            LastBookingDate = x.LastBookingDate,
+            StartTime = string.IsNullOrEmpty(x.StartTime)
+                ? null
+                : TimeSpan.Parse(x.StartTime),
+            EndTime = string.IsNullOrEmpty(x.EndTime)
+                ? null
+                : TimeSpan.Parse(x.EndTime),
+            BookingStatus = x.BookingStatus
+        }).ToList()
+    })
+    .Skip((pageNumber - 1) * pageSize)
+    .Take(pageSize)
+    .ToList();
+
+            return result;
+        }
+
     }
 }
