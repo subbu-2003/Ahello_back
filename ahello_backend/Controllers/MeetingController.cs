@@ -27,8 +27,6 @@ namespace ahello_backend.Controllers
             _hundredMsService = hundredMsService;
             _dbConn = dbConn;
         }
-
-        // GET /api/Meeting/join-info/{roomName}?userId=4
         [HttpGet("join-info/{roomName}")]
         public async Task<IActionResult> GetJoinInfo(string roomName, [FromQuery] int userId)
         {
@@ -43,9 +41,15 @@ namespace ahello_backend.Controllers
             if (meeting.UserId != userId && meeting.ClientId != userId)
                 return StatusCode(403, new { reason = "You are not part of this meeting." });
 
-            var roomCode = meeting.UserId == userId
+            var isHost = meeting.UserId == userId;
+
+            var roomCode = isHost
                 ? meeting.HostRoomCode
                 : meeting.ClientRoomCode;
+
+            var displayName = isHost
+                ? meeting.UserName
+                : meeting.ClientName;
 
             if (string.IsNullOrWhiteSpace(roomCode))
                 return BadRequest(new { reason = "100ms room code not found. Create a new booking." });
@@ -53,7 +57,8 @@ namespace ahello_backend.Controllers
             return Ok(new
             {
                 roomCode,
-                role = meeting.UserId == userId ? "host" : "client"
+                role = isHost ? "host" : "client",
+                name = displayName
             });
         }
 
