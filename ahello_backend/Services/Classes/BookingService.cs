@@ -1,5 +1,6 @@
 ﻿using ahello_backend.Models.Bookings;
 using ahello_backend.Models.Pagination;
+using ahello_backend.Repositorys.Classes;
 using ahello_backend.Repositorys.Interfaces;
 using ahello_backend.Services.Interfaces;
 
@@ -94,6 +95,23 @@ namespace ahello_backend.Services.Classes
                 .GetBookingModal(
                     serviceId
                 );
+        }
+
+        public async Task<List<ServiceWiseClientGet>> GetClientsServiceWiseAsync(
+    int userId,
+    int pageNumber,
+    int pageSize,
+    string? search,
+    string? bookingStatus,
+    DateTime? lastBookingDate)
+        {
+            return await _repository.GetClientsServiceWiseAsync(
+                userId,
+                pageNumber,
+                pageSize,
+                search,
+                bookingStatus,
+                lastBookingDate);
         }
     }
 }

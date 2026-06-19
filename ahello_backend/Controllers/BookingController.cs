@@ -313,5 +313,37 @@ namespace ahello_backend.Controllers
                 });
             }
         }
+        [HttpGet("clients-service-wise")]
+        public async Task<IActionResult> GetClientsServiceWise(
+    int userId,
+    int pageNumber = 1,
+    int pageSize = 10,
+    string? search = null,
+    string? bookingStatus = null,
+    DateTime? lastBookingDate = null)
+        {
+            try
+            {
+                var data = await _service.GetClientsServiceWiseAsync(
+                    userId,
+                    pageNumber,
+                    pageSize,
+                    search,
+                    bookingStatus,
+                    lastBookingDate);
+
+                return Ok(new
+                {
+                    PageNumber = pageNumber,
+                    PageSize = pageSize,
+                    TotalServices = data.Count,
+                    Data = data
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
     }
 }

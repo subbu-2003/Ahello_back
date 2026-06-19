@@ -2,6 +2,7 @@
 {
     public class ServiceDropDownOptionPut
     {
+        public int ServiceDropDownId { get; set; }
         public string OptionValue { get; set; }
 
         public string OptionLabel { get; set; }
