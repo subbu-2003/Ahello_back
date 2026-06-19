@@ -68,7 +68,7 @@ namespace ahello_backend.Controllers
                 if (userId == expertId)
                     role = "host";
                 else if (userId == clientId)
-                    role = "guest";
+                    role = "client";
                 else
                     return StatusCode(403, new { message = "You are not part of this meeting." });
 

@@ -56,9 +56,40 @@ namespace ahello_backend.Services.Classes
         }
 
         // ─────────────────────────────────────────
+        // 1b. Generate a room code for a given role
+        //     role = "host" or "client"
+        //     TODO: endpoint path, request shape, and response shape
+        //     are UNVERIFIED — confirm against 100ms's
+        //     "Generate Room Codes" API docs before using.
+        // ─────────────────────────────────────────
+        public async Task<string> CreateRoomCodeAsync(string roomId, string role)
+        {
+            var managementToken = GenerateManagementToken();
+
+            // TODO: confirm exact path — placeholder based on memory only
+            var request = new HttpRequestMessage(
+                HttpMethod.Post,
+                $"https://api.100ms.live/v2/room-codes/room/{roomId}/role/{role}");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", managementToken);
+
+            var response = await _http.SendAsync(request);
+
+            var responseBody = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"[100ms RoomCode] Status: {response.StatusCode}");
+            Console.WriteLine($"[100ms RoomCode] Response: {responseBody}");
+
+            response.EnsureSuccessStatusCode();
+
+            // TODO: confirm response shape before relying on this parse
+            using var doc = JsonDocument.Parse(responseBody);
+            return doc.RootElement.GetProperty("data")[0].GetProperty("code").GetString()!;
+        }
+
+        // ─────────────────────────────────────────
         // 2. Generate an auth token for a peer
         //    role = "host" (expert) or "guest" (client)
         // ─────────────────────────────────────────
+
         public string GenerateAuthToken(string roomId, string role, string userId)
         {
             var now = DateTimeOffset.UtcNow;
