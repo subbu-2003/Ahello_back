@@ -36,5 +36,12 @@ namespace ahello_backend.Services.Interfaces
             DateTime? scheduleDate);
 
         Task<BookingModalGet>GetBookingModal( int serviceId);
+        Task<List<ServiceWiseClientGet>> GetClientsServiceWiseAsync(
+    int userId,
+    int pageNumber,
+    int pageSize,
+    string? search,
+    string? bookingStatus,
+    DateTime? lastBookingDate);
     }
 }
