@@ -28,68 +28,33 @@ namespace ahello_backend.Controllers
             _dbConn = dbConn;
         }
 
-        // GET /api/Meeting/token/{roomName}?userId=4
-        [HttpGet("token/{roomName}")]
-        public async Task<IActionResult> GetMeetingToken(
-            string roomName,
-            [FromQuery] int userId)
+        // GET /api/Meeting/join-info/{roomName}?userId=4
+        [HttpGet("join-info/{roomName}")]
+        public async Task<IActionResult> GetJoinInfo(string roomName, [FromQuery] int userId)
         {
             if (userId <= 0)
-                return BadRequest(new { message = "Invalid userId." });
+                return BadRequest(new { reason = "Invalid userId." });
 
-            try
+            var meeting = await _service.GetByRoomNameAsync(roomName);
+
+            if (meeting == null)
+                return NotFound(new { reason = "Meeting not found." });
+
+            if (meeting.UserId != userId && meeting.ClientId != userId)
+                return StatusCode(403, new { reason = "You are not part of this meeting." });
+
+            var roomCode = meeting.UserId == userId
+                ? meeting.HostRoomCode
+                : meeting.ClientRoomCode;
+
+            if (string.IsNullOrWhiteSpace(roomCode))
+                return BadRequest(new { reason = "100ms room code not found. Create a new booking." });
+
+            return Ok(new
             {
-                // 1. Fetch meeting row by roomName from MeetingLink column
-                using var connection = _dbConn.GetMyConnection();
-                await connection.OpenAsync();
-
-                var meeting = await connection.QueryFirstOrDefaultAsync<dynamic>(@"
-                    SELECT
-                        m.RoomId,
-                        b.UserId,
-                        b.ClientId,
-                        b.Status
-                    FROM meetings m
-                    INNER JOIN bookings b ON m.BookingId = b.BookingId
-                    WHERE m.MeetingLink LIKE CONCAT('%', @RoomName, '%')
-                    AND m.Status = 'Pending'
-                    LIMIT 1",
-                    new { RoomName = roomName });
-
-                if (meeting == null)
-                    return NotFound(new { message = "Meeting not found or no longer active." });
-
-                string roomId = meeting.RoomId;
-                int expertId = (int)meeting.UserId;
-                int clientId = (int)meeting.ClientId;
-
-                // 2. Determine role
-                string role;
-                if (userId == expertId)
-                    role = "host";
-                else if (userId == clientId)
-                    role = "client";
-                else
-                    return StatusCode(403, new { message = "You are not part of this meeting." });
-
-                // 3. Generate 100ms auth token
-                var token = _hundredMsService.GenerateAuthToken(
-                    roomId,
-                    role,
-                    userId.ToString());
-
-                return Ok(new
-                {
-                    token,
-                    roomId,
-                    role
-                });
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[TokenError] {ex.Message}");
-                return StatusCode(500, new { message = "Failed to generate meeting token." });
-            }
+                roomCode,
+                role = meeting.UserId == userId ? "host" : "client"
+            });
         }
 
         [HttpGet]
