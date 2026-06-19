@@ -174,8 +174,10 @@ namespace ahello_backend.Repositorys.Classes
 
             m.StartTime,
             m.EndTime,
-            m.MeetingLink,
+           m.MeetingLink,
             m.RoomId,
+            m.HostRoomCode,
+            m.ClientRoomCode,
             m.Status,
             m.ReminderSent,
             m.LastReminderSent,
@@ -279,23 +281,26 @@ namespace ahello_backend.Repositorys.Classes
 
             // Step 1: Fetch the meeting by room name only (no time/status filter here)
             var sql = @"
-    SELECT
-        m.MeetingId,
-        m.UserId,
-        m.BookingId,
-        m.StartTime,
-        m.EndTime,
-        m.MeetingLink,
-        m.RoomId,
-        m.Status,
-        m.ReminderSent,
-        m.LastReminderSent,
+   SELECT
+    m.MeetingId,
+    m.UserId,
+    b.ClientId,
+    m.BookingId,
+    m.StartTime,
+    m.EndTime,
+    m.MeetingLink,
+    m.RoomId,
+    m.HostRoomCode,
+    m.ClientRoomCode,
+    m.Status,
+    m.ReminderSent,
+    m.LastReminderSent,
 
-        u.FullName AS UserName,
-        u.Email AS Email,
+    u.FullName AS UserName,
+    u.Email AS Email,
 
-        cu.FullName AS ClientName,
-        cu.Email AS ClientEmail
+    cu.FullName AS ClientName,
+    cu.Email AS ClientEmail
 
     FROM meetings m
     INNER JOIN bookings b ON m.BookingId = b.BookingId

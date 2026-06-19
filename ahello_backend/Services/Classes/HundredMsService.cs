@@ -56,40 +56,58 @@ namespace ahello_backend.Services.Classes
         }
 
         // ─────────────────────────────────────────
-        // 1b. Generate a room code for a given role
-        //     role = "host" or "client"
-        //     TODO: endpoint path, request shape, and response shape
-        //     are UNVERIFIED — confirm against 100ms's
-        //     "Generate Room Codes" API docs before using.
+        // 1b. Create room codes for BOTH roles at once
+        //     Confirmed against 100ms's official "Create Room Codes" API docs:
+        //     POST https://api.100ms.live/v2/room-codes/room/{room_id}
+        //     Creates a code per role in a single call.
+        //     Returns (HostCode, ClientCode)
         // ─────────────────────────────────────────
-        public async Task<string> CreateRoomCodeAsync(string roomId, string role)
+        public async Task<(string HostCode, string ClientCode)> CreateRoomCodesAsync(string roomId)
         {
             var managementToken = GenerateManagementToken();
 
-            // TODO: confirm exact path — placeholder based on memory only
             var request = new HttpRequestMessage(
                 HttpMethod.Post,
-                $"https://api.100ms.live/v2/room-codes/room/{roomId}/role/{role}");
+                $"https://api.100ms.live/v2/room-codes/room/{roomId}");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", managementToken);
 
             var response = await _http.SendAsync(request);
 
             var responseBody = await response.Content.ReadAsStringAsync();
-            Console.WriteLine($"[100ms RoomCode] Status: {response.StatusCode}");
-            Console.WriteLine($"[100ms RoomCode] Response: {responseBody}");
+            Console.WriteLine($"[100ms RoomCodes] Status: {response.StatusCode}");
+            Console.WriteLine($"[100ms RoomCodes] Response: {responseBody}");
 
             response.EnsureSuccessStatusCode();
 
-            // TODO: confirm response shape before relying on this parse
             using var doc = JsonDocument.Parse(responseBody);
-            return doc.RootElement.GetProperty("data")[0].GetProperty("code").GetString()!;
+            var data = doc.RootElement.GetProperty("data");
+
+            string? hostCode = null;
+            string? clientCode = null;
+
+            foreach (var item in data.EnumerateArray())
+            {
+                var role = item.GetProperty("role").GetString();
+                var code = item.GetProperty("code").GetString();
+
+                if (role == "host")
+                    hostCode = code;
+                else if (role == "client")
+                    clientCode = code;
+            }
+
+            if (hostCode == null || clientCode == null)
+                throw new Exception($"100ms room codes missing expected roles. Response: {responseBody}");
+
+            return (hostCode, clientCode);
         }
 
         // ─────────────────────────────────────────
         // 2. Generate an auth token for a peer
         //    role = "host" (expert) or "guest" (client)
+        //    NOTE: Used for the future native SDK path, not Prebuilt.
+        //    Prebuilt uses room codes (see CreateRoomCodesAsync above).
         // ─────────────────────────────────────────
-
         public string GenerateAuthToken(string roomId, string role, string userId)
         {
             var now = DateTimeOffset.UtcNow;
