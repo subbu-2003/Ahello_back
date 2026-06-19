@@ -39,7 +39,6 @@ namespace ahello_backend.Repositorys.Classes
             if (model.UserId == model.ClientId)
                 throw new Exception("UserId and ClientId cannot be same.");
 
-            // STEP 1 — PARALLEL READS
             using var clientConn = _dbConn.GetMyConnection();
             using var serviceConn = _dbConn.GetMyConnection();
 
@@ -58,12 +57,10 @@ namespace ahello_backend.Repositorys.Classes
             var client = clientTask.Result;
             var service = serviceTask.Result;
 
-            // ✅ Capture outside try block so they're accessible after commit
             int bookingId = 0;
             string meetingLink = string.Empty;
             DateTime meetingStartTime = default;
 
-            // STEP 2 — TRANSACTION WRITES
             using var connection = _dbConn.GetMyConnection();
             await connection.OpenAsync();
             using var tx = await connection.BeginTransactionAsync();
@@ -71,42 +68,52 @@ namespace ahello_backend.Repositorys.Classes
             try
             {
                 var bookingSql = @"
-                INSERT INTO bookings
-                (UserId, ClientId, ServiceId, ScheduleDate, StartTime, EndTime, Status, CreatedAt, CreatedBy)
-                VALUES
-                (@UserId, @ClientId, @ServiceId, @ScheduleDate, @StartTime, @EndTime, @Status, NOW(), @CreatedBy);
-                SELECT LAST_INSERT_ID();";
+        INSERT INTO bookings
+        (UserId, ClientId, ServiceId, ScheduleDate, StartTime, EndTime, Status, CreatedAt, CreatedBy)
+        VALUES
+        (@UserId, @ClientId, @ServiceId, @ScheduleDate, @StartTime, @EndTime, @Status, NOW(), @CreatedBy);
+        SELECT LAST_INSERT_ID();";
 
                 bookingId = await connection.ExecuteScalarAsync<int>(bookingSql, model, tx);
 
-                // ✅ Create 100ms room and generate Ahllo meeting link
                 var roomId = await _hundredMsService.CreateRoomAsync(bookingId);
+                var roomCodes = await _hundredMsService.CreateRoomCodesAsync(roomId);
 
                 meetingLink = GenerateAhlloMeetingLink(bookingId);
                 meetingStartTime = model.ScheduleDate.Date.Add(model.StartTime);
                 var meetingEndTime = model.ScheduleDate.Date.Add(model.EndTime);
 
                 await connection.ExecuteAsync(@"
-                INSERT INTO meetings
-                (UserId, BookingId, StartTime, EndTime, MeetingLink, RoomId, Status, CreatedAt, CreatedBy)
-                VALUES
-                (@UserId, @BookingId, @StartTime, @EndTime, @MeetingLink, @RoomId, 'Pending', NOW(), @CreatedBy);",
-                    new
-                    {
-                        model.UserId,
-                        BookingId = bookingId,
-                        StartTime = meetingStartTime,
-                        EndTime = meetingEndTime,
-                        MeetingLink = meetingLink,
-                        RoomId = roomId,
-                        model.CreatedBy
-                    }, tx);
+        INSERT INTO meetings
+        (
+            UserId, BookingId, StartTime, EndTime,
+            MeetingLink, RoomId, HostRoomCode, ClientRoomCode,
+            Status, CreatedAt, CreatedBy
+        )
+        VALUES
+        (
+            @UserId, @BookingId, @StartTime, @EndTime,
+            @MeetingLink, @RoomId, @HostRoomCode, @ClientRoomCode,
+            'Pending', NOW(), @CreatedBy
+        );",
+                new
+                {
+                    model.UserId,
+                    BookingId = bookingId,
+                    StartTime = meetingStartTime,
+                    EndTime = meetingEndTime,
+                    MeetingLink = meetingLink,
+                    RoomId = roomId,
+                    HostRoomCode = roomCodes.HostCode,
+                    ClientRoomCode = roomCodes.ClientCode,
+                    model.CreatedBy
+                }, tx);
 
                 var bookedSlotSql = @"
-                INSERT INTO bookedslots
-                (SlotId, UserId, ServiceId, BookingId, SlotDate, StartTime, EndTime, CreatedAt)
-                VALUES
-                (@SlotId, @UserId, @ServiceId, @BookingId, @SlotDate, @StartTime, @EndTime, NOW())";
+        INSERT INTO bookedslots
+        (SlotId, UserId, ServiceId, BookingId, SlotDate, StartTime, EndTime, CreatedAt)
+        VALUES
+        (@SlotId, @UserId, @ServiceId, @BookingId, @SlotDate, @StartTime, @EndTime, NOW())";
 
                 await connection.ExecuteAsync(bookedSlotSql, new
                 {
@@ -127,7 +134,6 @@ namespace ahello_backend.Repositorys.Classes
                 throw;
             }
 
-            // ✅ Outside try block — runs only after successful commit
             string clientEmail = client.Email;
             string clientFullName = client.FullName;
             string serviceName = service?.ServiceTitle ?? "the service";
@@ -135,7 +141,6 @@ namespace ahello_backend.Repositorys.Classes
             string formattedTime = meetingStartTime.ToString("hh:mm tt", CultureInfo.InvariantCulture);
             string capturedMeetingLink = $"{meetingLink}?userId={model.ClientId}&email={Uri.EscapeDataString(clientEmail)}";
 
-            // ✅ Fire-and-forget — singleton EmailRepository is safe
             _ = Task.Run(async () =>
             {
                 try
@@ -145,13 +150,10 @@ namespace ahello_backend.Repositorys.Classes
 
                     await _emailRepository.SendMeetingInviteEmailAsync(
                         clientEmail, clientFullName, capturedMeetingLink);
-
-                    Console.WriteLine($"[Email] Both emails sent to {clientEmail}");
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"[EmailError] {ex.GetType().Name}: {ex.Message}");
-                    Console.WriteLine(ex.StackTrace);
                 }
             });
 
@@ -306,47 +308,37 @@ namespace ahello_backend.Repositorys.Classes
                 // 6. Create 100ms room and fresh Ahllo meeting link
                 // ======================================================
                 var newRoomId = await _hundredMsService.CreateRoomAsync(newBookingId);
+                var newRoomCodes = await _hundredMsService.CreateRoomCodesAsync(newRoomId);
 
                 var newMeetingLink = GenerateAhlloMeetingLink(newBookingId);
                 var newMeetingStart = newDate.Date.Add(newStart);
                 var newMeetingEnd = newDate.Date.Add(newEnd);
 
                 await connection.ExecuteAsync(@"
-            INSERT INTO meetings
-            (
-                UserId,
-                BookingId,
-                StartTime,
-                EndTime,
-                MeetingLink,
-                RoomId,
-                Status,
-                CreatedAt,
-                CreatedBy
-            )
-            VALUES
-            (
-                @UserId,
-                @BookingId,
-                @StartTime,
-                @EndTime,
-                @MeetingLink,
-                @RoomId,
-                'Pending',
-                NOW(),
-                @CreatedBy
-            );",
-                    new
-                    {
-                        old.UserId,
-                        BookingId = newBookingId,
-                        StartTime = newMeetingStart,
-                        EndTime = newMeetingEnd,
-                        MeetingLink = newMeetingLink,
-                        RoomId = newRoomId,
-                        CreatedBy = rescheduledBy
-                    },
-                    tx);
+INSERT INTO meetings
+(
+    UserId, BookingId, StartTime, EndTime,
+    MeetingLink, RoomId, HostRoomCode, ClientRoomCode,
+    Status, CreatedAt, CreatedBy
+)
+VALUES
+(
+    @UserId, @BookingId, @StartTime, @EndTime,
+    @MeetingLink, @RoomId, @HostRoomCode, @ClientRoomCode,
+    'Pending', NOW(), @CreatedBy
+);",
+                new
+                {
+                    old.UserId,
+                    BookingId = newBookingId,
+                    StartTime = newMeetingStart,
+                    EndTime = newMeetingEnd,
+                    MeetingLink = newMeetingLink,
+                    RoomId = newRoomId,
+                    HostRoomCode = newRoomCodes.HostCode,
+                    ClientRoomCode = newRoomCodes.ClientCode,
+                    CreatedBy = rescheduledBy
+                }, tx);
 
                 // ======================================================
                 // 7. Insert new booked slot
