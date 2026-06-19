@@ -372,11 +372,9 @@ namespace ahello_backend.Repositorys.Classes
                 throw;
             }
         }
-
         public async Task<bool> UpdateAsync(int serviceId, ServiceDynamicPut model)
         {
             using var connection = _db.GetConnection();
-
             connection.Open();
 
             using var tx = connection.BeginTransaction();
@@ -384,50 +382,47 @@ namespace ahello_backend.Repositorys.Classes
             try
             {
                 var sql = @"
-                    UPDATE services
-                    SET
-                        UserId = @UserId,
-                        ServiceTypeId = @ServiceTypeId,
-                        ServiceCategoryId=@ServiceCategoryId,
-                        ServiceTitle = @ServiceTitle,
-                        Price = @Price,
-                        Duration = @Duration,
-                        ShortDescription = @ShortDescription,
-                        FullDescription = @FullDescription,
-                        Tags = @Tags,
-                        Language = @Language,
-                        ThumbnailImage = COALESCE(@ThumbnailImage, ThumbnailImage),
-                        BannerImage    = COALESCE(@BannerImage, BannerImage),
-                        IntroVideo = @IntroVideo,
-                        Status = @Status,
-                        IsActive = @IsActive,
-                        ModifiedAt = NOW(),
-                        ModifiedBy = @ModifiedBy
-                    WHERE ServiceId = @ServiceId";
+                UPDATE services
+                SET
+                    UserId = @UserId,
+                    ServiceTypeId = @ServiceTypeId,
+                    ServiceCategoryId = @ServiceCategoryId,
+                    ServiceTitle = @ServiceTitle,
+                    Price = @Price,
+                    Duration = @Duration,
+                    ShortDescription = @ShortDescription,
+                    FullDescription = @FullDescription,
+                    Tags = @Tags,
+                    Language = @Language,
+                    ThumbnailImage = COALESCE(@ThumbnailImage, ThumbnailImage),
+                    BannerImage = COALESCE(@BannerImage, BannerImage),
+                    IntroVideo = @IntroVideo,
+                    Status = @Status,
+                    IsActive = @IsActive,
+                    ModifiedAt = NOW(),
+                    ModifiedBy = @ModifiedBy
+                WHERE ServiceId = @ServiceId";
 
-                var rows = await connection.ExecuteAsync(
-                    sql,
-                    new
-                    {
-                        ServiceId = serviceId,
-                        model.UserId,
-                        model.ServiceTypeId,
-                        model.ServiceCategoryId,
-                        model.ServiceTitle,
-                        model.Price,
-                        model.Duration,
-                        model.ShortDescription,
-                        model.FullDescription,
-                        model.Tags,
-                        model.Language,
-                        ThumbnailImage = model.ThumbnailImageUrl,   // ← changed
-                        BannerImage = model.BannerImageUrl,
-                        model.IntroVideo,
-                        model.Status,
-                        model.IsActive,
-                        model.ModifiedBy
-                    },
-                    tx);
+                var rows = await connection.ExecuteAsync(sql, new
+                {
+                    ServiceId = serviceId,
+                    model.UserId,
+                    model.ServiceTypeId,
+                    model.ServiceCategoryId,
+                    model.ServiceTitle,
+                    model.Price,
+                    model.Duration,
+                    model.ShortDescription,
+                    model.FullDescription,
+                    model.Tags,
+                    model.Language,
+                    ThumbnailImage = model.ThumbnailImageUrl,
+                    BannerImage = model.BannerImageUrl,
+                    model.IntroVideo,
+                    model.Status,
+                    model.IsActive,
+                    model.ModifiedBy
+                }, tx);
 
                 if (rows <= 0)
                 {
@@ -435,61 +430,38 @@ namespace ahello_backend.Repositorys.Classes
                     return false;
                 }
 
+                // Field values only delete and re-insert
                 await connection.ExecuteAsync(
                     @"DELETE FROM servicefieldvalues
-                      WHERE ServiceId = @ServiceId",
+              WHERE ServiceId = @ServiceId",
                     new { ServiceId = serviceId },
                     tx);
 
                 if (model.Fields != null && model.Fields.Any())
                 {
                     var fieldSql = @"
-                        INSERT INTO servicefieldvalues
-                        (
-                            ServiceId,
-                            FieldCode,
-                            ServiceFieldId,
-                            FieldValue,
-                            CreatedDate,
-                            CreatedBy,
-                            CreatedAt
-                        )
-                        SELECT
-                            @ServiceId,
-                            sf.FieldCode,
-                            @ServiceFieldId,
-                            @FieldValue,
-                            NOW(),
-                            @ModifiedBy,
-                            CURRENT_TIMESTAMP
-                        FROM servicefields sf
-                        WHERE sf.ServiceFieldId = @ServiceFieldId;";
+                    INSERT INTO servicefieldvalues
+                    (
+                        ServiceId,
+                        FieldCode,
+                        ServiceFieldId,
+                        FieldValue,
+                        CreatedDate,
+                        CreatedBy,
+                        CreatedAt
+                    )
+                    SELECT
+                        @ServiceId,
+                        sf.FieldCode,
+                        sf.ServiceFieldId,
+                        @FieldValue,
+                        NOW(),
+                        @ModifiedBy,
+                        CURRENT_TIMESTAMP
+                    FROM servicefields sf
+                    WHERE sf.ServiceFieldId = @ServiceFieldId";
 
-                    foreach (var field in model.Fields)
-                    {
-                        await connection.ExecuteAsync(
-                            fieldSql,
-                            new
-                            {
-                                ServiceId = serviceId,
-                                ServiceFieldId = field.ServiceFieldId,
-                                FieldValue = field.FieldValue,
-                                model.ModifiedBy
-                            },
-                            tx);
-                    }
-                }
-                /* ADD THIS CODE HERE ↓↓↓ */
-
-                await connection.ExecuteAsync(
-                    @"DELETE FROM servicedropdownoptions
-                       WHERE ServiceId = @ServiceId",
-                    new { ServiceId = serviceId },
-                    tx);
-
-                if (model.Fields != null && model.Fields.Any())
-                {
-                    var dropdownSql = @"
+                    var insertDropdownSql = @"
                     INSERT INTO servicedropdownoptions
                     (
                         ServiceFieldId,
@@ -509,18 +481,51 @@ namespace ahello_backend.Repositorys.Classes
                         @IsActive,
                         NOW(),
                         @ModifiedBy
-                    );";
+                    )";
+
+                    var updateDropdownSql = @"
+                    UPDATE servicedropdownoptions
+                    SET
+                        OptionValue = @OptionValue,
+                        OptionLabel = @OptionLabel,
+                        IsActive = @IsActive,
+                        ModifiedDate = NOW(),
+                        ModifiedBy = @ModifiedBy
+                    WHERE ServiceDropDownId = @ServiceDropDownId";
 
                     foreach (var field in model.Fields)
                     {
-                        if (field.DropDownOptions != null &&
-                            field.DropDownOptions.Any())
+                        var insertedFieldRows = await connection.ExecuteAsync(fieldSql, new
+                        {
+                            ServiceId = serviceId,
+                            ServiceFieldId = field.ServiceFieldId,
+                            FieldValue = field.FieldValue,
+                            model.ModifiedBy
+                        }, tx);
+
+                        if (insertedFieldRows <= 0)
+                        {
+                            throw new Exception($"Invalid ServiceFieldId: {field.ServiceFieldId}");
+                        }
+
+                        if (field.DropDownOptions != null && field.DropDownOptions.Any())
                         {
                             foreach (var option in field.DropDownOptions)
                             {
-                                await connection.ExecuteAsync(
-                                    dropdownSql,
-                                    new
+                                if (option.ServiceDropDownId > 0)
+                                {
+                                    await connection.ExecuteAsync(updateDropdownSql, new
+                                    {
+                                        option.ServiceDropDownId,
+                                        option.OptionValue,
+                                        option.OptionLabel,
+                                        option.IsActive,
+                                        model.ModifiedBy
+                                    }, tx);
+                                }
+                                else
+                                {
+                                    await connection.ExecuteAsync(insertDropdownSql, new
                                     {
                                         ServiceFieldId = field.ServiceFieldId,
                                         ServiceId = serviceId,
@@ -528,15 +533,14 @@ namespace ahello_backend.Repositorys.Classes
                                         option.OptionLabel,
                                         option.IsActive,
                                         model.ModifiedBy
-                                    },
-                                    tx);
+                                    }, tx);
+                                }
                             }
                         }
                     }
                 }
 
                 tx.Commit();
-
                 return true;
             }
             catch
