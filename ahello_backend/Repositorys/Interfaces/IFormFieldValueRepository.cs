@@ -16,6 +16,7 @@ namespace ahello_backend.Repositorys.Interfaces
          int userId,
          int pageNumber,
          int pageSize,
-         string? search);
+         string? search, DateTime? date);
+
     }
 }
