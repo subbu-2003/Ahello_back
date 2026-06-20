@@ -6,7 +6,6 @@
 
         public string? FieldValue { get; set; }
 
-        public List<UserDropdownOptionPut> DropDownOptions { get; set; }
-            = new List<UserDropdownOptionPut>();
+        public List<UserDropdownOptionPut>? DropDownOptions { get; set; }
     }
 }
