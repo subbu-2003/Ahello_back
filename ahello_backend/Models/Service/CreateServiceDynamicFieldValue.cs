@@ -5,7 +5,6 @@
         public int ServiceFieldId { get; set; }
 
         public string? FieldValue { get; set; }
-        public List<ServiceDropDownOptionPut> DropDownOptions { get; set; }
-      = new List<ServiceDropDownOptionPut>();
+        public List<ServiceDropDownOptionPut>? DropDownOptions { get; set; }
     }
 }
