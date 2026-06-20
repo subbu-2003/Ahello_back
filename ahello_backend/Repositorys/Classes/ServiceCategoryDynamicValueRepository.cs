@@ -498,23 +498,24 @@ namespace ahello_backend.Repositorys.Classes
         }
 
         public async Task<bool> UpdateAsync(
-            int serviceCategoryId,
-            ServiceCategoryDynamicPut model)
+             int serviceCategoryId,
+             ServiceCategoryDynamicPut model)
         {
             using var connection = _db.GetConnection();
 
-            connection.Open();
+
+                connection.Open();
 
             using var tx = connection.BeginTransaction();
+
             try
             {
-                // DUPLICATE CHECK
+                // Check duplicate Service Category Name
                 var duplicateExists = await connection.ExecuteScalarAsync<int>(
                     @"SELECT COUNT(*)
-              FROM servicecategorydynamic
-              WHERE LOWER(ServiceCategoryName) =
-                    LOWER(@ServiceCategoryName)
-              AND ServiceCategoryId <> @ServiceCategoryId",
+          FROM servicecategorydynamic
+          WHERE LOWER(ServiceCategoryName) = LOWER(@ServiceCategoryName)
+          AND ServiceCategoryId <> @ServiceCategoryId",
                     new
                     {
                         model.ServiceCategoryName,
@@ -526,144 +527,196 @@ namespace ahello_backend.Repositorys.Classes
                 {
                     throw new Exception("Service Category Name already exists.");
                 }
-                await connection.ExecuteAsync(
-            @"UPDATE servicecategorydynamic
-              SET ServiceCategoryName = @ServiceCategoryName,
-                 IsActive = @IsActive,
-                  ModifiedBy = @ModifiedBy,
-                  ModifiedAt = NOW()
-              WHERE ServiceCategoryId = @ServiceCategoryId",
-            new
-            {
-                ServiceCategoryId = serviceCategoryId,
-                model.ServiceCategoryName,
-                model.IsActive,
-                model.ModifiedBy
-            },
-            tx);
 
-                try
+                // Update Service Category
+                await connection.ExecuteAsync(
+                    @"UPDATE servicecategorydynamic
+          SET ServiceCategoryName = @ServiceCategoryName,
+              IsActive = @IsActive,
+              ModifiedBy = @ModifiedBy,
+              ModifiedAt = NOW()
+          WHERE ServiceCategoryId = @ServiceCategoryId",
+                    new
+                    {
+                        ServiceCategoryId = serviceCategoryId,
+                        model.ServiceCategoryName,
+                        model.IsActive,
+                        model.ModifiedBy
+                    },
+                    tx);
+
+                // Delete old field values
+                await connection.ExecuteAsync(
+                    @"DELETE FROM servicecategoryfieldvalues
+          WHERE ServiceCategoryId = @ServiceCategoryId",
+                    new
+                    {
+                        ServiceCategoryId = serviceCategoryId
+                    },
+                    tx);
+
+                // Insert field values again
+                if (model.Fields != null && model.Fields.Any())
+                {
+                    var fieldSql = @"
+            INSERT INTO servicecategoryfieldvalues
+            (
+                ServiceCategoryId,
+                FieldCode,
+                ServiceCategoryFieldId,
+                FieldValue,
+                CreatedDate,
+                CreatedBy,
+                CreatedAt
+            )
+            SELECT
+                @ServiceCategoryId,
+                scf.FieldCode,
+                @ServiceCategoryFieldId,
+                @FieldValue,
+                NOW(),
+                @ModifiedBy,
+                NOW()
+            FROM servicecategoryfields scf
+            WHERE scf.ServiceCategoryFieldId =
+                  @ServiceCategoryFieldId";
+
+                    foreach (var field in model.Fields.Where(x => x.ServiceCategoryFieldId > 0))
+                    {
+                        await connection.ExecuteAsync(
+                            fieldSql,
+                            new
+                            {
+                                ServiceCategoryId = serviceCategoryId,
+                                field.ServiceCategoryFieldId,
+                                field.FieldValue,
+                                model.ModifiedBy
+                            },
+                            tx);
+                    }
+                }
+
+                // Collect existing dropdown ids from request
+                var existingIds = model.Fields?
+                    .SelectMany(f => f.DropDownOptions ?? new List<ServiceCategoryDropdownOptionPut>())
+                    .Where(x => x.ServiceCategoryDropDownId.HasValue)
+                    .Select(x => x.ServiceCategoryDropDownId!.Value)
+                    .ToList()
+                    ?? new List<int>();
+
+                // Delete removed dropdown options
+                if (existingIds.Any())
                 {
                     await connection.ExecuteAsync(
-                        @"DELETE FROM servicecategoryfieldvalues
-                      WHERE ServiceCategoryId =
-                            @ServiceCategoryId",
+                        $@"DELETE FROM servicecategorydropdownoption
+               WHERE ServiceCategoryId = @ServiceCategoryId
+               AND ServiceCategoryDropDownId NOT IN ({string.Join(",", existingIds)})",
                         new
                         {
                             ServiceCategoryId = serviceCategoryId
                         },
                         tx);
+                }
+                else
+                {
                     await connection.ExecuteAsync(
-                   @"DELETE FROM servicecategorydropdownoption
-                  WHERE ServiceCategoryId =
-                        @ServiceCategoryId",
-                   new
-                   {
-                       ServiceCategoryId = serviceCategoryId
-                   },
-                   tx);
-                    if (model.Fields != null && model.Fields.Any())
-                    {
-                        var sql = @"
-                    INSERT INTO servicecategoryfieldvalues
-                    (
-                        ServiceCategoryId,
-                        FieldCode,
-                        ServiceCategoryFieldId,
-                        FieldValue,
-                        CreatedDate,
-                        CreatedBy,
-                        CreatedAt
-                    )
-                    SELECT
-                        @ServiceCategoryId,
-                        scf.FieldCode,
-                        @ServiceCategoryFieldId,
-                        @FieldValue,
-                        NOW(),
-                        @ModifiedBy,
-                        CURRENT_TIMESTAMP
-                    FROM servicecategoryfields scf
-                    WHERE scf.ServiceCategoryFieldId =
-                          @ServiceCategoryFieldId";
-
-                        foreach (var field in model.Fields.Where(x => x.ServiceCategoryFieldId > 0))
+                        @"DELETE FROM servicecategorydropdownoption
+              WHERE ServiceCategoryId = @ServiceCategoryId",
+                        new
                         {
-                            await connection.ExecuteAsync(
-                                sql,
-                                new
-                                {
-                                    ServiceCategoryId = serviceCategoryId,
-                                    field.ServiceCategoryFieldId,
-                                    field.FieldValue,
-                                    model.ModifiedBy
-                                },
-                                tx);
+                            ServiceCategoryId = serviceCategoryId
+                        },
+                        tx);
+                }
+
+                // Update or Insert dropdown options
+                if (model.Fields != null && model.Fields.Any())
+                {
+                    foreach (var field in model.Fields.Where(x => x.ServiceCategoryFieldId > 0))
+                    {
+                        if (field.DropDownOptions == null ||
+                            !field.DropDownOptions.Any())
+                        {
+                            continue;
                         }
-                    }
-                    if (model.Fields != null && model.Fields.Any())
-                    {
-                        var dropdownSql = @"
-                    INSERT INTO servicecategorydropdownoption
-                    (
-                        ServiceCategoryFieldId,
-                        ServiceCategoryId,
-                        OptionValue,
-                        OptionLabel,
-                        IsActive,
-                        CreatedDate,
-                        CreatedBy
-                    )
-                    VALUES
-                    (
-                        @ServiceCategoryFieldId,
-                        @ServiceCategoryId,
-                        @OptionValue,
-                        @OptionLabel,
-                        @IsActive,
-                        NOW(),
-                        @ModifiedBy
-                    );";
 
-                        foreach (var field in model.Fields.Where(x => x.ServiceCategoryFieldId > 0))
+                        foreach (var option in field.DropDownOptions)
                         {
-                            if (field.DropDownOptions != null &&
-                                field.DropDownOptions.Any())
+                            // Update existing dropdown
+                            if (option.ServiceCategoryDropDownId.HasValue &&
+                                option.ServiceCategoryDropDownId.Value > 0)
                             {
-                                foreach (var option in field.DropDownOptions)
-                                {
-                                    await connection.ExecuteAsync(
-                                        dropdownSql,
-                                        new
-                                        {
-                                            field.ServiceCategoryFieldId,
-                                            ServiceCategoryId = serviceCategoryId,
-                                            option.OptionValue,
-                                            option.OptionLabel,
-                                            option.IsActive,
-                                            model.ModifiedBy
-                                        },
-                                        tx);
-                                }
+                                await connection.ExecuteAsync(
+                                    @"UPDATE servicecategorydropdownoption
+                          SET OptionValue = @OptionValue,
+                              OptionLabel = @OptionLabel,
+                              IsActive = @IsActive,
+                              ModifiedDate = NOW(),
+                              ModifiedBy = @ModifiedBy
+                          WHERE ServiceCategoryDropDownId =
+                                @ServiceCategoryDropDownId",
+                                    new
+                                    {
+                                        option.OptionValue,
+                                        option.OptionLabel,
+                                        option.IsActive,
+                                        model.ModifiedBy,
+                                        option.ServiceCategoryDropDownId
+                                    },
+                                    tx);
+                            }
+                            else
+                            {
+                                // Insert new dropdown
+                                await connection.ExecuteAsync(
+                                    @"INSERT INTO servicecategorydropdownoption
+                        (
+                            ServiceCategoryFieldId,
+                            ServiceCategoryId,
+                            OptionValue,
+                            OptionLabel,
+                            IsActive,
+                            CreatedDate,
+                            CreatedBy
+                        )
+                        VALUES
+                        (
+                            @ServiceCategoryFieldId,
+                            @ServiceCategoryId,
+                            @OptionValue,
+                            @OptionLabel,
+                            @IsActive,
+                            NOW(),
+                            @ModifiedBy
+                        )",
+                                    new
+                                    {
+                                        field.ServiceCategoryFieldId,
+                                        ServiceCategoryId = serviceCategoryId,
+                                        option.OptionValue,
+                                        option.OptionLabel,
+                                        option.IsActive,
+                                        model.ModifiedBy
+                                    },
+                                    tx);
                             }
                         }
                     }
-                    tx.Commit();
+                }
 
-                    return true;
-                }
-                catch
-                {
-                    tx.Rollback();
-                    throw;
-                }
+                tx.Commit();
+
+                return true;
             }
             catch
             {
                 tx.Rollback();
                 throw;
             }
-        }
+
+
+}
+
 
         public async Task<bool> DeleteAsync( int serviceCategoryId)
         {
