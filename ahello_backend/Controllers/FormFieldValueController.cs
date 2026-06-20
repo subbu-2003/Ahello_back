@@ -72,7 +72,8 @@ namespace ahello_backend.Controllers
             int userId,
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10,
-            [FromQuery] string? search = null)
+            [FromQuery] string? search = null, [FromQuery] DateTime? date = null)
+
         {
             try
             {
@@ -80,7 +81,7 @@ namespace ahello_backend.Controllers
                     userId,
                     pageNumber,
                     pageSize,
-                    search);
+                    search, date);
 
                 return Ok(result);
             }

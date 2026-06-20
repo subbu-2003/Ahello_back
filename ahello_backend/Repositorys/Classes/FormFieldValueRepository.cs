@@ -405,114 +405,134 @@ namespace ahello_backend.Repositorys.Classes
             return errors;
         }
         public async Task<PagedResult<FormFieldValueUserResponse>>
-                 GetByUserIdAsync(
-                     int userId,
-                     int pageNumber,
-                     int pageSize,
-                     string? search)
-                        {
-                            using var connection = _db.GetConnection();
+            GetByUserIdAsync(
+                int userId,
+                int pageNumber,
+                int pageSize,
+                string? search,
+                DateTime? date)
+        {
+            using var connection = _db.GetConnection();
 
-                            int skip = (pageNumber - 1) * pageSize;
+            int skip = (pageNumber - 1) * pageSize;
 
-                            var whereClause = @"
-                    WHERE f.UserId = @UserId
-                    AND f.IsActive = 1";
+            var whereClause = @"
+        WHERE f.UserId = @UserId
+        AND f.IsActive = 1";
 
-                            if (!string.IsNullOrWhiteSpace(search))
-                            {
-                                whereClause += @"
-                        AND
-                        (
-                            f.Title LIKE @Search
-                            OR f.Description LIKE @Search
-                            OR ff.FieldName LIKE @Search
-                            OR ff.FieldCode LIKE @Search
-                            OR ffv.FieldValue LIKE @Search
-                        )";
-                            }
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                whereClause += @"
+            AND
+            (
+                f.Title LIKE @Search
+                OR f.Description LIKE @Search
+                OR ff.FieldName LIKE @Search
+                OR ff.FieldCode LIKE @Search
+                OR ffv.FieldValue LIKE @Search
+                OR u.FullName  LIKE @Search
+            )";
+            }
 
-                            // TOTAL COUNT
-                            var totalCount = await connection.ExecuteScalarAsync<int>(
-                            $@"
-                    SELECT COUNT(DISTINCT f.FormId)
+            if (date.HasValue)
+            {
+                whereClause += @"
+                AND DATE(f.CreatedAt) = DATE(@Date)";
+            }
 
-                    FROM forms f
+            // TOTAL COUNT
+            var totalCount = await connection.ExecuteScalarAsync<int>(
+            $@"
+        SELECT COUNT(DISTINCT f.FormId)
 
-                    LEFT JOIN formfields ff
-                        ON f.FormId = ff.FormId
+        FROM forms f
 
-                    LEFT JOIN formfieldvalues ffv
-                        ON ff.FormFieldId = ffv.FormFieldId
+        LEFT JOIN formfields ff
+            ON f.FormId = ff.FormId
 
-                    {whereClause}",
-                            new
-                            {
-                                UserId = userId,
-                                Search = $"%{search}%"
-                            });
+        LEFT JOIN formfieldvalues ffv
+            ON ff.FormFieldId = ffv.FormFieldId
 
-                            // MAIN QUERY
-                            var sql = $@"
+       LEFT JOIN users u
+    ON ffv.ClientId = u.UserId
 
-                    SELECT
+        {whereClause}",
+            new
+            {
+                UserId = userId,
+                Search = $"%{search}%",
+                Date = date
+            });
 
-                        f.FormId,
-                        f.UserId,
-                        f.Title,
-                        f.Description,
-                        f.IsActive,
-                        f.CreatedAt,
-                        f.CreatedBy,
-                        f.ModifiedAt,
-                        f.ModifiedBy,
+            // MAIN QUERY
+            var sql = $@"
+        SELECT
 
-                        ff.FormFieldId,
-                        ff.FormId,
-                        ff.FieldName,
-                        ff.FieldCode,
-                        ff.Placeholder,
-                        ff.Description,
-                        ff.IsRequired,
-                        ff.IsActive,
-                        ff.DataTypeId,
-                        ff.CreatedBy,
-                        ff.CreatedAt,
-                        ff.ModifiedBy,
-                        ff.ModifiedAt,
+            -- FORM
 
-                        ffv.FormFieldValueId,
-                        ffv.FormId,
-                        ffv.ClientId,
-                        ffv.FieldCode,
-                        ffv.FormFieldId,
-                        ffv.FieldValue,
-                        ffv.CreatedDate,
-                        ffv.CreatedBy,
-                        ffv.CreatedAt,
-                        ffv.ModifiedBy,
-                        ffv.ModifiedAt
+            f.FormId,
+            f.UserId,
+            f.Title,
+            f.Description,
+            f.IsActive,
+            f.CreatedAt,
+            f.CreatedBy,
+            f.ModifiedAt,
+            f.ModifiedBy,
 
-                    FROM forms f
+            -- FIELD
 
-                    LEFT JOIN formfields ff
-                        ON f.FormId = ff.FormId
+            ff.FormFieldId,
+            ff.FormId,
+            ff.FieldName,
+            ff.FieldCode,
+            ff.Placeholder,
+            ff.Description,
+            ff.IsRequired,
+            ff.IsActive,
+            ff.DataTypeId,
+            ff.CreatedBy,
+            ff.CreatedAt,
+            ff.ModifiedBy,
+            ff.ModifiedAt,
 
-                    LEFT JOIN formfieldvalues ffv
-                        ON ff.FormFieldId = ffv.FormFieldId
+            -- FIELD VALUE
 
-                    {whereClause}
+            ffv.FormFieldValueId,
+            ffv.FormId,
+            ffv.ClientId,
+            u.FullName AS ClientName,
+            ffv.FieldCode,
+            ffv.FormFieldId,
+            ffv.FieldValue,
+            ffv.CreatedDate,
+            ffv.CreatedBy,
+            ffv.CreatedAt,
+            ffv.ModifiedBy,
+            ffv.ModifiedAt
 
-                    ORDER BY f.FormId DESC,
-                             ff.FormFieldId
+        FROM forms f
 
-                    LIMIT @PageSize OFFSET @Skip";
+        LEFT JOIN formfields ff
+            ON f.FormId = ff.FormId
 
-            var forms =
-                new Dictionary<int, FormFieldValueUserResponse>();
+        LEFT JOIN formfieldvalues ffv
+            ON ff.FormFieldId = ffv.FormFieldId
 
-            var fields =
-                new Dictionary<int, FormFieldDetailResponse>();
+      LEFT JOIN users u
+    ON ffv.ClientId = u.UserId
+
+        {whereClause}
+
+        ORDER BY
+            f.FormId DESC,
+            ff.FormFieldId
+
+        LIMIT @PageSize OFFSET @Skip";
+
+            var forms = new Dictionary<int, FormFieldValueUserResponse>();
+
+            var fields = new Dictionary<int, FormFieldDetailResponse>();
 
             await connection.QueryAsync
             <
@@ -572,6 +592,7 @@ namespace ahello_backend.Repositorys.Classes
                 {
                     UserId = userId,
                     Search = $"%{search}%",
+                    Date = date,
                     PageSize = pageSize,
                     Skip = skip
                 },
@@ -581,7 +602,9 @@ namespace ahello_backend.Repositorys.Classes
             return new PagedResult<FormFieldValueUserResponse>
             {
                 TotalCount = totalCount,
-                Details = forms.Values
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                Details = forms.Values.ToList()
             };
         }
     }
