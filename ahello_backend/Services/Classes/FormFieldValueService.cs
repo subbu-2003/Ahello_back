@@ -37,13 +37,13 @@ namespace ahello_backend.Services.Classes
             int userId,
             int pageNumber,
             int pageSize,
-            string? search)
+            string? search, DateTime? date)
         {
             return await _repository.GetByUserIdAsync(
                 userId,
                 pageNumber,
                 pageSize,
-                search);
+                search, date);
         }
     }
 }
