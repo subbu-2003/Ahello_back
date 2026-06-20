@@ -19,6 +19,7 @@
     }
     public class ServiceCategoryDropdownOptionPut
     {
+        public int? ServiceCategoryDropDownId { get; set; }
         public string OptionValue { get; set; }
 
         public string OptionLabel { get; set; }
