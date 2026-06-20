@@ -592,7 +592,7 @@ new { UserId = user.UserId });
 
                     if (exists > 0)
                     {
-                        await connection.ExecuteAsync(
+                        var fieldAffected = await connection.ExecuteAsync(
                         @"UPDATE userfieldvalues
                           SET FieldValue = @FieldValue
                           WHERE UserId = @UserId
@@ -604,6 +604,8 @@ new { UserId = user.UserId });
                             FieldValue = field.FieldValue
                         },
                         tx);
+
+                        Console.WriteLine($"Field Updated Rows = {fieldAffected}");
                     }
                     else
                     {
