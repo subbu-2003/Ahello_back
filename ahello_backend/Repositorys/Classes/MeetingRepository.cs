@@ -96,22 +96,57 @@ namespace ahello_backend.Repositorys.Classes
             using var connection = _db.GetConnection();
 
             var sql = @"
-                SELECT
-                    m.MeetingId,
-                    m.UserId,
-                    u.FullName AS UserName,
-                    u.Email,
-                    m.BookingId,
-                    m.StartTime,
-                    m.EndTime,
-                    m.MeetingLink,
-                    m.Status,
-                    m.ReminderSent,
-                    m.LastReminderSent
-                FROM meetings m
-                INNER JOIN users u
-                    ON m.UserId = u.UserId
-                WHERE m.BookingId = @BookingId";
+    SELECT
+        m.MeetingId,
+
+        b.UserId,
+        u.FullName AS UserName,
+        u.Email,
+
+        b.ClientId,
+        cu.FullName AS ClientName,
+        cu.Email AS ClientEmail,
+
+        m.BookingId,
+
+        s.ServiceId,
+        s.ServiceTitle,
+        s.ServiceCategoryId,
+        sc.ServiceCategoryName,
+
+        m.StartTime,
+        m.EndTime,
+        m.MeetingLink,
+        m.RoomId,
+        m.HostRoomCode,
+        m.ClientRoomCode,
+        m.Status,
+        m.ReminderSent,
+        m.LastReminderSent,
+
+        m.CreatedAt,
+        m.CreatedBy,
+        m.ModifiedAt,
+        m.ModifiedBy
+
+    FROM meetings m
+
+    INNER JOIN bookings b
+        ON m.BookingId = b.BookingId
+
+    INNER JOIN users u
+        ON b.UserId = u.UserId
+
+    INNER JOIN users cu
+        ON b.ClientId = cu.UserId
+
+    INNER JOIN services s
+        ON b.ServiceId = s.ServiceId
+
+    LEFT JOIN servicecategorydynamic sc
+        ON s.ServiceCategoryId = sc.ServiceCategoryId
+
+    WHERE m.BookingId = @BookingId";
 
             return await connection.QueryAsync<Meeting>(
                 sql,
@@ -281,33 +316,31 @@ namespace ahello_backend.Repositorys.Classes
 
             // Step 1: Fetch the meeting by room name only (no time/status filter here)
             var sql = @"
-   SELECT
-    m.MeetingId,
-    m.UserId,
-    b.ClientId,
-    m.BookingId,
-    m.StartTime,
-    m.EndTime,
-    m.MeetingLink,
-    m.RoomId,
-    m.HostRoomCode,
-    m.ClientRoomCode,
-    m.Status,
-    m.ReminderSent,
-    m.LastReminderSent,
+               SELECT
+                m.MeetingId,
+                m.UserId,
+                b.ClientId,
+                m.BookingId,
+                m.StartTime,
+                m.EndTime,
+                m.MeetingLink,
+                m.RoomId,
+                m.HostRoomCode,
+                m.ClientRoomCode,
+                m.Status,
+                m.ReminderSent,
+                m.LastReminderSent,
+                u.FullName AS UserName,
+                u.Email AS Email,
+                cu.FullName AS ClientName,
+                cu.Email AS ClientEmail
 
-    u.FullName AS UserName,
-    u.Email AS Email,
+                FROM meetings m
+                INNER JOIN bookings b ON m.BookingId = b.BookingId
+                INNER JOIN users u ON m.UserId = u.UserId
+                INNER JOIN users cu ON b.ClientId = cu.UserId
 
-    cu.FullName AS ClientName,
-    cu.Email AS ClientEmail
-
-    FROM meetings m
-    INNER JOIN bookings b ON m.BookingId = b.BookingId
-    INNER JOIN users u ON m.UserId = u.UserId
-    INNER JOIN users cu ON b.ClientId = cu.UserId
-
-    WHERE m.MeetingLink LIKE @RoomName;";
+                WHERE m.MeetingLink LIKE @RoomName;";
 
             var meeting = await connection.QueryFirstOrDefaultAsync<Meeting>(
                 sql,

@@ -162,13 +162,19 @@ namespace ahello_backend.Controllers
                 // 6. Block if too early, more than 10 minutes before start
                 // 6. Block if too early, more than 10 minutes before start
                 var istNow = DateTime.UtcNow.AddHours(5).AddMinutes(30);
-                if (istNow < meeting.StartTime.AddMinutes(-10))
+                if (istNow < meeting.StartTime)
+                {
+                    var remaining = meeting.StartTime - istNow;
+                    var remainingMinutes = (int)Math.Ceiling(remaining.TotalMinutes);
+
                     return StatusCode(425, new
                     {
                         allowed = false,
-                        reason = "Meeting hasn't started yet.",
-                        startsAt = meeting.StartTime
+                        reason = $"Meeting hasn't started yet. Starts in {remainingMinutes} minutes.",
+                        startsAt = meeting.StartTime,
+                        remainingMinutes
                     });
+                }
 
                 // 7. Block if meeting end time passed
                 if (istNow > meeting.EndTime)
