@@ -8,7 +8,7 @@ namespace ahello_backend.Repositorys.Interfaces
         int pageNumber,
         int pageSize,
         string? search = null,
-        DateTime? createdDate = null);
+        DateTime? createdDate = null, bool? isActive = null);
 
         Task<CategoryDynamicGetResponse> GetByIdAsync(int categoryId);
 
