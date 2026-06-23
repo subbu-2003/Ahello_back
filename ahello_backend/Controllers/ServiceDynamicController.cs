@@ -44,12 +44,13 @@ namespace ahello_backend.Controllers
 
         [HttpGet("user/{userId}/pagination")]
         public async Task<IActionResult> GetByUserIdPagination(
-        int userId,
-        int pageNumber = 1,
-        int pageSize = 10,
-        string? search = null,
-        string? serviceCategoryName = null,
-        string? status = null)
+          int userId,
+          int pageNumber = 1,
+          int pageSize = 10,
+          string? search = null,
+          string? serviceCategoryName = null,
+          string? status = null,
+          bool? isActive = null)
         {
             var result = await _service.GetByUserIdPagedAsync(
                 userId,
@@ -57,7 +58,8 @@ namespace ahello_backend.Controllers
                 pageSize,
                 search,
                 serviceCategoryName,
-                status);
+                status,
+                isActive);
 
             return Ok(result);
         }

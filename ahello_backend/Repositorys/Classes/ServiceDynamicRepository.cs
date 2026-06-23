@@ -160,7 +160,8 @@ namespace ahello_backend.Repositorys.Classes
         int pageSize,
         string? search = null,
         string? serviceCategoryName = null,
-        string? status = null)
+        string? status = null,
+        bool? isActive = null)
         {
             using var connection = _db.GetConnection();
 
@@ -192,7 +193,13 @@ namespace ahello_backend.Repositorys.Classes
             if (!string.IsNullOrWhiteSpace(status))
             {
                 whereClause += @"
-                AND s.Status = @Status";
+                    AND s.Status = @Status";
+            }
+
+            if (isActive.HasValue)
+            {
+                whereClause += @"
+                     AND s.IsActive = @IsActive";
             }
             // TOTAL COUNT
             var totalRecords = await connection.ExecuteScalarAsync<int>(
@@ -202,13 +209,14 @@ namespace ahello_backend.Repositorys.Classes
             LEFT JOIN ServiceCategoryDynamic sc
                 ON s.ServiceCategoryId = sc.ServiceCategoryId
             {whereClause}",
-            new
-            {
-                UserId = userId,
-                Search = $"%{search}%",
-                ServiceCategoryName = $"%{serviceCategoryName}%",
-                Status = status
-            });
+           new
+           {
+               UserId = userId,
+               Search = $"%{search}%",
+               ServiceCategoryName = $"%{serviceCategoryName}%",
+               Status = status,
+               IsActive = isActive
+           });
 
             // PAGINATION DATA
             var services = (await connection.QueryAsync<ServiceDynamicGetResponse>(
@@ -239,15 +247,16 @@ namespace ahello_backend.Repositorys.Classes
                 {whereClause}
                 ORDER BY s.ServiceId DESC
                 LIMIT @PageSize OFFSET @Offset",
-                new
-                {
-                    UserId = userId,
-                    Search = $"%{search}%",
-                    ServiceCategoryName = $"%{serviceCategoryName}%",
-                    Status = status,
-                    PageSize = pageSize,
-                    Offset = offset
-                })).ToList();
+               new
+               {
+                   UserId = userId,
+                   Search = $"%{search}%",
+                   ServiceCategoryName = $"%{serviceCategoryName}%",
+                   Status = status,
+                   IsActive = isActive,
+                   PageSize = pageSize,
+                   Offset = offset
+               })).ToList();
 
             // DYNAMIC FIELDS
             // DYNAMIC FIELDS
