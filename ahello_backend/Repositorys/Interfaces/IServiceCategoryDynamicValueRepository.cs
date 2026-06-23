@@ -20,7 +20,11 @@ namespace ahello_backend.Repositorys.Interfaces
         string? search,
         DateTime? createdDate);
         Task<PagedResult<ServiceCategoryDynamicGetResponse>> GetAllWithStatusAsync(
-        int pageNumber,int pageSize,string? search,DateTime? createdDate);
+        int pageNumber,
+        int pageSize,
+        string? search,
+        DateTime? createdDate,
+        bool? isActive);
         Task<ServiceCategoryDynamicGetResponse> GetByIdAsync(
             int serviceCategoryId);
         Task<bool> UpdateStatusAsync(
