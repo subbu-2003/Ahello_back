@@ -32,7 +32,10 @@ namespace ahello_backend.Services.Classes
         {
             return await _repository.GetByIdAsync(serviceFieldId);
         }
-
+        public async Task<IEnumerable<ServiceField>> GetByUserAsync(string userId)
+        {
+            return await _repository.GetByUserAsync(userId);
+        }
         public async Task<bool> DeleteAsync(int serviceFieldId, string modifiedBy)
         {
             return await _repository.DeleteAsync(serviceFieldId, modifiedBy);

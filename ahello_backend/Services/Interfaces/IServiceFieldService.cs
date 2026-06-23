@@ -11,6 +11,7 @@ namespace ahello_backend.Services.Interfaces
         Task<IEnumerable<ServiceField>> GetByServiceAsync(int serviceId);
 
         Task<ServiceField> GetByIdAsync(int serviceFieldId);
+        Task<IEnumerable<ServiceField>> GetByUserAsync(string userId);
 
         Task<bool> DeleteAsync(int serviceFieldId, string modifiedBy);
     }
