@@ -40,20 +40,24 @@ namespace ahello_backend.Controllers
             return Ok(data);
         }
 
-       
+
 
         [HttpGet("user/{userId}/pagination")]
         public async Task<IActionResult> GetByUserIdPagination(
-            int userId,
-            int pageNumber = 1,
-            int pageSize = 10,
-            string? search = null)
+        int userId,
+        int pageNumber = 1,
+        int pageSize = 10,
+        string? search = null,
+        string? serviceCategoryName = null,
+        string? status = null)
         {
             var result = await _service.GetByUserIdPagedAsync(
                 userId,
                 pageNumber,
                 pageSize,
-                search);
+                search,
+                serviceCategoryName,
+                status);
 
             return Ok(result);
         }

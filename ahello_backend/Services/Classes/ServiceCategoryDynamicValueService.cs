@@ -39,14 +39,19 @@ namespace ahello_backend.Services.Classes
             return await _repository.DeleteAsync(
                 serviceCategoryId);
         }
-        public async Task<PagedResult<ServiceCategoryDynamicGetResponse>> GetAllWithStatusAsync(
-        int pageNumber,int pageSize,string? search, DateTime? createdDate)
+        public async Task<PagedResult<ServiceCategoryDynamicGetResponse>>GetAllWithStatusAsync(
+        int pageNumber,
+        int pageSize,
+        string? search,
+        DateTime? createdDate,
+        bool? isActive)
         {
             return await _repository.GetAllWithStatusAsync(
                 pageNumber,
                 pageSize,
                 search,
-                createdDate);
+                createdDate,
+                isActive);
         }
         public async Task<PagedResult<ServiceCategoryDynamicGetResponse>> GetAllAsync(
         int pageNumber,

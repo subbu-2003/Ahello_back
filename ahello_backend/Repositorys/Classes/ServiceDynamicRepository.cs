@@ -155,17 +155,19 @@ namespace ahello_backend.Repositorys.Classes
         // ServiceDynamicRepository.cs
 
         public async Task<PagedServiceDynamicResponse> GetByUserIdPagedAsync(
-            int userId,
-            int pageNumber,
-            int pageSize,
-            string? search = null)
+        int userId,
+        int pageNumber,
+        int pageSize,
+        string? search = null,
+        string? serviceCategoryName = null,
+        string? status = null)
         {
             using var connection = _db.GetConnection();
 
             var offset = (pageNumber - 1) * pageSize;
 
             var whereClause = @"
-            WHERE UserId = @UserId";
+            WHERE s.UserId = @UserId";
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -180,10 +182,22 @@ namespace ahello_backend.Repositorys.Classes
                 OR s.Status LIKE @Search
             )";
             }
+            // ADD THIS BLOCK HERE
+            if (!string.IsNullOrWhiteSpace(serviceCategoryName))
+            {
+                whereClause += @"
+                 AND sc.ServiceCategoryName LIKE @ServiceCategoryName";
+            }
 
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                whereClause += @"
+                AND s.Status = @Status";
+            }
             // TOTAL COUNT
             var totalRecords = await connection.ExecuteScalarAsync<int>(
-            $@"SELECT COUNT(*)
+            $@"
+            SELECT COUNT(*)
             FROM services s
             LEFT JOIN ServiceCategoryDynamic sc
                 ON s.ServiceCategoryId = sc.ServiceCategoryId
@@ -191,44 +205,49 @@ namespace ahello_backend.Repositorys.Classes
             new
             {
                 UserId = userId,
-                Search = $"%{search}%"
+                Search = $"%{search}%",
+                ServiceCategoryName = $"%{serviceCategoryName}%",
+                Status = status
             });
 
             // PAGINATION DATA
             var services = (await connection.QueryAsync<ServiceDynamicGetResponse>(
-            $@"SELECT
-            s.ServiceId,
-            s.UserId,
-            s.ServiceTypeId,
-            s.ServiceCategoryId,
-            sc.ServiceCategoryName,
-            s.ServiceTitle,
-            s.Price,
-            s.Duration,
-            s.ShortDescription,
-            s.FullDescription,
-            s.Tags,
-            s.Language,
-            s.ThumbnailImage,
-            s.BannerImage,
-            s.IntroVideo,
-            s.Status,
-            s.IsActive,
-            s.CreatedBy,
-            s.CreatedAt
-        FROM services s
-        LEFT JOIN ServiceCategoryDynamic sc
-            ON s.ServiceCategoryId = sc.ServiceCategoryId
-        {whereClause}
-        ORDER BY s.ServiceId DESC
-        LIMIT @PageSize OFFSET @Offset",
-            new
-            {
-                UserId = userId,
-                Search = $"%{search}%",
-                PageSize = pageSize,
-                Offset = offset
-            })).ToList();
+                $@"
+                SELECT
+                    s.ServiceId,
+                    s.UserId,
+                    s.ServiceTypeId,
+                    s.ServiceCategoryId,
+                    sc.ServiceCategoryName,
+                    s.ServiceTitle,
+                    s.Price,
+                    s.Duration,
+                    s.ShortDescription,
+                    s.FullDescription,
+                    s.Tags,
+                    s.Language,
+                    s.ThumbnailImage,
+                    s.BannerImage,
+                    s.IntroVideo,
+                    s.Status,
+                    s.IsActive,
+                    s.CreatedBy,
+                    s.CreatedAt
+                FROM services s
+                LEFT JOIN ServiceCategoryDynamic sc
+                    ON s.ServiceCategoryId = sc.ServiceCategoryId
+                {whereClause}
+                ORDER BY s.ServiceId DESC
+                LIMIT @PageSize OFFSET @Offset",
+                new
+                {
+                    UserId = userId,
+                    Search = $"%{search}%",
+                    ServiceCategoryName = $"%{serviceCategoryName}%",
+                    Status = status,
+                    PageSize = pageSize,
+                    Offset = offset
+                })).ToList();
 
             // DYNAMIC FIELDS
             // DYNAMIC FIELDS
