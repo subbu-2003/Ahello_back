@@ -185,9 +185,9 @@ namespace ahello_backend.Repositorys.Classes
             int offset = (pageNumber - 1) * pageSize;
 
             var whereConditions = new List<string>
-{
-    "IsActive = 1"
-};
+            {
+                "IsActive = 1"
+            };
 
             var parameters = new DynamicParameters();
 
@@ -220,22 +220,22 @@ namespace ahello_backend.Repositorys.Classes
             var totalRecords =
                 await connection.ExecuteScalarAsync<int>(
                 $@"SELECT COUNT(*)
-       FROM servicecategorydynamic
-       {whereClause}",
+               FROM servicecategorydynamic
+               {whereClause}",
                 parameters);
 
             var categories =
                 (await connection.QueryAsync<
                     ServiceCategoryDynamicGetResponse>(
                 $@"SELECT
-        ServiceCategoryId,
-        ServiceCategoryName,
-        IsActive,
-        CreatedAt
-      FROM servicecategorydynamic
-      {whereClause}
-      ORDER BY ServiceCategoryId DESC
-      LIMIT @PageSize OFFSET @Offset",
+                ServiceCategoryId,
+                ServiceCategoryName,
+                IsActive,
+                CreatedAt
+              FROM servicecategorydynamic
+              {whereClause}
+              ORDER BY ServiceCategoryId DESC
+              LIMIT @PageSize OFFSET @Offset",
                 parameters))
                 .ToList();
 
@@ -303,11 +303,12 @@ namespace ahello_backend.Repositorys.Classes
                 Details = categories
             };
         }
-        public async Task<PagedResult<ServiceCategoryDynamicGetResponse>> GetAllWithStatusAsync(
-        int pageNumber,
-        int pageSize,
-        string? search,
-        DateTime? createdDate)
+        public async Task<PagedResult<ServiceCategoryDynamicGetResponse>>GetAllWithStatusAsync(
+         int pageNumber,
+         int pageSize,
+         string? search,
+         DateTime? createdDate,
+         bool? isActive)
         {
             using var connection = _db.GetConnection();
 
@@ -327,7 +328,11 @@ namespace ahello_backend.Repositorys.Classes
                 whereConditions.Add("DATE(CreatedAt) = @CreatedDate");
                 parameters.Add("CreatedDate", createdDate.Value.Date);
             }
-
+            if (isActive.HasValue)
+            {
+                whereConditions.Add("IsActive = @IsActive");
+                parameters.Add("IsActive", isActive.Value);
+            }
             string whereClause = whereConditions.Any()
                 ? $"WHERE {string.Join(" AND ", whereConditions)}"
                 : "";

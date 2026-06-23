@@ -25,16 +25,20 @@ namespace ahello_backend.Services.Classes
         // ServiceDynamicService.cs
 
         public async Task<PagedServiceDynamicResponse> GetByUserIdPagedAsync(
-            int userId,
-            int pageNumber,
-            int pageSize,
-            string? search = null)
+        int userId,
+        int pageNumber,
+        int pageSize,
+        string? search = null,
+        string? serviceCategoryName = null,
+        string? status = null)
         {
             return await _repository.GetByUserIdPagedAsync(
                 userId,
                 pageNumber,
                 pageSize,
-                search);
+                search,
+                serviceCategoryName,
+                status);
         }
         public async Task<int> CreateAsync(ServiceDynamicPost model)
         {
