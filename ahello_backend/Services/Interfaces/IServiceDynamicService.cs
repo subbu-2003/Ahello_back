@@ -10,12 +10,13 @@ namespace ahello_backend.Services.Interfaces
         // IServiceDynamicService.cs
 
         Task<PagedServiceDynamicResponse> GetByUserIdPagedAsync(
-        int userId,
-        int pageNumber,
-        int pageSize,
-        string? search = null,
-        string? serviceCategoryName = null,
-        string? status = null);
+         int userId,
+         int pageNumber,
+         int pageSize,
+         string? search = null,
+         string? serviceCategoryName = null,
+         string? status = null,
+         bool? isActive = null);
 
         Task<int> CreateAsync(ServiceDynamicPost model);
 

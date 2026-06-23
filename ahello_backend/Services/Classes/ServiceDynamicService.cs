@@ -30,7 +30,8 @@ namespace ahello_backend.Services.Classes
         int pageSize,
         string? search = null,
         string? serviceCategoryName = null,
-        string? status = null)
+        string? status = null,
+        bool? isActive = null)
         {
             return await _repository.GetByUserIdPagedAsync(
                 userId,
@@ -38,7 +39,8 @@ namespace ahello_backend.Services.Classes
                 pageSize,
                 search,
                 serviceCategoryName,
-                status);
+                status,
+                isActive);
         }
         public async Task<int> CreateAsync(ServiceDynamicPost model)
         {
