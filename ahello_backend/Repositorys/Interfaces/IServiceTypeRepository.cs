@@ -7,7 +7,7 @@ namespace ahello_backend.Repositorys.Interfaces
     {
         Task<IEnumerable<ServiceType>> GetAllAsync();
         Task<PagedResult<ServiceType>> GetPagedAsync(int pageNumber, int pageSize,
-        string? search,DateTime? createdDate);
+        string? search,DateTime? createdDate, bool? isActive = null);
         Task<ServiceType> GetByIdAsync(int serviceTypeId);
 
         Task<int> CreateAsync(ServiceTypePost model);

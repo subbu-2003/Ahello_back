@@ -34,10 +34,11 @@ namespace ahello_backend.Repositorys.Classes
             return await connection.QueryAsync<ServiceType>(sql);
         }
         public async Task<PagedResult<ServiceType>> GetPagedAsync(
-        int pageNumber,
-        int pageSize,
-        string? search,
-        DateTime? createdDate)
+    int pageNumber,
+    int pageSize,
+    string? search,
+    DateTime? createdDate,
+    bool? isActive = null)
         {
             using var connection = _db.GetConnection();
 
@@ -53,42 +54,46 @@ namespace ahello_backend.Repositorys.Classes
                 whereClause += " AND DATE(CreatedAt) = @CreatedDate ";
             }
 
+            if (isActive.HasValue)
+            {
+                whereClause += " AND IsActive = @IsActive ";
+            }
+
+            var parameters = new
+            {
+                Search = $"%{search}%",
+                CreatedDate = createdDate?.Date,
+                IsActive = isActive,
+                Offset = (pageNumber - 1) * pageSize,
+                PageSize = pageSize
+            };
+
             var totalQuery = $@"
-            SELECT COUNT(*)
-            FROM servicetypes
-            {whereClause}";
+        SELECT COUNT(*)
+        FROM servicetypes
+        {whereClause}";
 
             var totalRecords = await connection.ExecuteScalarAsync<int>(
                 totalQuery,
-                new
-                {
-                    Search = $"%{search}%",
-                    CreatedDate = createdDate?.Date
-                });
+                parameters);
 
             var sql = $@"
-            SELECT
-                ServiceTypeId,
-                ServiceTypeName,
-                IsActive,
-                CreatedAt,
-                CreatedBy,
-                ModifiedAt,
-                ModifiedBy
-            FROM servicetypes
-            {whereClause}
-            ORDER BY ServiceTypeId DESC
-            LIMIT @Offset,@PageSize";
+        SELECT
+            ServiceTypeId,
+            ServiceTypeName,
+            IsActive,
+            CreatedAt,
+            CreatedBy,
+            ModifiedAt,
+            ModifiedBy
+        FROM servicetypes
+        {whereClause}
+        ORDER BY ServiceTypeId DESC
+        LIMIT @Offset,@PageSize";
 
             var data = await connection.QueryAsync<ServiceType>(
                 sql,
-                new
-                {
-                    Search = $"%{search}%",
-                    CreatedDate = createdDate?.Date,
-                    Offset = (pageNumber - 1) * pageSize,
-                    PageSize = pageSize
-                });
+                parameters);
 
             return new PagedResult<ServiceType>
             {

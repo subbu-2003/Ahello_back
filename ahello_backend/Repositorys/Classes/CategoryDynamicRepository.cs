@@ -15,10 +15,11 @@ namespace ahello_backend.Repositorys.Classes
         }
 
         public async Task<PagedCategoryDynamicResponse> GetAllAsync(
-        int pageNumber,
-        int pageSize,
-        string? search = null,
-        DateTime? createdDate = null)
+     int pageNumber,
+     int pageSize,
+     string? search = null,
+     DateTime? createdDate = null,
+     bool? isActive = null)
         {
             using var connection = _db.GetConnection();
 
@@ -36,36 +37,40 @@ namespace ahello_backend.Repositorys.Classes
                 whereClause += " AND DATE(c.CreatedAt) = @CreatedDate";
             }
 
+            if (isActive.HasValue)
+            {
+                whereClause += " AND c.IsActive = @IsActive";
+            }
+
+            var parameters = new
+            {
+                Search = $"%{search}%",
+                CreatedDate = createdDate?.Date,
+                IsActive = isActive,
+                PageSize = pageSize,
+                Offset = offset
+            };
+
             var totalRecords = await connection.ExecuteScalarAsync<int>(
                 $@"SELECT COUNT(*)
-                   FROM categories c
-                   {whereClause}",
-                new
-                {
-                    Search = $"%{search}%",
-                    CreatedDate = createdDate?.Date
-                });
+           FROM categories c
+           {whereClause}",
+                parameters);
 
             var categories = (await connection.QueryAsync<CategoryDynamicGetResponse>(
                 $@"SELECT
-                c.CategoryId,
-                c.CategoryName,
-                c.CreatedBy,
-                c.CreatedAt,
-                c.ModifiedBy,
-                c.ModifiedAt,
-                c.IsActive
-                  FROM categories c
-                  {whereClause}
-                  ORDER BY c.CategoryId DESC
-                  LIMIT @PageSize OFFSET @Offset",
-                new
-                {
-                    Search = $"%{search}%",
-                    CreatedDate = createdDate?.Date,
-                    PageSize = pageSize,
-                    Offset = offset
-                })).ToList();
+            c.CategoryId,
+            c.CategoryName,
+            c.CreatedBy,
+            c.CreatedAt,
+            c.ModifiedBy,
+            c.ModifiedAt,
+            c.IsActive
+          FROM categories c
+          {whereClause}
+          ORDER BY c.CategoryId DESC
+          LIMIT @PageSize OFFSET @Offset",
+                parameters)).ToList();
 
             foreach (var category in categories)
             {
@@ -75,10 +80,10 @@ namespace ahello_backend.Repositorys.Classes
                 cf.FieldName,
                 cf.FieldCode,
                 cfv.FieldValue
-                FROM categoryfieldvalues cfv
-                INNER JOIN categoryfields cf
+              FROM categoryfieldvalues cfv
+              INNER JOIN categoryfields cf
                 ON cfv.CategoryFieldId = cf.CategoryFieldId
-                 WHERE cfv.CategoryId = @CategoryId",
+              WHERE cfv.CategoryId = @CategoryId",
                     new { CategoryId = category.CategoryId });
 
                 category.Fields = fields.ToList();
@@ -92,7 +97,6 @@ namespace ahello_backend.Repositorys.Classes
                 Data = categories
             };
         }
-
         public async Task<CategoryDynamicGetResponse> GetByIdAsync(int categoryId)
         {
             using var connection = _db.GetConnection();
