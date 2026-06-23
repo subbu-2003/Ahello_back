@@ -45,14 +45,18 @@ namespace ahello_backend.Controllers
             [FromQuery] int userId,
             [FromQuery] string? searchText,
             [FromQuery] bool? isActive,
-            [FromQuery] DateTime? date)
+            [FromQuery] DateTime? date,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10)
         {
             var model = new FormSearchRequest
             {
                 UserId = userId,
                 SearchText = searchText,
                 IsActive = isActive,
-                Date = date
+                Date = date,
+                PageNumber = pageNumber,
+                PageSize = pageSize
             };
 
             var data = await _service.GetByUserIdAsync(model);
