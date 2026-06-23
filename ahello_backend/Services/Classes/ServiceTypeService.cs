@@ -21,13 +21,13 @@ namespace ahello_backend.Services.Classes
         }
         public async Task<PagedResult<ServiceType>> GetPagedAsync(
         int pageNumber,int pageSize,string? search,
-        DateTime? createdDate)
+        DateTime? createdDate, bool? isActive = null)
         {
             return await _repository.GetPagedAsync(
                 pageNumber,
                 pageSize,
                 search,
-                createdDate);
+                createdDate, isActive);
         }
         public async Task<ServiceType> GetByIdAsync(int serviceTypeId)
         {

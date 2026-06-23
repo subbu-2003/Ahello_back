@@ -1,6 +1,7 @@
 using ahello_backend.DbContexts;
 using ahello_backend.Models.Form;
 using ahello_backend.Models.Forms;
+using ahello_backend.Models.Pagination;
 using ahello_backend.Repositorys.Interfaces;
 using Dapper;
 
@@ -117,53 +118,45 @@ namespace ahello_backend.Repositorys.Classes
             return form;
         }
 
-        public async Task<IEnumerable<FormDynamicGetResponse>>
-       GetByUserIdAsync(FormSearchRequest model)
+        public async Task<PagedResult<FormDynamicGetResponse>>
+                    GetByUserIdAsync(FormSearchRequest model)
         {
             using var connection = _db.GetConnection();
 
             var forms = (await connection.QueryAsync<FormDynamicGetResponse>(
-                @"
-        SELECT DISTINCT f.*
-        FROM forms f
-        LEFT JOIN formfields ff
-            ON f.FormId = ff.FormId
-
-        LEFT JOIN formfieldvalues ffv
-            ON ff.FormFieldId = ffv.FormFieldId
-        WHERE f.UserId = @UserId
-
-        AND (@IsActive IS NULL
-             OR f.IsActive = @IsActive)
-
-        AND (@Date IS NULL
-             OR DATE(f.CreatedAt) = DATE(@Date))
-
-        AND (
-                @SearchText IS NULL
-                OR @SearchText = ''
-
-                OR f.Title LIKE CONCAT('%', @SearchText, '%')
-                OR f.Description LIKE CONCAT('%', @SearchText, '%')
-
-                OR ff.FieldName LIKE CONCAT('%', @SearchText, '%')
-                OR ff.FieldCode LIKE CONCAT('%', @SearchText, '%')
-                OR ff.Description LIKE CONCAT('%', @SearchText, '%')
-                OR ff.Placeholder LIKE CONCAT('%', @SearchText, '%')
-
-                OR ffv.FieldCode LIKE CONCAT('%', @SearchText, '%')
-                OR ffv.FieldValue LIKE CONCAT('%', @SearchText, '%')
-            )
-
-        ORDER BY f.FormId DESC
-        ",
-                new
-                {
-                    model.UserId,
-                    model.SearchText,
-                    model.IsActive,
-                    model.Date
-                })).ToList();
+                 @"
+                SELECT DISTINCT f.*
+                FROM forms f
+                LEFT JOIN formfields ff
+                    ON f.FormId = ff.FormId
+                LEFT JOIN formfieldvalues ffv
+                    ON ff.FormFieldId = ffv.FormFieldId
+                WHERE f.UserId = @UserId
+                  AND (@IsActive IS NULL OR f.IsActive = @IsActive)
+                  AND (@Date IS NULL OR DATE(f.CreatedAt) = DATE(@Date))
+                  AND (
+                      @SearchText IS NULL
+                      OR @SearchText = ''
+                      OR f.Title LIKE CONCAT('%', @SearchText, '%')
+                      OR f.Description LIKE CONCAT('%', @SearchText, '%')
+                      OR ff.FieldName LIKE CONCAT('%', @SearchText, '%')
+                      OR ff.FieldCode LIKE CONCAT('%', @SearchText, '%')
+                      OR ff.Description LIKE CONCAT('%', @SearchText, '%')
+                      OR ff.Placeholder LIKE CONCAT('%', @SearchText, '%')
+                      OR ffv.FieldCode LIKE CONCAT('%', @SearchText, '%')
+                      OR ffv.FieldValue LIKE CONCAT('%', @SearchText, '%')
+                  )
+                ORDER BY f.FormId DESC
+                LIMIT @PageSize OFFSET @Offset",
+                 new
+                 {
+                     model.UserId,
+                     model.SearchText,
+                     model.IsActive,
+                     model.Date,
+                     model.PageSize,
+                     Offset = (model.PageNumber - 1) * model.PageSize
+                 })).ToList();
 
             foreach (var form in forms)
             {
@@ -206,7 +199,13 @@ namespace ahello_backend.Repositorys.Classes
                 form.DropdownOptions = dropdowns.ToList();
             }
 
-            return forms;
+            return new PagedResult<FormDynamicGetResponse>
+            {
+                TotalCount = forms.Count,
+                PageNumber = model.PageNumber,
+                PageSize = model.PageSize,
+                Details = forms
+            };
         }
 
         public async Task<int> CreateAsync(FormDynamicPost model)

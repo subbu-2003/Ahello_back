@@ -6,7 +6,7 @@ namespace ahello_backend.Services.Interfaces
     public interface IServiceTypeService
     {
         Task<IEnumerable<ServiceType>> GetAllAsync();
-        Task<PagedResult<ServiceType>> GetPagedAsync(int pageNumber,int pageSize,string? search,DateTime? createdDate);
+        Task<PagedResult<ServiceType>> GetPagedAsync(int pageNumber,int pageSize,string? search,DateTime? createdDate, bool? isActive = null);
         Task<ServiceType> GetByIdAsync(int serviceTypeId);
 
         Task<int> CreateAsync(ServiceTypePost model);

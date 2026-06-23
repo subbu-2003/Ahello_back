@@ -39,14 +39,14 @@ namespace ahello_backend.Controllers
         int pageNumber = 1,
         int pageSize = 10,
         string? search = null,
-        DateTime? createdDate = null)
+        DateTime? createdDate = null, bool? isActive = null)
         {
             var result = await _service.
                 GetPagedAsync(
                 pageNumber,
                 pageSize,
                 search,
-                createdDate);
+                createdDate, isActive);
 
             return Ok(result);
         }

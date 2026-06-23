@@ -14,9 +14,9 @@ namespace ahello_backend.Services.Classes
         }
 
         public Task<PagedCategoryDynamicResponse> GetAllAsync(int pageNumber, int pageSize,string? search = null,
-            DateTime? createdDate = null)
+            DateTime? createdDate = null, bool? isActive = null)
             => _repository.GetAllAsync(
-                pageNumber, pageSize, search, createdDate);
+                pageNumber, pageSize, search, createdDate, isActive);
 
         public Task<CategoryDynamicGetResponse> GetByIdAsync(int categoryId)
             => _repository.GetByIdAsync(categoryId);
