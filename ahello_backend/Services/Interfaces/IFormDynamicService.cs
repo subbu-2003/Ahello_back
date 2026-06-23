@@ -1,5 +1,6 @@
 ﻿using ahello_backend.Models.Form;
 using ahello_backend.Models.Forms;
+using ahello_backend.Models.Pagination;
 
 namespace ahello_backend.Services.Interfaces
 {
@@ -9,7 +10,7 @@ namespace ahello_backend.Services.Interfaces
 
         Task<FormDynamicGetResponse>GetByIdAsync(int formId);
 
-        Task<IEnumerable<FormDynamicGetResponse>>GetByUserIdAsync(FormSearchRequest model);
+        Task<PagedResult<FormDynamicGetResponse>>GetByUserIdAsync(FormSearchRequest model);
 
         Task<int> CreateAsync(FormDynamicPost model);
 
