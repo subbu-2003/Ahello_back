@@ -49,6 +49,7 @@ namespace ahello_backend.Controllers
           int pageSize = 10,
           string? search = null,
           string? serviceCategoryName = null,
+           string? serviceTypeName = null,
           string? status = null,
           bool? isActive = null)
         {
@@ -58,6 +59,7 @@ namespace ahello_backend.Controllers
                 pageSize,
                 search,
                 serviceCategoryName,
+                serviceTypeName,
                 status,
                 isActive);
 

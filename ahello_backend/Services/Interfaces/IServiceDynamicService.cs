@@ -15,6 +15,7 @@ namespace ahello_backend.Services.Interfaces
          int pageSize,
          string? search = null,
          string? serviceCategoryName = null,
+          string? serviceTypeName = null,
          string? status = null,
          bool? isActive = null);
 
