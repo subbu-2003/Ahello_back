@@ -315,18 +315,18 @@ namespace ahello_backend.Repositorys.Classes
                 var newMeetingEnd = newDate.Date.Add(newEnd);
 
                 await connection.ExecuteAsync(@"
-INSERT INTO meetings
-(
-    UserId, BookingId, StartTime, EndTime,
-    MeetingLink, RoomId, HostRoomCode, ClientRoomCode,
-    Status, CreatedAt, CreatedBy
-)
-VALUES
-(
-    @UserId, @BookingId, @StartTime, @EndTime,
-    @MeetingLink, @RoomId, @HostRoomCode, @ClientRoomCode,
-    'Pending', NOW(), @CreatedBy
-);",
+                INSERT INTO meetings
+                (
+                    UserId, BookingId, StartTime, EndTime,
+                    MeetingLink, RoomId, HostRoomCode, ClientRoomCode,
+                    Status, CreatedAt, CreatedBy
+                )
+                VALUES
+                (
+                    @UserId, @BookingId, @StartTime, @EndTime,
+                    @MeetingLink, @RoomId, @HostRoomCode, @ClientRoomCode,
+                    'Pending', NOW(), @CreatedBy
+                );",
                 new
                 {
                     old.UserId,
@@ -344,28 +344,28 @@ VALUES
                 // 7. Insert new booked slot
                 // ======================================================
                 await connection.ExecuteAsync(@"
-            INSERT INTO bookedslots
-            (
-                SlotId,
-                UserId,
-                ServiceId,
-                BookingId,
-                SlotDate,
-                StartTime,
-                EndTime,
-                CreatedAt
-            )
-            VALUES
-            (
-                @SlotId,
-                @UserId,
-                @ServiceId,
-                @BookingId,
-                @SlotDate,
-                @StartTime,
-                @EndTime,
-                NOW()
-            )",
+                INSERT INTO bookedslots
+                (
+                    SlotId,
+                    UserId,
+                    ServiceId,
+                    BookingId,
+                    SlotDate,
+                    StartTime,
+                    EndTime,
+                    CreatedAt
+                )
+                VALUES
+                (
+                    @SlotId,
+                    @UserId,
+                    @ServiceId,
+                    @BookingId,
+                    @SlotDate,
+                    @StartTime,
+                    @EndTime,
+                    NOW()
+                )",
                     new
                     {
                         SlotId = slotId,
@@ -383,22 +383,22 @@ VALUES
                 // reason = Manual or NoShow
                 // ======================================================
                 await connection.ExecuteAsync(@"
-            INSERT INTO reschedules
-            (
-                OldBookingId,
-                NewBookingId,
-                Reason,
-                RescheduledBy,
-                CreatedAt
-            )
-            VALUES
-            (
-                @OldBookingId,
-                @NewBookingId,
-                @Reason,
-                @RescheduledBy,
-                NOW()
-            )",
+                INSERT INTO reschedules
+                (
+                    OldBookingId,
+                    NewBookingId,
+                    Reason,
+                    RescheduledBy,
+                    CreatedAt
+                )
+                VALUES
+                (
+                    @OldBookingId,
+                    @NewBookingId,
+                    @Reason,
+                    @RescheduledBy,
+                    NOW()
+                )",
                     new
                     {
                         OldBookingId = oldBookingId,
@@ -954,12 +954,12 @@ VALUES
             };
         }
         public async Task<List<ServiceWiseClientGet>> GetClientsServiceWiseAsync(
-    int userId,
-    int pageNumber,
-    int pageSize,
-    string? search,
-    string? bookingStatus,
-    DateTime? lastBookingDate)
+        int userId,
+        int pageNumber,
+        int pageSize,
+        string? search,
+        string? bookingStatus,
+        DateTime? lastBookingDate)
         {
             using var connection = _db.GetConnection();
 
@@ -974,32 +974,32 @@ VALUES
 
             MAX(b.ScheduleDate) AS LastBookingDate,
 
-    SUBSTRING_INDEX(
-        GROUP_CONCAT(
+        SUBSTRING_INDEX(
+            GROUP_CONCAT(
             b.StartTime
             ORDER BY b.ScheduleDate DESC, b.StartTime DESC
         ),
         ',',
         1
-    ) AS StartTime,
+        ) AS StartTime,
 
-    SUBSTRING_INDEX(
-        GROUP_CONCAT(
+        SUBSTRING_INDEX(
+            GROUP_CONCAT(
             b.EndTime
             ORDER BY b.ScheduleDate DESC, b.StartTime DESC
         ),
         ',',
         1
-    ) AS EndTime,
+        ) AS EndTime,
 
-    SUBSTRING_INDEX(
+        SUBSTRING_INDEX(
         GROUP_CONCAT(
             b.Status
             ORDER BY b.ScheduleDate DESC, b.StartTime DESC
         ),
         ',',
         1
-    ) AS BookingStatus
+         ) AS BookingStatus
 
         FROM bookings b
 
@@ -1011,24 +1011,24 @@ VALUES
 
         WHERE b.UserId = @UserId
 
-AND (
-    @Search IS NULL
-    OR @Search = ''
-    OR c.FullName LIKE CONCAT('%', @Search, '%')
-    OR c.Email LIKE CONCAT('%', @Search, '%')
-    OR s.ServiceTitle LIKE CONCAT('%', @Search, '%')
-)
+        AND (
+            @Search IS NULL
+            OR @Search = ''
+            OR c.FullName LIKE CONCAT('%', @Search, '%')
+            OR c.Email LIKE CONCAT('%', @Search, '%')
+            OR s.ServiceTitle LIKE CONCAT('%', @Search, '%')
+        )
 
-AND (
-    @BookingStatus IS NULL
-    OR @BookingStatus = ''
-    OR b.Status = @BookingStatus
-)
+        AND (
+            @BookingStatus IS NULL
+            OR @BookingStatus = ''
+            OR b.Status = @BookingStatus
+        )
 
-AND (
-    @LastBookingDate IS NULL
-    OR DATE(b.ScheduleDate) = DATE(@LastBookingDate)
-)
+        AND (
+            @LastBookingDate IS NULL
+            OR DATE(b.ScheduleDate) = DATE(@LastBookingDate)
+        )
 
         GROUP BY
             s.ServiceId,
@@ -1040,48 +1040,48 @@ AND (
         ORDER BY
             s.ServiceId DESC,
             LastBookingDate DESC;
-    ";
+            ";
 
             var rows = await connection.QueryAsync<ServiceWiseClientRow>(
-    sql,
-    new
-    {
-        UserId = userId,
-        Search = search,
-        BookingStatus = bookingStatus,
-        LastBookingDate = lastBookingDate
-    });
+            sql,
+            new
+            {
+                UserId = userId,
+                Search = search,
+                BookingStatus = bookingStatus,
+                LastBookingDate = lastBookingDate
+            });
 
-            var result = rows
-    .GroupBy(x => new
-    {
-        x.ServiceId,
-        x.ServiceTitle
-    })
-    .Select(g => new ServiceWiseClientGet
-    {
-        ServiceId = g.Key.ServiceId,
-        ServiceTitle = g.Key.ServiceTitle,
-        TotalClients = g.Count(),
+                    var result = rows
+            .GroupBy(x => new
+            {
+                x.ServiceId,
+                x.ServiceTitle
+            })
+            .Select(g => new ServiceWiseClientGet
+            {
+                ServiceId = g.Key.ServiceId,
+                ServiceTitle = g.Key.ServiceTitle,
+                TotalClients = g.Count(),
 
-        Clients = g.Select(x => new ServiceClientGet
-        {
-            ClientId = x.ClientId,
-            ClientName = x.ClientName,
-            Email = x.Email,
-            LastBookingDate = x.LastBookingDate,
-            StartTime = string.IsNullOrEmpty(x.StartTime)
-                ? null
-                : TimeSpan.Parse(x.StartTime),
-            EndTime = string.IsNullOrEmpty(x.EndTime)
-                ? null
-                : TimeSpan.Parse(x.EndTime),
-            BookingStatus = x.BookingStatus
-        }).ToList()
-    })
-    .Skip((pageNumber - 1) * pageSize)
-    .Take(pageSize)
-    .ToList();
+                Clients = g.Select(x => new ServiceClientGet
+                {
+                    ClientId = x.ClientId,
+                    ClientName = x.ClientName,
+                    Email = x.Email,
+                    LastBookingDate = x.LastBookingDate,
+                    StartTime = string.IsNullOrEmpty(x.StartTime)
+                        ? null
+                        : TimeSpan.Parse(x.StartTime),
+                    EndTime = string.IsNullOrEmpty(x.EndTime)
+                        ? null
+                        : TimeSpan.Parse(x.EndTime),
+                    BookingStatus = x.BookingStatus
+                }).ToList()
+            })
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
 
             return result;
         }
