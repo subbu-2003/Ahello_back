@@ -17,7 +17,7 @@
         public bool IsActive { get; set; }
 
         public int DataTypeId { get; set; }
-
+        public string? DataTypeName { get; set; }
         public string CreatedBy { get; set; }
 
         public DateTime CreatedAt { get; set; }

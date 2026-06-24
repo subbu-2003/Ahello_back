@@ -216,6 +216,7 @@ namespace ahello_backend.Repositorys.Classes
             sf.IsRequired,
             sf.IsActive,
             sf.DataTypeId,
+            dt.DataTypeName,
             sf.CreatedBy,
             sf.CreatedAt,
             sf.ModifiedBy,
@@ -230,6 +231,8 @@ namespace ahello_backend.Repositorys.Classes
 
         FROM servicefields sf
         INNER JOIN services s ON sf.ServiceId = s.ServiceId
+        LEFT JOIN datatypes dt
+            ON sf.DataTypeId = dt.DataTypeId
         LEFT JOIN servicedropdownoptions sdo
             ON sf.ServiceFieldId = sdo.ServiceFieldId
             AND sdo.IsActive = 1

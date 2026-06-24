@@ -109,47 +109,49 @@ namespace ahello_backend.Repositorys.Classes
             return rows > 0;
         }
 
-        public async Task<IEnumerable<UserField>>
-       GetByUserAsync(int userId)
+        public async Task<IEnumerable<UserField>>GetByUserAsync(int userId)
         {
             var sql = @"
 
-    SELECT
+            SELECT
 
-        uf.UserFieldId,
-        uf.UserId,
-        uf.FieldName,
-        uf.FieldCode,
-        uf.Placeholder,
-        uf.IsRequired,
-        uf.IsActive,
-        uf.DataTypeId,
-        uf.CreatedBy,
-        uf.CreatedAt,
-        uf.ModifiedBy,
-        uf.ModifiedAt,
+                uf.UserFieldId,
+                uf.UserId,
+                uf.FieldName,
+                uf.FieldCode,
+                uf.Placeholder,
+                uf.IsRequired,
+                uf.IsActive,
+                uf.DataTypeId,
+                dt.DataTypeName,
+                uf.CreatedBy,
+                uf.CreatedAt,
+                uf.ModifiedBy,
+                uf.ModifiedAt,
 
-        udo.UserDropDownId,
-        udo.UserFieldId,
-        udo.UserId,
-        udo.OptionValue,
-        udo.OptionLabel,
-        udo.IsActive,
-        udo.CreatedDate,
-        udo.CreatedBy,
-        udo.ModifiedDate,
-        udo.ModifiedBy
+                udo.UserDropDownId,
+                udo.UserFieldId,
+                udo.UserId,
+                udo.OptionValue,
+                udo.OptionLabel,
+                udo.IsActive,
+                udo.CreatedDate,
+                udo.CreatedBy,
+                udo.ModifiedDate,
+                udo.ModifiedBy
 
-    FROM userfields uf
+            FROM userfields uf
+            LEFT JOIN datatypes dt
+                ON uf.DataTypeId = dt.DataTypeId
 
-    LEFT JOIN userdropdownoptions udo
-        ON uf.UserFieldId = udo.UserFieldId
-        AND udo.IsActive = 1
+            LEFT JOIN userdropdownoptions udo
+                ON uf.UserFieldId = udo.UserFieldId
+                AND udo.IsActive = 1
 
-    WHERE uf.UserId = @UserId
-    AND uf.IsActive = 1
+            WHERE uf.UserId = @UserId
+            AND uf.IsActive = 1
 
-    ORDER BY uf.UserFieldId DESC";
+            ORDER BY uf.UserFieldId DESC";
 
             using var connection = _db.GetConnection();
 
@@ -229,37 +231,36 @@ namespace ahello_backend.Repositorys.Classes
 
             return rows > 0;
         }
-        public async Task<IEnumerable<UserFieldWithOptions>>
-    GetFieldsWithOptionsAsync(int userId)
+        public async Task<IEnumerable<UserFieldWithOptions>>GetFieldsWithOptionsAsync(int userId)
         {
             var sql = @"
 
-    SELECT
+            SELECT
 
-        uf.UserFieldId,
-        uf.UserId,
-        uf.FieldName,
-        uf.FieldCode,
-        uf.Placeholder,
-        uf.IsRequired,
-        uf.IsActive,
-        uf.DataTypeId,
+                uf.UserFieldId,
+                uf.UserId,
+                uf.FieldName,
+                uf.FieldCode,
+                uf.Placeholder,
+                uf.IsRequired,
+                uf.IsActive,
+                uf.DataTypeId,
 
-        udo.UserDropDownId,
-        udo.OptionValue,
-        udo.OptionLabel,
-        udo.IsActive AS OptionIsActive
+                udo.UserDropDownId,
+                udo.OptionValue,
+                udo.OptionLabel,
+                udo.IsActive AS OptionIsActive
 
-    FROM userfields uf
+            FROM userfields uf
 
-    LEFT JOIN userdropdownoptions udo
-        ON uf.UserFieldId = udo.UserFieldId
+            LEFT JOIN userdropdownoptions udo
+                ON uf.UserFieldId = udo.UserFieldId
 
-    WHERE uf.UserId = @UserId
-    AND uf.IsActive = 1
+            WHERE uf.UserId = @UserId
+            AND uf.IsActive = 1
 
-    ORDER BY uf.UserFieldId DESC;
-    ";
+            ORDER BY uf.UserFieldId DESC;
+            ";
 
             using var connection = _db.GetConnection();
 
