@@ -68,7 +68,13 @@ namespace ahello_backend.Controllers
             var fields = await _service.GetByUserAsync(userId);
             return Ok(fields);
         }
+        [HttpGet("userfieldform/{userId}")]
+        public async Task<IActionResult> GetByUserAll(string userId)
+        {
+            var fields = await _service.GetByUserAllAsync(userId);
 
+            return Ok(fields);
+        }
         [HttpDelete("{serviceFieldId}")]
         public async Task<IActionResult> Delete(
             int serviceFieldId,
