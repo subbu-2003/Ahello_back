@@ -160,6 +160,7 @@ namespace ahello_backend.Repositorys.Classes
         int pageSize,
         string? search = null,
         string? serviceCategoryName = null,
+        string? serviceTypeName = null,
         string? status = null,
         bool? isActive = null)
         {
@@ -177,6 +178,7 @@ namespace ahello_backend.Repositorys.Classes
             (
                 s.ServiceTitle LIKE @Search
                 OR sc.ServiceCategoryName LIKE @Search
+                OR st.ServiceTypeName LIKE @Search
                 OR s.ShortDescription LIKE @Search
                 OR s.Tags LIKE @Search
                 OR s.Language LIKE @Search
@@ -188,6 +190,11 @@ namespace ahello_backend.Repositorys.Classes
             {
                 whereClause += @"
                  AND sc.ServiceCategoryName LIKE @ServiceCategoryName";
+            }
+            if (!string.IsNullOrWhiteSpace(serviceTypeName))
+            {
+                whereClause += @"
+               AND st.ServiceTypeName LIKE @ServiceTypeName";
             }
 
             if (!string.IsNullOrWhiteSpace(status))
@@ -208,12 +215,15 @@ namespace ahello_backend.Repositorys.Classes
             FROM services s
             LEFT JOIN ServiceCategoryDynamic sc
                 ON s.ServiceCategoryId = sc.ServiceCategoryId
+           LEFT JOIN servicetypes st
+            ON s.ServiceTypeId = st.ServiceTypeId
             {whereClause}",
            new
            {
                UserId = userId,
                Search = $"%{search}%",
                ServiceCategoryName = $"%{serviceCategoryName}%",
+               ServiceTypeName = $"%{serviceTypeName}%",
                Status = status,
                IsActive = isActive
            });
@@ -225,6 +235,7 @@ namespace ahello_backend.Repositorys.Classes
                     s.ServiceId,
                     s.UserId,
                     s.ServiceTypeId,
+                    st.ServiceTypeName,
                     s.ServiceCategoryId,
                     sc.ServiceCategoryName,
                     s.ServiceTitle,
@@ -244,6 +255,8 @@ namespace ahello_backend.Repositorys.Classes
                 FROM services s
                 LEFT JOIN ServiceCategoryDynamic sc
                     ON s.ServiceCategoryId = sc.ServiceCategoryId
+               LEFT JOIN servicetypes st
+                    ON s.ServiceTypeId = st.ServiceTypeId
                 {whereClause}
                 ORDER BY s.ServiceId DESC
                 LIMIT @PageSize OFFSET @Offset",
@@ -252,6 +265,7 @@ namespace ahello_backend.Repositorys.Classes
                    UserId = userId,
                    Search = $"%{search}%",
                    ServiceCategoryName = $"%{serviceCategoryName}%",
+                   ServiceTypeName = $"%{serviceTypeName}%",
                    Status = status,
                    IsActive = isActive,
                    PageSize = pageSize,
@@ -284,13 +298,13 @@ namespace ahello_backend.Repositorys.Classes
                 {
                     var dropdownOptions = await connection.QueryAsync<ServiceDropDownOptionResponse>(
                         @"SELECT
-                ServiceDropDownId,
-                OptionValue,
-                OptionLabel,
-                IsActive
-                FROM servicedropdownoptions
-                WHERE ServiceFieldId = @ServiceFieldId
-                AND ServiceId = @ServiceId",
+                        ServiceDropDownId,
+                        OptionValue,
+                        OptionLabel,
+                        IsActive
+                        FROM servicedropdownoptions
+                        WHERE ServiceFieldId = @ServiceFieldId
+                        AND ServiceId = @ServiceId",
                         new { field.ServiceFieldId, ServiceId = service.ServiceId });
 
                     field.DropDownOptions = dropdownOptions.ToList();

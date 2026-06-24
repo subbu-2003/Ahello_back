@@ -30,6 +30,7 @@ namespace ahello_backend.Services.Classes
         int pageSize,
         string? search = null,
         string? serviceCategoryName = null,
+        string? serviceTypeName = null,
         string? status = null,
         bool? isActive = null)
         {
@@ -39,6 +40,7 @@ namespace ahello_backend.Services.Classes
                 pageSize,
                 search,
                 serviceCategoryName,
+                serviceTypeName,
                 status,
                 isActive);
         }

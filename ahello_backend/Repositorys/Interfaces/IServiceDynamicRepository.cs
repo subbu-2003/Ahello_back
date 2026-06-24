@@ -15,6 +15,7 @@ namespace ahello_backend.Repositorys.Interfaces
         int pageSize,
         string? search = null,
         string? serviceCategoryName = null,
+        string? serviceTypeName = null,
         string? status = null,
         bool? isActive = null);
         Task<int> CreateAsync(ServiceDynamicPost model);

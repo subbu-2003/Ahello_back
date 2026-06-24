@@ -5,6 +5,7 @@
         public int ServiceId { get; set; }
         public int UserId { get; set; }
         public int ServiceTypeId { get; set; }
+        public string? ServiceTypeName { get; set; }
         public int ServiceCategoryId { get; set; }
         public string? ServiceCategoryName { get; set; }
 
