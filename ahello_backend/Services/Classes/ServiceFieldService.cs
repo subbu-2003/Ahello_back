@@ -36,6 +36,10 @@ namespace ahello_backend.Services.Classes
         {
             return await _repository.GetByUserAsync(userId);
         }
+        public async Task<IEnumerable<ServiceField>> GetByUserAllAsync(string userId)
+        {
+            return await _repository.GetByUserAllAsync(userId);
+        }
         public async Task<bool> DeleteAsync(int serviceFieldId, string modifiedBy)
         {
             return await _repository.DeleteAsync(serviceFieldId, modifiedBy);

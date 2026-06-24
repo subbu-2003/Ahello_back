@@ -12,7 +12,7 @@ namespace ahello_backend.Repositorys.Interfaces
 
         Task<ServiceField> GetByIdAsync(int serviceFieldId);
         Task<IEnumerable<ServiceField>> GetByUserAsync(string userId);
-
+        Task<IEnumerable<ServiceField>> GetByUserAllAsync(string userId);
         Task<bool> DeleteAsync(int serviceFieldId, string modifiedBy);
     }
 }
