@@ -197,7 +197,88 @@ namespace ahello_backend.Repositorys.Classes
 
             return dictionary.Values;
         }
+        public async Task<IEnumerable<UserField>> GetByUserAllAsync(int userId)
+        {
+            var sql = @"
 
+                SELECT
+
+                    uf.UserFieldId,
+                    uf.UserId,
+                    uf.FieldName,
+                    uf.FieldCode,
+                    uf.Placeholder,
+                    uf.IsRequired,
+                    uf.IsActive,
+                    uf.DataTypeId,
+                    dt.DataTypeName,
+                    uf.CreatedBy,
+                    uf.CreatedAt,
+                    uf.ModifiedBy,
+                    uf.ModifiedAt,
+
+                    udo.UserDropDownId,
+                    udo.UserFieldId,
+                    udo.UserId,
+                    udo.OptionValue,
+                    udo.OptionLabel,
+                    udo.IsActive,
+                    udo.CreatedDate,
+                    udo.CreatedBy,
+                    udo.ModifiedDate,
+                    udo.ModifiedBy
+
+                FROM userfields uf
+
+                LEFT JOIN datatypes dt
+                    ON uf.DataTypeId = dt.DataTypeId
+
+                LEFT JOIN userdropdownoptions udo
+                    ON uf.UserFieldId = udo.UserFieldId
+                    AND udo.IsActive = 1
+
+                WHERE uf.UserId = @UserId
+
+                ORDER BY uf.UserFieldId DESC";
+
+            using var connection = _db.GetConnection();
+
+            var dictionary = new Dictionary<int, UserField>();
+
+            await connection.QueryAsync<
+                UserField,
+                GetUserDropdownOption,
+                UserField>(
+                sql,
+                (field, dropdown) =>
+                {
+                    if (!dictionary.TryGetValue(
+                        field.UserFieldId,
+                        out var existingField))
+                    {
+                        existingField = field;
+
+                        existingField.DropdownOptions =
+                            new List<GetUserDropdownOption>();
+
+                        dictionary.Add(
+                            existingField.UserFieldId,
+                            existingField);
+                    }
+
+                    if (dropdown != null &&
+                        dropdown.UserDropDownId > 0)
+                    {
+                        existingField.DropdownOptions.Add(dropdown);
+                    }
+
+                    return existingField;
+                },
+                new { UserId = userId },
+                splitOn: "UserDropDownId");
+
+            return dictionary.Values;
+        }
         public async Task<UserField> GetByIdAsync(int userFieldId)
         {
             var sql = @"SELECT *

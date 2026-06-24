@@ -67,6 +67,13 @@ namespace ahello_backend.Controllers
 
             return Ok(data);
         }
+        [HttpGet("userfieldform/{userId}")]
+        public async Task<IActionResult> GetByUserAll(int userId)
+        {
+            var data = await _service.GetByUserAllAsync(userId);
+
+            return Ok(data);
+        }
 
         [HttpGet("{userFieldId}")]
         public async Task<IActionResult> GetById(int userFieldId)
