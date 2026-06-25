@@ -300,10 +300,10 @@ namespace ahello_backend.Repositorys.Classes
                       INNER JOIN servicefields sf
                         ON sfv.ServiceFieldId = sf.ServiceFieldId
 
-                      WHERE sfv.ServiceId = @ServiceId",
+                      WHERE sfv.UserId = @UserId",
                     new
                     {
-                        ServiceId = service.ServiceId
+                        UserId = service.UserId
                     })).ToList();
 
                 foreach (var field in fields)
@@ -316,8 +316,8 @@ namespace ahello_backend.Repositorys.Classes
                         IsActive
                         FROM servicedropdownoptions
                         WHERE ServiceFieldId = @ServiceFieldId
-                        AND ServiceId = @ServiceId",
-                        new { field.ServiceFieldId, ServiceId = service.ServiceId });
+                        AND UserId = @UserId",
+                        new { field.ServiceFieldId, UserId = service.UserId });
 
                     field.DropDownOptions = dropdownOptions.ToList();
                 }
@@ -768,8 +768,8 @@ namespace ahello_backend.Repositorys.Classes
                   FROM servicefieldvalues sfv
                   INNER JOIN servicefields sf
                     ON sfv.ServiceFieldId = sf.ServiceFieldId
-                  WHERE sfv.ServiceId = @ServiceId",
-                    new { ServiceId = service.ServiceId })).ToList();
+                  WHERE UserId = @UserId",
+                    new { UserId = service.UserId })).ToList();
 
                 foreach (var field in fields)
                 {
@@ -781,8 +781,8 @@ namespace ahello_backend.Repositorys.Classes
                 IsActive
               FROM servicedropdownoptions
               WHERE ServiceFieldId = @ServiceFieldId
-                AND ServiceId = @ServiceId",
-                        new { field.ServiceFieldId, ServiceId = service.ServiceId });
+                AND UserId = @UserId",
+                        new { field.ServiceFieldId, UserId = service.UserId });
 
                     field.DropDownOptions = dropdownOptions.ToList();
                 }
