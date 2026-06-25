@@ -285,48 +285,43 @@ public async Task<IEnumerable<ServiceField>> GetByUserAsync(string userId)
         public async Task<IEnumerable<ServiceField>> GetByUserAllAsync(string userId)
         {
             var sql = @"
-                SELECT 
-                    sf.ServiceFieldId,
-                    sf.ServiceId,
-                    sf.FieldName,
-                    sf.FieldCode,
-                    sf.Placeholder,
-                    sf.IsRequired,
-                    sf.IsActive,
-                    sf.DataTypeId,
-                    dt.DataTypeName,
-                    sf.CreatedBy,
-                    sf.CreatedAt,
-                    sf.ModifiedBy,
-                    sf.ModifiedAt,
+        SELECT 
+            sf.ServiceFieldId,
+            sf.FieldName,
+            sf.FieldCode,
+            sf.Placeholder,
+            sf.IsRequired,
+            sf.IsActive,
+            sf.DataTypeId,
+            dt.DataTypeName,
+            sf.CreatedBy,
+            sf.CreatedAt,
+            sf.ModifiedBy,
+            sf.ModifiedAt,
 
-                    sdo.ServiceDropDownId,
-                    sdo.ServiceFieldId,
-                    sdo.ServiceId,
-                    sdo.OptionValue,
-                    sdo.OptionLabel,
-                    sdo.IsActive
+            sdo.ServiceDropDownId,
+            sdo.ServiceFieldId,
+            sdo.OptionValue,
+            sdo.OptionLabel,
+            sdo.IsActive
 
-                FROM servicefields sf
+        FROM servicefields sf
 
-                INNER JOIN services s
-                    ON sf.ServiceId = s.ServiceId
+        LEFT JOIN datatypes dt
+            ON sf.DataTypeId = dt.DataTypeId
 
-                LEFT JOIN datatypes dt
-                    ON sf.DataTypeId = dt.DataTypeId
+        LEFT JOIN servicedropdownoptions sdo
+            ON sf.ServiceFieldId = sdo.ServiceFieldId
+            AND sdo.IsActive = 1
 
-                LEFT JOIN servicedropdownoptions sdo
-                    ON sf.ServiceFieldId = sdo.ServiceFieldId
-                    AND sdo.IsActive = 1
+        WHERE sf.CreatedBy = @UserId
+          AND sf.IsActive = 1
 
-                WHERE s.UserId = @UserId
-
-                ORDER BY sf.ServiceFieldId DESC";
+        ORDER BY sf.ServiceFieldId DESC";
 
             using var connection = _db.GetConnection();
 
-            var fieldDictionary =
-                new Dictionary<int, ServiceField>();
+            var fieldDictionary = new Dictionary<int, ServiceField>();
 
             await connection.QueryAsync<
                 ServiceField,
