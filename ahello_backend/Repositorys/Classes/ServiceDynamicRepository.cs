@@ -86,64 +86,76 @@ namespace ahello_backend.Repositorys.Classes
             using var connection = _db.GetConnection();
 
             var service = await connection.QueryFirstOrDefaultAsync<ServiceDynamicGetResponse>(
-             @"SELECT
-                s.ServiceId,
-                s.UserId,
-                s.ServiceTypeId,
-                s.ServiceCategoryId,
-                sc.ServiceCategoryName,
-                s.ServiceTitle,
-                s.Price,
-                s.Duration,
-                s.ShortDescription,
-                s.FullDescription,
-                s.Tags,
-                s.Language,
-                s.ThumbnailImage,
-                s.BannerImage,
-                s.IntroVideo,
-                s.Status,
-                s.IsActive,
-                s.CreatedBy,
-                s.CreatedAt
-            FROM services s
-            LEFT JOIN ServiceCategoryDynamic sc
-                ON s.ServiceCategoryId = sc.ServiceCategoryId
-            WHERE s.ServiceId = @ServiceId",
-             new { ServiceId = serviceId });
+            @"SELECT
+        s.ServiceId,
+        s.UserId,
+        s.ServiceTypeId,
+        s.ServiceCategoryId,
+        sc.ServiceCategoryName,
+        s.ServiceTitle,
+        s.Price,
+        s.Duration,
+        s.ShortDescription,
+        s.FullDescription,
+        s.Tags,
+        s.Language,
+        s.ThumbnailImage,
+        s.BannerImage,
+        s.IntroVideo,
+        s.Status,
+        s.IsActive,
+        s.CreatedBy,
+        s.CreatedAt
+    FROM services s
+    LEFT JOIN ServiceCategoryDynamic sc
+        ON s.ServiceCategoryId = sc.ServiceCategoryId
+    WHERE s.ServiceId = @ServiceId",
+            new { ServiceId = serviceId });
 
             if (service == null)
                 return null;
 
             var fields = (await connection.QueryAsync<ServiceDynamicFieldResponse>(
             @"SELECT
-                sf.ServiceFieldId,
-                sf.FieldName,
-                sf.FieldCode,
-                sfv.FieldValue
-              FROM servicefieldvalues sfv
-              INNER JOIN servicefields sf
-                ON sfv.ServiceFieldId = sf.ServiceFieldId
-              WHERE sfv.ServiceId = @ServiceId",
-            new { ServiceId = serviceId })).ToList();
+        sf.ServiceFieldId,
+        sf.FieldName,
+        sf.FieldCode,
+        sf.Placeholder,
+        sf.IsRequired,
+        sf.IsActive,
+        sf.DataTypeId,
+        dt.DataTypeName,
+        sfv.FieldValue
+    FROM servicefields sf
+    LEFT JOIN datatypes dt
+        ON sf.DataTypeId = dt.DataTypeId
+    LEFT JOIN servicefieldvalues sfv
+        ON sf.ServiceFieldId = sfv.ServiceFieldId
+        AND sfv.UserId = @UserId
+    WHERE sf.CreatedBy = @UserId
+      AND sf.IsActive = 1
+    ORDER BY sf.ServiceFieldId ASC",
+            new
+            {
+                UserId = service.UserId
+            })).ToList();
 
             foreach (var field in fields)
             {
-                var dropdownOptions = await connection.QueryAsync<ServiceDropDownOptionResponse>(
+                var dropdownOptions =
+                    await connection.QueryAsync<ServiceDropDownOptionResponse>(
                 @"SELECT
-                ServiceDropDownId,
-                OptionValue,
-                OptionLabel,
-                IsActive
-                FROM servicedropdownoptions
-                WHERE ServiceId = @ServiceId
-                AND ServiceFieldId = @ServiceFieldId
-                AND IsActive = 1",
-                    new
-                    {
-                        ServiceId = serviceId,
-                        ServiceFieldId = field.ServiceFieldId
-                    });
+            ServiceDropDownId,
+            OptionValue,
+            OptionLabel,
+            IsActive
+        FROM servicedropdownoptions
+        WHERE ServiceFieldId = @ServiceFieldId
+          AND IsActive = 1",
+                new
+                {
+                    ServiceFieldId = field.ServiceFieldId
+                });
 
                 field.DropDownOptions = dropdownOptions.ToList();
             }

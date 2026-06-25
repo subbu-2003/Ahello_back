@@ -6,7 +6,6 @@
 
         public int ServiceFieldId { get; set; }
 
-        public int ServiceId { get; set; }
 
         public string OptionValue { get; set; }
 

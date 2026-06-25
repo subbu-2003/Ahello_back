@@ -4,7 +4,7 @@
     {
         public int ServiceFieldValueId { get; set; }
 
-        public int ServiceId { get; set; }
+        public int UserId { get; set; }
 
         public string FieldCode { get; set; }
 
