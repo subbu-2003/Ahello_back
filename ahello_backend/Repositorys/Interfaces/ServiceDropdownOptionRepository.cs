@@ -23,7 +23,7 @@ namespace ahello_backend.Repositorys.Classes
             INSERT INTO servicedropdownoptions
             (
                 ServiceFieldId,
-                ServiceId,
+                UserId,
                 OptionValue,
                 OptionLabel,
                 IsActive,
@@ -33,7 +33,7 @@ namespace ahello_backend.Repositorys.Classes
             VALUES
             (
                 @ServiceFieldId,
-                @ServiceId,
+                @UserId,
                 @OptionValue,
                 @OptionLabel,
                 @IsActive,
@@ -52,7 +52,7 @@ namespace ahello_backend.Repositorys.Classes
                     new
                     {
                         model.ServiceFieldId,
-                        model.ServiceId,
+                        model.UserId,
                         opt.OptionValue,
                         opt.OptionLabel,
                         opt.IsActive,
@@ -105,14 +105,14 @@ namespace ahello_backend.Repositorys.Classes
         public async Task<IEnumerable<GetServiceDropdownOption>>
             GetByFieldIdAsync(
                 int serviceFieldId,
-                int? serviceId)
+                int? UserId)
         {
             var sql = @"
             SELECT *
             FROM servicedropdownoptions
             WHERE ServiceFieldId = @serviceFieldId
-            AND (@serviceId IS NULL 
-                 OR ServiceId = @serviceId)
+            AND (@UserId IS NULL 
+                 OR UserId = @UserId)
             AND IsActive = 1";
 
             using var connection = _db.GetConnection();
@@ -123,7 +123,7 @@ namespace ahello_backend.Repositorys.Classes
                     new
                     {
                         serviceFieldId,
-                        serviceId
+                        UserId
                     });
         }
     }

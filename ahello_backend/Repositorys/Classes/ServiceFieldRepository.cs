@@ -21,7 +21,7 @@ namespace ahello_backend.Repositorys.Classes
             // CHECK DUPLICATE FIELDNAME
             var duplicateSql = @"SELECT COUNT(*)
                                  FROM servicefields
-                                 WHERE ServiceId = @ServiceId
+                                 WHERE UserId = @UserId
                                  AND LOWER(FieldName) = LOWER(@FieldName)
                                  AND IsActive = 1";
 
@@ -29,7 +29,7 @@ namespace ahello_backend.Repositorys.Classes
                 duplicateSql,
                 new
                 {
-                    model.ServiceId,
+                    model.UserId,
                     model.FieldName
                 });
 
@@ -40,7 +40,7 @@ namespace ahello_backend.Repositorys.Classes
 
             var sql = @"INSERT INTO servicefields
                         (
-                            ServiceId,
+                            UserId,
                             FieldName,
                             FieldCode,
                             Placeholder,
@@ -51,7 +51,7 @@ namespace ahello_backend.Repositorys.Classes
                         )
                         VALUES
                         (
-                            @ServiceId,
+                            @UserId,
                             @FieldName,
                             @FieldCode,
                             @Placeholder,
@@ -73,7 +73,7 @@ namespace ahello_backend.Repositorys.Classes
             // CHECK DUPLICATE FIELDNAME
             var duplicateSql = @"SELECT COUNT(*)
                                  FROM servicefields
-                                 WHERE ServiceId = @ServiceId
+                                 WHERE UserId = @UserId
                                  AND LOWER(FieldName) = LOWER(@FieldName)
                                  AND ServiceFieldId != @ServiceFieldId
                                  AND IsActive = 1";
@@ -82,7 +82,7 @@ namespace ahello_backend.Repositorys.Classes
                 duplicateSql,
                 new
                 {
-                    model.ServiceId,
+                    model.UserId,
                     model.FieldName,
                     model.ServiceFieldId
                 });
@@ -94,7 +94,7 @@ namespace ahello_backend.Repositorys.Classes
 
             var sql = @"UPDATE servicefields
                         SET
-                            ServiceId = @ServiceId,
+                            UserId = @UserId,
                             FieldName = @FieldName,
                             FieldCode = @FieldCode,
                             Placeholder = @Placeholder,
@@ -109,12 +109,12 @@ namespace ahello_backend.Repositorys.Classes
             return rows > 0;
         }
 
-        public async Task<IEnumerable<ServiceField>> GetByServiceAsync(int serviceId)
+        public async Task<IEnumerable<ServiceField>> GetByServiceAsync(int UserId)
         {
             var sql = @"
     SELECT 
         sf.ServiceFieldId,
-        sf.ServiceId,
+        sf.UserId,
         sf.FieldName,
         sf.FieldCode,
         sf.Placeholder,
@@ -128,7 +128,7 @@ namespace ahello_backend.Repositorys.Classes
 
         sdo.ServiceDropDownId,
         sdo.ServiceFieldId,
-        sdo.ServiceId,
+        sdo.UserId,
         sdo.OptionValue,
         sdo.OptionLabel,
         sdo.IsActive
@@ -139,7 +139,7 @@ namespace ahello_backend.Repositorys.Classes
         ON sf.ServiceFieldId = sdo.ServiceFieldId
         AND sdo.IsActive = 1
 
-    WHERE sf.ServiceId = @ServiceId
+    WHERE sf.UserId = @UserId
     AND sf.IsActive = 1
 
     ORDER BY sf.ServiceFieldId DESC";
@@ -182,7 +182,7 @@ namespace ahello_backend.Repositorys.Classes
 
                     return existingField;
                 },
-                new { ServiceId = serviceId },
+                new { UserId = UserId },
                 splitOn: "ServiceDropDownId"
             );
 
@@ -209,7 +209,7 @@ namespace ahello_backend.Repositorys.Classes
             var sql = @"
         SELECT 
             sf.ServiceFieldId,
-            sf.ServiceId,
+            sf.UserId,
             sf.FieldName,
             sf.FieldCode,
             sf.Placeholder,
@@ -223,13 +223,13 @@ namespace ahello_backend.Repositorys.Classes
 
             sdo.ServiceDropDownId,
             sdo.ServiceFieldId,
-            sdo.ServiceId,
+            sdo.UserId,
             sdo.OptionValue,
             sdo.OptionLabel,
             sdo.IsActive
 
         FROM servicefields sf
-        INNER JOIN services s ON sf.ServiceId = s.ServiceId
+        INNER JOIN services s ON sf.UserId = s.UserId
         LEFT JOIN servicedropdownoptions sdo
             ON sf.ServiceFieldId = sdo.ServiceFieldId
             AND sdo.IsActive = 1
