@@ -21,7 +21,8 @@ namespace ahello_backend.Services.Classes
 
         public Task<IEnumerable<UserField>> GetByUserAsync(int userId)
             => _repository.GetByUserAsync(userId);
-
+        public Task<IEnumerable<UserField>> GetByUserAllAsync(int userId)
+    => _repository.GetByUserAllAsync(userId);
         public Task<UserField> GetByIdAsync(int userFieldId)
             => _repository.GetByIdAsync(userFieldId);
 

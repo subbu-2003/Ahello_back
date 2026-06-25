@@ -204,66 +204,164 @@ namespace ahello_backend.Repositorys.Classes
         }
 
 
-        public async Task<IEnumerable<ServiceField>> GetByUserAsync(string userId)
+public async Task<IEnumerable<ServiceField>> GetByUserAsync(string userId)
+{
+    var sql = @"
+    SELECT 
+        sf.ServiceFieldId,
+        sf.UserId,
+        sf.FieldName,
+        sf.FieldCode,
+        sf.Placeholder,
+        sf.IsRequired,
+        sf.IsActive,
+        sf.DataTypeId,
+        dt.DataTypeName,
+        sf.CreatedBy,
+        sf.CreatedAt,
+        sf.ModifiedBy,
+        sf.ModifiedAt,
+
+        sdo.ServiceDropDownId,
+        sdo.ServiceFieldId,
+        sdo.UserId,
+        sdo.OptionValue,
+        sdo.OptionLabel,
+        sdo.IsActive
+
+    FROM servicefields sf
+
+    LEFT JOIN datatypes dt
+        ON sf.DataTypeId = dt.DataTypeId
+
+    LEFT JOIN servicedropdownoptions sdo
+        ON sf.ServiceFieldId = sdo.ServiceFieldId
+        AND sdo.IsActive = 1
+
+    WHERE sf.UserId = @UserId
+    AND sf.IsActive = 1
+
+    ORDER BY sf.ServiceFieldId DESC";
+
+
+    using var connection = _db.GetConnection();
+
+    var fieldDictionary = new Dictionary<int, ServiceField>();
+
+    await connection.QueryAsync<ServiceField, ServiceDropdownOptionModel, ServiceField>(
+        sql,
+        (field, dropdown) =>
+        {
+            if (!fieldDictionary.TryGetValue(field.ServiceFieldId, out var existingField))
+            {
+                existingField = field;
+
+                existingField.DropdownOptions =
+                    new List<ServiceDropdownOptionModel>();
+
+                fieldDictionary.Add(
+                    existingField.ServiceFieldId,
+                    existingField
+                );
+            }
+
+
+            if (dropdown != null &&
+                dropdown.ServiceDropDownId > 0)
+            {
+                existingField.DropdownOptions.Add(dropdown);
+            }
+
+            return existingField;
+
+        },
+        new { UserId = userId },
+        splitOn: "ServiceDropDownId"
+    );
+
+
+    return fieldDictionary.Values;
+}
+        public async Task<IEnumerable<ServiceField>> GetByUserAllAsync(string userId)
         {
             var sql = @"
-        SELECT 
-            sf.ServiceFieldId,
-            sf.UserId,
-            sf.FieldName,
-            sf.FieldCode,
-            sf.Placeholder,
-            sf.IsRequired,
-            sf.IsActive,
-            sf.DataTypeId,
-            sf.CreatedBy,
-            sf.CreatedAt,
-            sf.ModifiedBy,
-            sf.ModifiedAt,
+                SELECT 
+                    sf.ServiceFieldId,
+                    sf.ServiceId,
+                    sf.FieldName,
+                    sf.FieldCode,
+                    sf.Placeholder,
+                    sf.IsRequired,
+                    sf.IsActive,
+                    sf.DataTypeId,
+                    dt.DataTypeName,
+                    sf.CreatedBy,
+                    sf.CreatedAt,
+                    sf.ModifiedBy,
+                    sf.ModifiedAt,
 
-            sdo.ServiceDropDownId,
-            sdo.ServiceFieldId,
-            sdo.UserId,
-            sdo.OptionValue,
-            sdo.OptionLabel,
-            sdo.IsActive
+                    sdo.ServiceDropDownId,
+                    sdo.ServiceFieldId,
+                    sdo.ServiceId,
+                    sdo.OptionValue,
+                    sdo.OptionLabel,
+                    sdo.IsActive
 
-        FROM servicefields sf
-        INNER JOIN services s ON sf.UserId = s.UserId
-        LEFT JOIN servicedropdownoptions sdo
-            ON sf.ServiceFieldId = sdo.ServiceFieldId
-            AND sdo.IsActive = 1
-        WHERE s.UserId = @UserId
-        AND sf.IsActive = 1
-        ORDER BY sf.ServiceFieldId DESC";
+                FROM servicefields sf
+
+                INNER JOIN services s
+                    ON sf.ServiceId = s.ServiceId
+
+                LEFT JOIN datatypes dt
+                    ON sf.DataTypeId = dt.DataTypeId
+
+                LEFT JOIN servicedropdownoptions sdo
+                    ON sf.ServiceFieldId = sdo.ServiceFieldId
+                    AND sdo.IsActive = 1
+
+                WHERE s.UserId = @UserId
+
+                ORDER BY sf.ServiceFieldId DESC";
 
             using var connection = _db.GetConnection();
 
-            var fieldDictionary = new Dictionary<int, ServiceField>();
+            var fieldDictionary =
+                new Dictionary<int, ServiceField>();
 
-            await connection.QueryAsync<ServiceField, ServiceDropdownOptionModel, ServiceField>(
+            await connection.QueryAsync<
+                ServiceField,
+                ServiceDropdownOptionModel,
+                ServiceField>(
                 sql,
                 (field, dropdown) =>
                 {
-                    if (!fieldDictionary.TryGetValue(field.ServiceFieldId, out var existingField))
+                    if (!fieldDictionary.TryGetValue(
+                            field.ServiceFieldId,
+                            out var existingField))
                     {
                         existingField = field;
-                        existingField.DropdownOptions = new List<ServiceDropdownOptionModel>();
-                        fieldDictionary.Add(existingField.ServiceFieldId, existingField);
+
+                        existingField.DropdownOptions =
+                            new List<ServiceDropdownOptionModel>();
+
+                        fieldDictionary.Add(
+                            existingField.ServiceFieldId,
+                            existingField);
                     }
 
-                    if (dropdown != null && dropdown.ServiceDropDownId > 0)
+                    if (dropdown != null &&
+                        dropdown.ServiceDropDownId > 0)
+                    {
                         existingField.DropdownOptions.Add(dropdown);
+                    }
 
                     return existingField;
                 },
                 new { UserId = userId },
-                splitOn: "ServiceDropDownId"
-            );
+                splitOn: "ServiceDropDownId");
 
             return fieldDictionary.Values;
         }
-
         public async Task<bool> DeleteAsync(int serviceFieldId, string modifiedBy)
         {
             var sql = @"UPDATE servicefields
