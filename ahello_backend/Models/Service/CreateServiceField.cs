@@ -2,7 +2,7 @@
 {
     public class CreateServiceField
     {
-        public int ServiceId { get; set; }
+        public int UserId { get; set; }
 
         public string FieldName { get; set; }
 

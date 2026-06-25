@@ -21,7 +21,7 @@ namespace ahello_backend.Repositorys.Classes
             // CHECK DUPLICATE FIELDNAME
             var duplicateSql = @"SELECT COUNT(*)
                                  FROM servicefields
-                                 WHERE ServiceId = @ServiceId
+                                 WHERE UserId = @UserId
                                  AND LOWER(FieldName) = LOWER(@FieldName)
                                  AND IsActive = 1";
 
@@ -29,7 +29,7 @@ namespace ahello_backend.Repositorys.Classes
                 duplicateSql,
                 new
                 {
-                    model.ServiceId,
+                    model.UserId,
                     model.FieldName
                 });
 
@@ -40,7 +40,7 @@ namespace ahello_backend.Repositorys.Classes
 
             var sql = @"INSERT INTO servicefields
                         (
-                            ServiceId,
+                            UserId,
                             FieldName,
                             FieldCode,
                             Placeholder,
@@ -51,7 +51,7 @@ namespace ahello_backend.Repositorys.Classes
                         )
                         VALUES
                         (
-                            @ServiceId,
+                            @UserId,
                             @FieldName,
                             @FieldCode,
                             @Placeholder,
@@ -73,7 +73,7 @@ namespace ahello_backend.Repositorys.Classes
             // CHECK DUPLICATE FIELDNAME
             var duplicateSql = @"SELECT COUNT(*)
                                  FROM servicefields
-                                 WHERE ServiceId = @ServiceId
+                                 WHERE UserId = @UserId
                                  AND LOWER(FieldName) = LOWER(@FieldName)
                                  AND ServiceFieldId != @ServiceFieldId
                                  AND IsActive = 1";
@@ -82,7 +82,7 @@ namespace ahello_backend.Repositorys.Classes
                 duplicateSql,
                 new
                 {
-                    model.ServiceId,
+                    model.UserId,
                     model.FieldName,
                     model.ServiceFieldId
                 });
@@ -94,7 +94,7 @@ namespace ahello_backend.Repositorys.Classes
 
             var sql = @"UPDATE servicefields
                         SET
-                            ServiceId = @ServiceId,
+                            UserId = @UserId,
                             FieldName = @FieldName,
                             FieldCode = @FieldCode,
                             Placeholder = @Placeholder,
@@ -109,12 +109,12 @@ namespace ahello_backend.Repositorys.Classes
             return rows > 0;
         }
 
-        public async Task<IEnumerable<ServiceField>> GetByServiceAsync(int serviceId)
+        public async Task<IEnumerable<ServiceField>> GetByServiceAsync(int UserId)
         {
             var sql = @"
     SELECT 
         sf.ServiceFieldId,
-        sf.ServiceId,
+        sf.UserId,
         sf.FieldName,
         sf.FieldCode,
         sf.Placeholder,
@@ -128,7 +128,7 @@ namespace ahello_backend.Repositorys.Classes
 
         sdo.ServiceDropDownId,
         sdo.ServiceFieldId,
-        sdo.ServiceId,
+        sdo.UserId,
         sdo.OptionValue,
         sdo.OptionLabel,
         sdo.IsActive
@@ -139,7 +139,7 @@ namespace ahello_backend.Repositorys.Classes
         ON sf.ServiceFieldId = sdo.ServiceFieldId
         AND sdo.IsActive = 1
 
-    WHERE sf.ServiceId = @ServiceId
+    WHERE sf.UserId = @UserId
     AND sf.IsActive = 1
 
     ORDER BY sf.ServiceFieldId DESC";
@@ -182,7 +182,7 @@ namespace ahello_backend.Repositorys.Classes
 
                     return existingField;
                 },
-                new { ServiceId = serviceId },
+                new { UserId = UserId },
                 splitOn: "ServiceDropDownId"
             );
 
@@ -204,68 +204,84 @@ namespace ahello_backend.Repositorys.Classes
         }
 
 
-        public async Task<IEnumerable<ServiceField>> GetByUserAsync(string userId)
+public async Task<IEnumerable<ServiceField>> GetByUserAsync(string userId)
+{
+    var sql = @"
+    SELECT 
+        sf.ServiceFieldId,
+        sf.UserId,
+        sf.FieldName,
+        sf.FieldCode,
+        sf.Placeholder,
+        sf.IsRequired,
+        sf.IsActive,
+        sf.DataTypeId,
+        dt.DataTypeName,
+        sf.CreatedBy,
+        sf.CreatedAt,
+        sf.ModifiedBy,
+        sf.ModifiedAt,
+
+        sdo.ServiceDropDownId,
+        sdo.ServiceFieldId,
+        sdo.UserId,
+        sdo.OptionValue,
+        sdo.OptionLabel,
+        sdo.IsActive
+
+    FROM servicefields sf
+
+    LEFT JOIN datatypes dt
+        ON sf.DataTypeId = dt.DataTypeId
+
+    LEFT JOIN servicedropdownoptions sdo
+        ON sf.ServiceFieldId = sdo.ServiceFieldId
+        AND sdo.IsActive = 1
+
+    WHERE sf.UserId = @UserId
+    AND sf.IsActive = 1
+
+    ORDER BY sf.ServiceFieldId DESC";
+
+
+    using var connection = _db.GetConnection();
+
+    var fieldDictionary = new Dictionary<int, ServiceField>();
+
+    await connection.QueryAsync<ServiceField, ServiceDropdownOptionModel, ServiceField>(
+        sql,
+        (field, dropdown) =>
         {
-            var sql = @"
-        SELECT 
-            sf.ServiceFieldId,
-            sf.ServiceId,
-            sf.FieldName,
-            sf.FieldCode,
-            sf.Placeholder,
-            sf.IsRequired,
-            sf.IsActive,
-            sf.DataTypeId,
-            dt.DataTypeName,
-            sf.CreatedBy,
-            sf.CreatedAt,
-            sf.ModifiedBy,
-            sf.ModifiedAt,
+            if (!fieldDictionary.TryGetValue(field.ServiceFieldId, out var existingField))
+            {
+                existingField = field;
 
-            sdo.ServiceDropDownId,
-            sdo.ServiceFieldId,
-            sdo.ServiceId,
-            sdo.OptionValue,
-            sdo.OptionLabel,
-            sdo.IsActive
+                existingField.DropdownOptions =
+                    new List<ServiceDropdownOptionModel>();
 
-        FROM servicefields sf
-        INNER JOIN services s ON sf.ServiceId = s.ServiceId
-        LEFT JOIN datatypes dt
-            ON sf.DataTypeId = dt.DataTypeId
-        LEFT JOIN servicedropdownoptions sdo
-            ON sf.ServiceFieldId = sdo.ServiceFieldId
-            AND sdo.IsActive = 1
-        WHERE s.UserId = @UserId
-        AND sf.IsActive = 1
-        ORDER BY sf.ServiceFieldId DESC";
+                fieldDictionary.Add(
+                    existingField.ServiceFieldId,
+                    existingField
+                );
+            }
 
-            using var connection = _db.GetConnection();
 
-            var fieldDictionary = new Dictionary<int, ServiceField>();
+            if (dropdown != null &&
+                dropdown.ServiceDropDownId > 0)
+            {
+                existingField.DropdownOptions.Add(dropdown);
+            }
 
-            await connection.QueryAsync<ServiceField, ServiceDropdownOptionModel, ServiceField>(
-                sql,
-                (field, dropdown) =>
-                {
-                    if (!fieldDictionary.TryGetValue(field.ServiceFieldId, out var existingField))
-                    {
-                        existingField = field;
-                        existingField.DropdownOptions = new List<ServiceDropdownOptionModel>();
-                        fieldDictionary.Add(existingField.ServiceFieldId, existingField);
-                    }
+            return existingField;
 
-                    if (dropdown != null && dropdown.ServiceDropDownId > 0)
-                        existingField.DropdownOptions.Add(dropdown);
+        },
+        new { UserId = userId },
+        splitOn: "ServiceDropDownId"
+    );
 
-                    return existingField;
-                },
-                new { UserId = userId },
-                splitOn: "ServiceDropDownId"
-            );
 
-            return fieldDictionary.Values;
-        }
+    return fieldDictionary.Values;
+}
         public async Task<IEnumerable<ServiceField>> GetByUserAllAsync(string userId)
         {
             var sql = @"

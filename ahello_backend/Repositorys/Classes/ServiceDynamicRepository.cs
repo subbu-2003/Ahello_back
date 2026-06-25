@@ -124,7 +124,7 @@ namespace ahello_backend.Repositorys.Classes
               FROM servicefieldvalues sfv
               INNER JOIN servicefields sf
                 ON sfv.ServiceFieldId = sf.ServiceFieldId
-              WHERE sfv.ServiceId = @ServiceId",
+              WHERE sfv.UserId = @UserId",
             new { ServiceId = serviceId })).ToList();
 
             foreach (var field in fields)
