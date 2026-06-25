@@ -18,7 +18,7 @@ namespace ahello_backend.Repositorys.Classes
         {
             var sql = @"INSERT INTO servicefieldvalues
                         (
-                            ServiceId,
+                            UserId,
                             FieldCode,
                             ServiceFieldId,
                             FieldValue,
@@ -28,7 +28,7 @@ namespace ahello_backend.Repositorys.Classes
                         )
                         VALUES
                         (
-                            @ServiceId,
+                            @UserId,
                             @FieldCode,
                             @ServiceFieldId,
                             @FieldValue,
