@@ -33,6 +33,16 @@ namespace ahello_backend.Services.Classes
                 new AuthenticationHeaderValue("Basic", credentials);
         }
 
+        // Helper: throws with actual Razorpay error body
+        private static async Task EnsureSuccessAsync(HttpResponseMessage response)
+        {
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"Razorpay {(int)response.StatusCode}: {body}");
+            }
+        }
+
         public async Task<(string accountId, string responseJson)> CreateLinkedAccountAsync(
             CreateLinkedAccountDto dto,
             dynamic user)
@@ -41,10 +51,11 @@ namespace ahello_backend.Services.Classes
             {
                 email = user.Email,
                 phone = user.MobileNumber,
+                type = "route",
+                reference_id = $"expert_{user.UserId}",
                 legal_business_name = user.FullName,
                 customer_facing_business_name = dto.CustomerFacingBusinessName,
-                business_type = dto.BusinessType,
-
+                business_type = dto.BusinessType.ToLower(),
                 contact_name = user.FullName,
 
                 profile = new
@@ -55,11 +66,11 @@ namespace ahello_backend.Services.Classes
                     {
                         registered = new
                         {
-                            street1 = user.Address ?? "NA",
-                            street2 = user.City ?? "NA",
-                            city = user.City ?? "NA",
-                            state = user.State ?? "NA",
-                            postal_code = user.Pincode ?? "000000",
+                            street1 = user.Address ?? "Madurai Main Road",
+                            street2 = user.City ?? "Madurai",
+                            city = user.City ?? "Madurai",
+                            state = user.State ?? "TAMIL NADU",
+                            postal_code = user.Pincode ?? "625001",
                             country = "IN"
                         }
                     }
@@ -69,7 +80,7 @@ namespace ahello_backend.Services.Classes
             var response = await _http.PostAsJsonAsync("v2/accounts", payload);
             var json = await response.Content.ReadAsStringAsync();
 
-            response.EnsureSuccessStatusCode();
+            await EnsureSuccessAsync(response);
 
             var data = JsonSerializer.Deserialize<JsonElement>(json);
             var accountId = data.GetProperty("id").GetString() ?? "";
@@ -119,7 +130,7 @@ namespace ahello_backend.Services.Classes
 
             var json = await response.Content.ReadAsStringAsync();
 
-            response.EnsureSuccessStatusCode();
+            await EnsureSuccessAsync(response);
 
             var data = JsonSerializer.Deserialize<JsonElement>(json);
             var stakeholderId = data.GetProperty("id").GetString() ?? "";
@@ -142,7 +153,7 @@ namespace ahello_backend.Services.Classes
 
             var json = await response.Content.ReadAsStringAsync();
 
-            response.EnsureSuccessStatusCode();
+            await EnsureSuccessAsync(response);
 
             var data = JsonSerializer.Deserialize<JsonElement>(json);
             var productId = data.GetProperty("id").GetString() ?? "";
@@ -172,7 +183,7 @@ namespace ahello_backend.Services.Classes
 
             var json = await response.Content.ReadAsStringAsync();
 
-            response.EnsureSuccessStatusCode();
+            await EnsureSuccessAsync(response);
 
             return json;
         }
@@ -195,7 +206,7 @@ namespace ahello_backend.Services.Classes
             var response = await _http.PostAsJsonAsync("v1/orders", payload);
             var json = await response.Content.ReadAsStringAsync();
 
-            response.EnsureSuccessStatusCode();
+            await EnsureSuccessAsync(response);
 
             var data = JsonSerializer.Deserialize<JsonElement>(json);
             var orderId = data.GetProperty("id").GetString() ?? "";
@@ -249,7 +260,7 @@ namespace ahello_backend.Services.Classes
 
             var json = await response.Content.ReadAsStringAsync();
 
-            response.EnsureSuccessStatusCode();
+            await EnsureSuccessAsync(response);
 
             var data = JsonSerializer.Deserialize<JsonElement>(json);
             var transfer = data.GetProperty("items")[0];
@@ -260,10 +271,7 @@ namespace ahello_backend.Services.Classes
 
         public async Task<string> ReleaseTransferAsync(string transferId)
         {
-            var payload = new
-            {
-                on_hold = false
-            };
+            var payload = new { on_hold = false };
 
             var request = new HttpRequestMessage(
                 HttpMethod.Patch,
@@ -274,7 +282,7 @@ namespace ahello_backend.Services.Classes
             var response = await _http.SendAsync(request);
             var json = await response.Content.ReadAsStringAsync();
 
-            response.EnsureSuccessStatusCode();
+            await EnsureSuccessAsync(response);
 
             return json;
         }
@@ -285,10 +293,7 @@ namespace ahello_backend.Services.Classes
         {
             var paise = (long)(amount * 100);
 
-            var payload = new
-            {
-                amount = paise
-            };
+            var payload = new { amount = paise };
 
             var response = await _http.PostAsJsonAsync(
                 $"v1/transfers/{transferId}/reversals",
@@ -296,7 +301,7 @@ namespace ahello_backend.Services.Classes
 
             var json = await response.Content.ReadAsStringAsync();
 
-            response.EnsureSuccessStatusCode();
+            await EnsureSuccessAsync(response);
 
             return json;
         }
@@ -307,10 +312,7 @@ namespace ahello_backend.Services.Classes
         {
             var paise = (long)(amount * 100);
 
-            var payload = new
-            {
-                amount = paise
-            };
+            var payload = new { amount = paise };
 
             var response = await _http.PostAsJsonAsync(
                 $"v1/payments/{paymentId}/refund",
@@ -318,7 +320,7 @@ namespace ahello_backend.Services.Classes
 
             var json = await response.Content.ReadAsStringAsync();
 
-            response.EnsureSuccessStatusCode();
+            await EnsureSuccessAsync(response);
 
             return json;
         }
