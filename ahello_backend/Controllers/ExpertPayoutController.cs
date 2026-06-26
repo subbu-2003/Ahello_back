@@ -230,7 +230,7 @@ namespace ahello_backend.Controllers
             }
         }
 
-        [HttpPatch("update-product")]
+        [HttpPut("update-product")]
         public async Task<IActionResult> UpdateProduct([FromBody] UpdateProductDto dto)
         {
             if (dto.UserId <= 0)

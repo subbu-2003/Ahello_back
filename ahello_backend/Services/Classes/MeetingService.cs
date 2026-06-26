@@ -9,10 +9,20 @@ namespace ahello_backend.Services.Classes
     public class MeetingService : IMeetingService
     {
         private readonly IMeetingRepository _repo;
+        private readonly IEscrowPaymentRepository _escrowRepo;
+        private readonly IEscrowPaymentLogRepository _logRepo;
+        private readonly IRazorpayService _razorpayService;
 
-        public MeetingService(IMeetingRepository repo)
+        public MeetingService(
+      IMeetingRepository repo,
+      IEscrowPaymentRepository escrowRepo,
+      IEscrowPaymentLogRepository logRepo,
+      IRazorpayService razorpayService)
         {
             _repo = repo;
+            _escrowRepo = escrowRepo;
+            _logRepo = logRepo;
+            _razorpayService = razorpayService;
         }
 
         public async Task<IEnumerable<Meeting>> GetAllAsync()
@@ -35,7 +45,50 @@ namespace ahello_backend.Services.Classes
             => await _repo.CreateAsync(model);
 
         public async Task<bool> UpdateAsync(MeetingPut model)
-            => await _repo.UpdateAsync(model);
+        {
+            var result = await _repo.UpdateAsync(model);
+
+            if (result && !string.IsNullOrEmpty(model.Status) &&
+                model.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase))
+            {
+                _ = Task.Run(async () =>
+                    await OnMeetingCompletedAsync(model.BookingId));
+            }
+
+            return result;
+        }
+
+
+        private async Task OnMeetingCompletedAsync(int bookingId)
+        {
+            var escrow = await _escrowRepo.GetByBookingIdAsync(bookingId);
+            if (escrow == null || escrow.Status != "HELD") return;
+
+            try
+            {
+                var releaseJson = await _razorpayService.ReleaseTransferAsync(
+                    escrow.RazorpayTransferId!);
+
+                await _escrowRepo.UpdateReleaseAsync(escrow.EscrowPaymentId, releaseJson);
+
+                await _logRepo.InsertAsync(
+                    escrow.EscrowPaymentId,
+                    bookingId,
+                    "RELEASE_TRANSFER",
+                    "SUCCESS",
+                    responseJson: releaseJson);
+            }
+            catch (Exception ex)
+            {
+                await _logRepo.InsertAsync(
+                    escrow.EscrowPaymentId,
+                    bookingId,
+                    "RELEASE_TRANSFER",
+                    "ERROR",
+                    errorMessage: ex.Message);
+                // Do not rethrow — meeting completion must not fail
+            }
+        }
 
         public async Task<bool> DeleteAsync(int meetingId)
             => await _repo.DeleteAsync(meetingId);
