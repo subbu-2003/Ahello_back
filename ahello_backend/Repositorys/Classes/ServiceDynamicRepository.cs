@@ -561,24 +561,24 @@ namespace ahello_backend.Repositorys.Classes
 
                     await connection.ExecuteAsync(
                         @"DELETE FROM servicefieldvalues
-                            WHERE ServiceId = @ServiceId
+                            WHERE UserId = @UserId
                               AND ServiceFieldId IN @FieldIds",
-                        new { ServiceId = serviceId, FieldIds = fieldIdsInRequest },
+                        new { UserId = model.UserId, FieldIds = fieldIdsInRequest },
                         tx);
 
                     if (dropdownFieldIdsInRequest.Any())
                     {
                         await connection.ExecuteAsync(
                             @"DELETE FROM servicedropdownoptions
-                                    WHERE ServiceId = @ServiceId
+                                    WHERE UserId = @UserId
                                       AND ServiceFieldId IN @FieldIds",
-                            new { ServiceId = serviceId, FieldIds = dropdownFieldIdsInRequest },
+                            new { UserId = model.UserId, FieldIds = dropdownFieldIdsInRequest },
                             tx);
                     }
                     var fieldSql = @"
                     INSERT INTO servicefieldvalues
                     (
-                        ServiceId,
+                        UserId,
                         FieldCode,
                         ServiceFieldId,
                         FieldValue,
@@ -587,7 +587,7 @@ namespace ahello_backend.Repositorys.Classes
                         CreatedAt
                     )
                     SELECT
-                        @ServiceId,
+                        @UserId,
                         sf.FieldCode,
                         sf.ServiceFieldId,
                         @FieldValue,
@@ -601,7 +601,7 @@ namespace ahello_backend.Repositorys.Classes
                     INSERT INTO servicedropdownoptions
                     (
                         ServiceFieldId,
-                        ServiceId,
+                        UserId,
                         OptionValue,
                         OptionLabel,
                         IsActive,
@@ -611,7 +611,7 @@ namespace ahello_backend.Repositorys.Classes
                     VALUES
                     (
                         @ServiceFieldId,
-                        @ServiceId,
+                        @UserId,
                         @OptionValue,
                         @OptionLabel,
                         @IsActive,
@@ -623,7 +623,7 @@ namespace ahello_backend.Repositorys.Classes
                     {
                         var insertedFieldRows = await connection.ExecuteAsync(fieldSql, new
                         {
-                            ServiceId = serviceId,
+                            UserId = model.UserId,
                             ServiceFieldId = field.ServiceFieldId,
                             FieldValue = field.FieldValue,
                             model.ModifiedBy
@@ -641,7 +641,7 @@ namespace ahello_backend.Repositorys.Classes
                                 await connection.ExecuteAsync(insertDropdownSql, new
                                 {
                                     ServiceFieldId = field.ServiceFieldId,
-                                    ServiceId = serviceId,
+                                    UserId = model.UserId,
                                     option.OptionValue,
                                     option.OptionLabel,
                                     option.IsActive,
