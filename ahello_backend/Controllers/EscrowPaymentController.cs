@@ -250,5 +250,100 @@ namespace ahello_backend.Controllers
                 status = "PAYMENT_VERIFIED"
             });
         }
+        // POST /api/EscrowPayment/release
+        [HttpPost("release")]
+        public async Task<IActionResult> Release([FromBody] ReleaseDto dto)
+        {
+            if (dto.BookingId <= 0)
+                return Error("Valid BookingId is required");
+
+            var escrow = await _escrowRepo.GetByBookingIdAsync(dto.BookingId);
+            if (escrow == null)
+                return Error("Escrow payment record not found", 404);
+
+            if (escrow.Status == "RELEASED")
+                return Success("Transfer already released", new { status = "RELEASED" });
+
+            if (escrow.Status != "HELD")
+                return Error("Payment not in HELD status", 409, new { currentStatus = escrow.Status });
+
+            try
+            {
+                var releaseJson = await _razorpayService.ReleaseTransferAsync(escrow.RazorpayTransferId);
+
+                await _escrowRepo.UpdateReleaseAsync(escrow.EscrowPaymentId, releaseJson);
+                await _logRepo.InsertAsync(escrow.EscrowPaymentId, dto.BookingId,
+                    "RELEASE_TRANSFER", "SUCCESS", responseJson: releaseJson);
+
+                return Success("Transfer released successfully", new { status = "RELEASED" });
+            }
+            catch (Exception ex)
+            {
+                await _logRepo.InsertAsync(escrow.EscrowPaymentId, dto.BookingId,
+                    "RELEASE_TRANSFER", "ERROR", errorMessage: ex.Message);
+                return Error("Failed to release transfer", 500, new { razorpayError = ex.Message });
+            }
+        }
+
+        // POST /api/EscrowPayment/refund
+        [HttpPost("refund")]
+        public async Task<IActionResult> Refund([FromBody] RefundDto dto)
+        {
+            if (dto.BookingId <= 0)
+                return Error("Valid BookingId is required");
+
+            var escrow = await _escrowRepo.GetByBookingIdAsync(dto.BookingId);
+            if (escrow == null)
+                return Error("Escrow payment record not found", 404);
+
+            if (escrow.Status == "REFUNDED")
+                return Success("Already refunded", new { status = "REFUNDED" });
+
+            // Reverse transfer first if it exists
+            if (!string.IsNullOrEmpty(escrow.RazorpayTransferId))
+            {
+                try
+                {
+                    var reversalJson = await _razorpayService.ReverseTransferAsync(
+                        escrow.RazorpayTransferId, escrow.ExpertAmount);
+                    await _logRepo.InsertAsync(escrow.EscrowPaymentId, dto.BookingId,
+                        "REVERSE_TRANSFER", "SUCCESS", responseJson: reversalJson);
+                }
+                catch (Exception ex)
+                {
+                    await _logRepo.InsertAsync(escrow.EscrowPaymentId, dto.BookingId,
+                        "REVERSE_TRANSFER", "ERROR", errorMessage: ex.Message);
+                    return Error("Failed to reverse transfer before refund", 500,
+                        new { razorpayError = ex.Message });
+                }
+            }
+
+            try
+            {
+                var refundJson = await _razorpayService.RefundPaymentAsync(
+                    escrow.RazorpayPaymentId, escrow.TotalAmount);
+
+                await _escrowRepo.UpdateRefundAsync(escrow.EscrowPaymentId, refundJson);
+                await _logRepo.InsertAsync(escrow.EscrowPaymentId, dto.BookingId,
+                    "REFUND_PAYMENT", "SUCCESS", responseJson: refundJson);
+
+                return Success("Refund processed successfully", new { status = "REFUNDED" });
+            }
+            catch (Exception ex)
+            {
+                await _logRepo.InsertAsync(escrow.EscrowPaymentId, dto.BookingId,
+                    "REFUND_PAYMENT", "ERROR", errorMessage: ex.Message);
+                return Error("Failed to process refund", 500, new { razorpayError = ex.Message });
+            }
+        }
+
+        // GET /api/EscrowPayment/booking/{bookingId}
+        [HttpGet("booking/{bookingId}")]
+        public async Task<IActionResult> GetByBooking(int bookingId)
+        {
+            var escrow = await _escrowRepo.GetByBookingIdAsync(bookingId);
+            if (escrow == null) return Error("Not found", 404);
+            return Success("Escrow payment fetched", escrow);
+        }
     }
 }
