@@ -426,7 +426,7 @@ namespace ahello_backend.Repositorys.Classes
                     var fieldSql = @"
                         INSERT INTO servicefieldvalues
                         (
-                            ServiceId,
+                            UserId,
                             FieldCode,
                             ServiceFieldId,
                             FieldValue,
@@ -435,7 +435,7 @@ namespace ahello_backend.Repositorys.Classes
                             CreatedAt
                         )
                         SELECT
-                            @ServiceId,
+                            @UserId,
                             sf.FieldCode,
                             @ServiceFieldId,
                             @FieldValue,
@@ -451,7 +451,7 @@ namespace ahello_backend.Repositorys.Classes
                             fieldSql,
                             new
                             {
-                                ServiceId = serviceId,
+                                UserId = model.UserId,
                                 ServiceFieldId = field.ServiceFieldId,
                                 FieldValue = field.FieldValue,
                                 model.CreatedBy
