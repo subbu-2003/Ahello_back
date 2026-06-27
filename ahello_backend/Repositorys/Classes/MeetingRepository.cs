@@ -455,8 +455,8 @@ namespace ahello_backend.Repositorys.Classes
         INNER JOIN users cu    ON b.ClientId  = cu.UserId
         WHERE m.ReminderSent = 0
           AND m.Status = 'Pending'
-          AND m.StartTime BETWEEN DATE_ADD(NOW(), INTERVAL 1 MINUTE)
-                              AND DATE_ADD(NOW(), INTERVAL 15 MINUTE)";
+          AND m.StartTime BETWEEN DATE_ADD(CONVERT_TZ(NOW(), '+00:00', '+05:30'), INTERVAL 1 MINUTE)
+                          AND DATE_ADD(CONVERT_TZ(NOW(), '+00:00', '+05:30'), INTERVAL 15 MINUTE)";
 
             return await connection.QueryAsync<Meeting>(sql);
         }
