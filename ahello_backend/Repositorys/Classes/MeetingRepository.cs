@@ -460,5 +460,26 @@ namespace ahello_backend.Repositorys.Classes
 
             return await connection.QueryAsync<Meeting>(sql);
         }
+        public async Task<bool> UpdateStatusAsync(int meetingId, string status, string? modifiedBy)
+        {
+            using var connection = _db.GetConnection();
+
+            var sql = @"
+    UPDATE meetings
+    SET
+        Status = @Status,
+        ModifiedAt = NOW(),
+        ModifiedBy = @ModifiedBy
+    WHERE MeetingId = @MeetingId;";
+
+            var rows = await connection.ExecuteAsync(sql, new
+            {
+                MeetingId = meetingId,
+                Status = status,
+                ModifiedBy = modifiedBy
+            });
+
+            return rows > 0;
+        }
     }
 }
