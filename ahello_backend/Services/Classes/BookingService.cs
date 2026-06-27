@@ -86,9 +86,7 @@ namespace ahello_backend.Services.Classes
                 search, status,
                 scheduleDate);
         }
-        public async Task<BookingModalGet>
-    GetBookingModal(
-        int serviceId
+        public async Task<BookingModalGet>GetBookingModal(int serviceId
     )
         {
             return await _repository
