@@ -56,6 +56,7 @@ namespace ahello_backend.Controllers
 
             return Ok(new
             {
+                meetingId = meeting.MeetingId,
                 roomCode,
                 role = isHost ? "host" : "client",
                 name = displayName
@@ -366,6 +367,40 @@ namespace ahello_backend.Controllers
                 {
                     Success = false,
                     Message = errorMessage
+                });
+            }
+        }
+        [HttpPut("status")]
+        public async Task<IActionResult> UpdateStatus(MeetingStatusPut request)
+        {
+            try
+            {
+                var result = await _service.UpdateStatusAsync(
+                    request.MeetingId,
+                    request.Status,
+                    request.ModifiedBy);
+
+                if (!result)
+                {
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = "Meeting not found."
+                    });
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Meeting status updated successfully."
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = ex.InnerException?.Message ?? ex.Message
                 });
             }
         }

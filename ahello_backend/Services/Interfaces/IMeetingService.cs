@@ -20,5 +20,6 @@ namespace ahello_backend.Services.Interfaces
 
         Task<bool> DeleteAsync(int meetingId);
         Task<bool> SendMeetingReminderAsync();
+        Task<bool> UpdateStatusAsync(int meetingId, string status, string? modifiedBy);
     }
 }
