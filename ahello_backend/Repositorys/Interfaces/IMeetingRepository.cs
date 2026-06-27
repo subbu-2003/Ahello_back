@@ -22,5 +22,6 @@ namespace ahello_backend.Repositorys.Interfaces
 
         Task UpdateReminderSentAsync(int meetingId);
         Task<IEnumerable<Meeting>> GetPendingRemindersAsync();
+        Task<bool> UpdateStatusAsync(int meetingId, string status, string? modifiedBy);
     }
 }
