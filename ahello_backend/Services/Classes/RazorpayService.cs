@@ -43,10 +43,35 @@ namespace ahello_backend.Services.Classes
             }
         }
 
-        public async Task<(string accountId, string responseJson)> CreateLinkedAccountAsync(
-            CreateLinkedAccountDto dto,
-            dynamic user)
+
+        private static (string category, string subcategory) GetRazorpayCategory(string categoryName)
         {
+            return categoryName?.Trim().ToLower() switch
+            {
+                "doctors" => ("healthcare", "clinic"),
+
+                "trainers" => ("education", "coaching"),
+                "professor" => ("education", "coaching"),
+                "coach" => ("education", "coaching"),
+
+                "consultation" => ("services", "consulting"),
+                "business" => ("services", "consulting"),
+                "entrepreneur" => ("services", "consulting"),
+                "entrepreneurs" => ("services", "consulting"),
+                "influencer" => ("services", "consulting"),
+
+                _ => ("services", "consulting")
+            };
+        }
+
+        public async Task<(string accountId, string responseJson)> CreateLinkedAccountAsync(
+    CreateLinkedAccountDto dto,
+    dynamic user)
+        {
+            string ahlloCategory = Convert.ToString(user.CategoryName) ?? "";
+
+            var razorpayCategory = GetRazorpayCategory(ahlloCategory);
+
             var payload = new
             {
                 email = user.Email,
@@ -54,26 +79,41 @@ namespace ahello_backend.Services.Classes
                 type = "route",
                 reference_id = $"expert_{user.UserId}",
                 legal_business_name = user.FullName,
-                customer_facing_business_name = dto.CustomerFacingBusinessName,
-                business_type = dto.BusinessType.ToLower(),
+
+                customer_facing_business_name =
+                    string.IsNullOrWhiteSpace(dto.CustomerFacingBusinessName)
+                        ? user.FullName
+                        : dto.CustomerFacingBusinessName,
+
+                business_type =
+                    string.IsNullOrWhiteSpace(dto.BusinessType)
+                        ? "individual"
+                        : dto.BusinessType.Trim().ToLower(),
+
                 contact_name = user.FullName,
 
                 profile = new
                 {
-                    category = "services",
-                    subcategory = "consulting",
+                    category = razorpayCategory.category,
+                    subcategory = razorpayCategory.subcategory,
                     addresses = new
                     {
                         registered = new
                         {
                             street1 = user.Address ?? "Madurai Main Road",
-                            street2 = user.City ?? "Madurai",
+                            street2 = "",
                             city = user.City ?? "Madurai",
                             state = user.State ?? "TAMIL NADU",
                             postal_code = user.Pincode ?? "625001",
                             country = "IN"
                         }
                     }
+                },
+
+                notes = new
+                {
+                    expert_id = Convert.ToString(user.UserId),
+                    ahllo_category = ahlloCategory
                 }
             };
 
