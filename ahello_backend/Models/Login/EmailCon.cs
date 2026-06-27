@@ -10,7 +10,7 @@
 
         public string Password { get; set; } = "fuou adty dpmy uato";
 
-        public string DisplayName { get; set; } = "Ahello";
+        public string DisplayName { get; set; } = "Ahllo";
 
         public string FromEmail { get; set; } = "otpe2o@gmail.com";
 
