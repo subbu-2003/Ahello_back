@@ -96,57 +96,57 @@ namespace ahello_backend.Repositorys.Classes
             using var connection = _db.GetConnection();
 
             var sql = @"
-    SELECT
-        m.MeetingId,
+                SELECT
+                    m.MeetingId,
 
-        b.UserId,
-        u.FullName AS UserName,
-        u.Email,
+                    b.UserId,
+                    u.FullName AS UserName,
+                    u.Email,
 
-        b.ClientId,
-        cu.FullName AS ClientName,
-        cu.Email AS ClientEmail,
+                    b.ClientId,
+                    cu.FullName AS ClientName,
+                    cu.Email AS ClientEmail,
 
-        m.BookingId,
+                    m.BookingId,
 
-        s.ServiceId,
-        s.ServiceTitle,
-        s.ServiceCategoryId,
-        sc.ServiceCategoryName,
+                    s.ServiceId,
+                    s.ServiceTitle,
+                    s.ServiceCategoryId,
+                    sc.ServiceCategoryName,
 
-        m.StartTime,
-        m.EndTime,
-        m.MeetingLink,
-        m.RoomId,
-        m.HostRoomCode,
-        m.ClientRoomCode,
-        m.Status,
-        m.ReminderSent,
-        m.LastReminderSent,
+                    m.StartTime,
+                    m.EndTime,
+                    m.MeetingLink,
+                    m.RoomId,
+                    m.HostRoomCode,
+                    m.ClientRoomCode,
+                    m.Status,
+                    m.ReminderSent,
+                    m.LastReminderSent,
 
-        m.CreatedAt,
-        m.CreatedBy,
-        m.ModifiedAt,
-        m.ModifiedBy
+                    m.CreatedAt,
+                    m.CreatedBy,
+                    m.ModifiedAt,
+                    m.ModifiedBy
 
-    FROM meetings m
+                FROM meetings m
 
-    INNER JOIN bookings b
-        ON m.BookingId = b.BookingId
+                INNER JOIN bookings b
+                    ON m.BookingId = b.BookingId
 
-    INNER JOIN users u
-        ON b.UserId = u.UserId
+                INNER JOIN users u
+                    ON b.UserId = u.UserId
 
-    INNER JOIN users cu
-        ON b.ClientId = cu.UserId
+                INNER JOIN users cu
+                    ON b.ClientId = cu.UserId
 
-    INNER JOIN services s
-        ON b.ServiceId = s.ServiceId
+                INNER JOIN services s
+                    ON b.ServiceId = s.ServiceId
 
-    LEFT JOIN servicecategorydynamic sc
-        ON s.ServiceCategoryId = sc.ServiceCategoryId
+                LEFT JOIN servicecategorydynamic sc
+                    ON s.ServiceCategoryId = sc.ServiceCategoryId
 
-    WHERE m.BookingId = @BookingId";
+                WHERE m.BookingId = @BookingId";
 
             return await connection.QueryAsync<Meeting>(
                 sql,
@@ -154,30 +154,30 @@ namespace ahello_backend.Repositorys.Classes
         }
 
         public async Task<PagedResult<Meeting>> GetByUserIdAsync(
-      int userId,
-      int pageNumber,
-      int pageSize,
-      string? status,
-      DateTime? startDate)
+          int userId,
+          int pageNumber,
+          int pageSize,
+          string? status,
+          DateTime? startDate)
         {
             using var connection = _db.GetConnection();
 
             var countSql = @"
-        SELECT COUNT(*)
-        FROM meetings m
-        INNER JOIN bookings b ON m.BookingId = b.BookingId
-        WHERE b.UserId = @UserId
-        AND
-        (
-            @Status IS NULL
-            OR @Status = ''
-            OR m.Status = @Status
-        )
-        AND
-        (
-            @StartDate IS NULL
-            OR DATE(m.StartTime) = DATE(@StartDate)
-        );";
+            SELECT COUNT(*)
+            FROM meetings m
+            INNER JOIN bookings b ON m.BookingId = b.BookingId
+            WHERE (b.UserId = @UserId OR b.ClientId = @UserId)
+            AND
+            (
+                @Status IS NULL
+                OR @Status = ''
+                OR m.Status = @Status
+            )
+            AND
+            (
+                @StartDate IS NULL
+                OR DATE(m.StartTime) = DATE(@StartDate)
+            );";
 
             var totalCount = await connection.ExecuteScalarAsync<int>(
                 countSql,
@@ -239,7 +239,11 @@ namespace ahello_backend.Repositorys.Classes
         LEFT JOIN servicecategorydynamic sc
             ON s.ServiceCategoryId = sc.ServiceCategoryId
 
-        WHERE b.UserId = @UserId
+        WHERE
+        (
+            b.UserId = @UserId
+            OR b.ClientId = @UserId
+        )
         AND
         (
             @Status IS NULL
