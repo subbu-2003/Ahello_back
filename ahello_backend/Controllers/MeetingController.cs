@@ -404,5 +404,38 @@ namespace ahello_backend.Controllers
                 });
             }
         }
+        [HttpGet("sdk-token/{roomName}")]
+        public async Task<IActionResult> GetSdkToken(string roomName, [FromQuery] int userId)
+        {
+            var meeting = await _service.GetByRoomNameAsync(roomName);
+
+            if (meeting == null)
+                return NotFound(new { message = "Meeting not found" });
+
+            if (meeting.UserId != userId && meeting.ClientId != userId)
+                return Unauthorized(new { message = "Unauthorized" });
+
+            bool isHost = meeting.UserId == userId;
+
+            string role = isHost ? "host" : "client";
+
+            string name = isHost
+                ? meeting.UserName
+                : meeting.ClientName;
+
+            var token = _hundredMsService.GenerateAuthToken(
+                meeting.RoomId,
+                role,
+                userId.ToString()
+            );
+
+            return Ok(new
+            {
+                authToken = token,
+                userName = name,
+                role,
+                roomId = meeting.RoomId
+            });
+        }
     }
 }
