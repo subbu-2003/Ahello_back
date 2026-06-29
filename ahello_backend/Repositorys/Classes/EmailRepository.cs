@@ -118,288 +118,88 @@ namespace ahello_backend.Repositorys.Classes
                         }
 
         public async Task SendBookingConfirmationEmailAsync(
-     string toEmail,
-     string clientName,
-     string serviceName,
-     string date,
-     string time)
+    string toEmail,
+    string clientName,
+    string serviceName,
+    string date,
+    string time)
         {
             await SendEmailAsync(
                 toEmail,
-                "🎉 Booking Confirmed - " + serviceName,
-                $@"
-
-<!DOCTYPE html>
-<html>
-
-<body style='margin:0;padding:0;background:#F8FAFC;font-family:Segoe UI,Arial,sans-serif;'>
-
-<table width='100%' cellpadding='0' cellspacing='0' style='background:#F8FAFC;padding:30px;'>
-
-<tr>
-<td align='center'>
-
-<table width='700' cellpadding='0' cellspacing='0'
-style='background:#ffffff;border-radius:16px;overflow:hidden;
-box-shadow:0 5px 20px rgba(0,0,0,.08);'>
-
-<!-- HEADER -->
-
-<tr>
-<td style='background:#005B71;padding:40px;color:white;'>
-
-<h1 style='margin:0;font-size:42px;font-weight:bold;'>
-Ahllo
-</h1>
-
-<p style='margin:5px 0 30px;color:#dbeafe;'>
-CONNECT • CONSULT • GROW
-</p>
-
-<h2 style='margin:0;font-size:42px;font-weight:700;'>
-Booking
-<span style='color:#2DD4BF;'>
-Confirmed!
-</span>
-</h2>
-
-<p style='margin-top:20px;
-font-size:20px;
-color:#ffffff;'>
-Your appointment is all set.<br/>
-We look forward to meeting with you.
-</p>
-
-</td>
-</tr>
-
-<!-- COLOR BAR -->
-
-<tr>
-<td height='8'
-style='background:linear-gradient(90deg,#2DD4BF,#5E5CE6);'>
-</td>
-</tr>
-
-<!-- CONTENT -->
-
-<tr>
-
-<td style='padding:40px;'>
-
-<h2 style='margin:0;color:#005B71;font-size:34px;'>
-
-Hi {clientName},
-
-</h2>
-
-<p style='margin-top:20px;
-font-size:18px;
-color:#555;
-line-height:30px;'>
-
-Your booking has been confirmed!
-<br>
-We're excited to meet you.
-
-</p>
-
-<!-- BOOKING DETAILS -->
-
-<table width='100%'
-style='margin-top:35px;
-border:1px solid #dbeafe;
-border-radius:12px;
-overflow:hidden;
-border-collapse:collapse;'>
-
-<tr>
-
-<td colspan='2'
-align='center'
-style='background:#F8FAFC;
-padding:25px;'>
-
-<h2 style='margin:0;
-color:#005B71;'>
-
-Booking Details
-
-</h2>
-
-</td>
-
-</tr>
-
-<tr>
-
-<td width='180'
-style='padding:18px;
-border-top:1px solid #eee;
-font-weight:bold;
-color:#005B71;'>
-
-👜 Service
-
-</td>
-
-<td style='padding:18px;
-border-top:1px solid #eee;
-font-size:18px;'>
-
-{serviceName}
-
-</td>
-
-</tr>
-
-<tr>
-
-<td style='padding:18px;
-border-top:1px solid #eee;
-font-weight:bold;
-color:#005B71;'>
-
-📅 Date
-
-</td>
-
-<td style='padding:18px;
-border-top:1px solid #eee;
-font-size:18px;'>
-
-{date}
-
-</td>
-
-</tr>
-
-<tr>
-
-<td style='padding:18px;
-border-top:1px solid #eee;
-font-weight:bold;
-color:#005B71;'>
-
-🕒 Time
-
-</td>
-
-<td style='padding:18px;
-border-top:1px solid #eee;
-font-size:18px;'>
-
-{time}
-
-</td>
-
-</tr>
-
-</table>
-
-<!-- THANK YOU -->
-
-<table width='100%'
-style='margin-top:35px;
-background:#F5F3FF;
-border:1px solid #DDD6FE;
-border-radius:12px;'>
-
-<tr>
-
-<td style='padding:25px;'>
-
-<h3 style='margin:0;color:#5E5CE6;'>
-
-Thank You!
-
-</h3>
-
-<p style='margin-top:15px;
-font-size:17px;
-line-height:28px;
-color:#555;'>
-
-✔ You'll receive a reminder before your appointment.
-
-<br><br>
-
-If you have any questions,
-simply reply to this email.
-
-</p>
-
-</td>
-
-</tr>
-
-</table>
-
-<!-- FOOTER -->
-
-<div style='margin-top:40px;
-text-align:center;'>
-
-<p style='font-size:24px;
-color:#005B71;
-font-weight:bold;'>
-
-We appreciate your trust in us.
-
-</p>
-
-<p style='font-size:20px;
-color:#2DD4BF;
-font-weight:bold;'>
-
-See you soon!
-
-</p>
-
-</div>
-
-<hr style='margin:35px 0;border:none;border-top:1px solid #e5e7eb;'>
-
-<table width='100%'>
-
-<tr>
-
-<td align='center'
-style='color:#666;font-size:15px;'>
-
-📧 support@ahllo.com
-
-&nbsp;&nbsp;&nbsp;&nbsp;
-
-📞 +91 98765 43210
-
-&nbsp;&nbsp;&nbsp;&nbsp;
-
-🌐 www.ahllo.com
-
-</td>
-
-</tr>
-
-</table>
-
-</td>
-
-</tr>
-
-</table>
-
-</td>
-</tr>
-
-</table>
-
-</body>
-</html>
-
-");
+                "Booking Confirmed - " + serviceName,
+            $@"
+                <!DOCTYPE html>
+                <html>
+                <head>
+                <meta charset='UTF-8'>
+                <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                </head>
+                <body style='margin:0;padding:0;background:#f5f7fa;font-family:Segoe UI,Arial;'>
+                <table width='100%' cellpadding='0' cellspacing='0'>
+                <tr><td align='center'>
+                <table width='600' cellpadding='0' cellspacing='0' style='background:#ffffff;'>
+
+                <!-- Header Banner -->
+                <tr>
+                <td style='background:#005B71;padding:24px 40px;'>
+
+                  <div>
+                    <span style='font-size:24px;font-weight:bold;color:#ffffff;letter-spacing:1px;'>Ahllo</span>
+                    <span style='font-size:24px;color:#ffffff;margin:0 8px;'>·</span>
+                    <span style='font-size:24px;font-weight:bold;color:#4DD9C0;'>Booking Confirmed</span>
+                  </div>
+
+                </td>
+                </tr>
+
+                <!-- Body -->
+                <tr>
+                <td style='padding:24px 40px;background:#ffffff;'>
+
+                  <p style='font-size:15px;color:#333;margin:0 0 8px 0;'>Hi <strong>{clientName}</strong>,</p>
+                  <p style='font-size:14px;color:#555;line-height:22px;margin:0 0 18px 0;'>
+                    Your appointment has been successfully scheduled. Here are the details:
+                  </p>
+
+                  <!-- Details Card -->
+                  <table width='100%' cellpadding='0' cellspacing='0'
+                    style='border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;font-size:14px;color:#333;'>
+                    <tr style='background:#f9f9f9;'>
+                      <td style='padding:11px 16px;font-weight:bold;color:#005B71;width:100px;border-bottom:1px solid #eee;'>Service</td>
+                      <td style='padding:11px 16px;border-bottom:1px solid #eee;'>{serviceName}</td>
+                    </tr>
+                    <tr>
+                      <td style='padding:11px 16px;font-weight:bold;color:#005B71;border-bottom:1px solid #eee;'>Date</td>
+                      <td style='padding:11px 16px;border-bottom:1px solid #eee;'>{date}</td>
+                    </tr>
+                    <tr style='background:#f9f9f9;'>
+                      <td style='padding:11px 16px;font-weight:bold;color:#005B71;'>Time</td>
+                      <td style='padding:11px 16px;'>{time}</td>
+                    </tr>
+                  </table>
+
+                  <p style='margin-top:20px;font-size:13px;color:#555;line-height:21px;'>
+                    If you need to reschedule or have any questions, feel free to contact us.
+                  </p>
+                  <p style='margin-top:12px;font-size:14px;color:#005B71;font-weight:600;'>Thank you!</p>
+
+                </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                <td style='padding:14px 40px;background:#f5f7fa;border-top:1px solid #eee;font-size:12px;color:#888;'>
+                  <a href='https://www.ahllo.com' style='color:#888;text-decoration:none;'>www.ahllo.com</a>
+                </td>
+                </tr>
+
+                </table>
+                </td></tr>
+                </table>
+                </body>
+                </html>
+                ");
         }
-
         public async Task SendMeetingReminderEmailAsync(string toEmail, string clientName, DateTime startTime, string meetingLink, int minutesLeft)
         {
             await SendEmailAsync(toEmail, "Meeting Reminder - Ahllo", $@"
