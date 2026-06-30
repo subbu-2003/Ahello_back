@@ -59,108 +59,147 @@ namespace ahello_backend.Controllers
             return Ok(result);
         }
         [HttpPost]
-        public async Task<IActionResult> Create(
-     [FromForm] UserDynamicPost model)
+        [HttpPost]
+        public async Task<IActionResult> Create([FromForm] UserDynamicPost model)
         {
-            if (model.ProfileFile != null &&
-                model.ProfileFile.Length > 0)
+            try
             {
-                var rootPath = _env.WebRootPath
-                    ?? Path.Combine(
-                        Directory.GetCurrentDirectory(),
-                        "wwwroot");
+                if (model.ProfileFile != null &&
+                    model.ProfileFile.Length > 0)
+                {
+                    var rootPath = _env.WebRootPath
+                        ?? Path.Combine(
+                            Directory.GetCurrentDirectory(),
+                            "wwwroot");
 
-                var folderPath =
-                    Path.Combine(rootPath, "user-profiles");
+                    var folderPath = Path.Combine(rootPath, "user-profiles");
 
-                if (!Directory.Exists(folderPath))
-                    Directory.CreateDirectory(folderPath);
+                    if (!Directory.Exists(folderPath))
+                        Directory.CreateDirectory(folderPath);
 
-                var fileName =
-                    $"{Guid.NewGuid()}{Path.GetExtension(model.ProfileFile.FileName)}";
+                    var fileName =
+                        $"{Guid.NewGuid()}{Path.GetExtension(model.ProfileFile.FileName)}";
 
-                var filePath =
-                    Path.Combine(folderPath, fileName);
+                    var filePath = Path.Combine(folderPath, fileName);
 
-                await using var stream =
-                    new FileStream(filePath, FileMode.Create);
+                    await using var stream =
+                        new FileStream(filePath, FileMode.Create);
 
-                await model.ProfileFile.CopyToAsync(stream);
+                    await model.ProfileFile.CopyToAsync(stream);
 
-                model.ProfileUrl = $"/user-profiles/{fileName}";
+                    model.ProfileUrl = $"/user-profiles/{fileName}";
+                }
+
+                var id = await _service.CreateAsync(model);
+
+                return Ok(new
+                {
+                    Success = true,
+                    UserId = id,
+                    ProfileUrl = model.ProfileUrl
+                });
             }
-
-            var id = await _service.CreateAsync(model);
-
-            return Ok(new
+            catch (Exception ex)
             {
-                Success = true,
-                UserId = id,
-                ProfileUrl = model.ProfileUrl
-            });
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
         }
 
         [HttpPut("{userId}")]
         public async Task<IActionResult> Update(
-        int userId,
-        [FromForm] UserDynamicPut model)
+    int userId,
+    [FromForm] UserDynamicPut model)
         {
-            if (model.ProfileFile != null &&
-                model.ProfileFile.Length > 0)
+            try
             {
-                var rootPath = _env.WebRootPath
-                    ?? Path.Combine(
-                        Directory.GetCurrentDirectory(),
-                        "wwwroot");
+                if (model.ProfileFile != null &&
+                    model.ProfileFile.Length > 0)
+                {
+                    var rootPath = _env.WebRootPath
+                        ?? Path.Combine(
+                            Directory.GetCurrentDirectory(),
+                            "wwwroot");
 
-                var folderPath =
-                    Path.Combine(rootPath, "user-profiles");
+                    var folderPath = Path.Combine(rootPath, "user-profiles");
 
-                if (!Directory.Exists(folderPath))
-                    Directory.CreateDirectory(folderPath);
+                    if (!Directory.Exists(folderPath))
+                        Directory.CreateDirectory(folderPath);
 
-                var fileName =
-                    $"{Guid.NewGuid()}{Path.GetExtension(model.ProfileFile.FileName)}";
+                    var fileName =
+                        $"{Guid.NewGuid()}{Path.GetExtension(model.ProfileFile.FileName)}";
 
-                var filePath =
-                    Path.Combine(folderPath, fileName);
+                    var filePath = Path.Combine(folderPath, fileName);
 
-                await using var stream =
-                    new FileStream(filePath, FileMode.Create);
+                    await using var stream =
+                        new FileStream(filePath, FileMode.Create);
 
-                await model.ProfileFile.CopyToAsync(stream);
+                    await model.ProfileFile.CopyToAsync(stream);
 
-                model.ProfileUrl = $"/user-profiles/{fileName}";
+                    model.ProfileUrl = $"/user-profiles/{fileName}";
+                }
+
+                var updated = await _service.UpdateAsync(userId, model);
+
+                if (!updated)
+                {
+                    return BadRequest(new
+                    {
+                        Success = false,
+                        Message = "Update failed"
+                    });
+                }
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Updated successfully",
+                    ProfileUrl = model.ProfileUrl
+                });
             }
-
-            var updated = await _service.UpdateAsync(
-                userId,
-                model);
-
-            if (!updated)
-                return BadRequest("Update failed");
-
-            return Ok(new
+            catch (Exception ex)
             {
-                Success = true,
-                Message = "Updated successfully",
-                ProfileUrl = model.ProfileUrl
-            });
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
         }
 
         [HttpDelete("{userId}")]
         public async Task<IActionResult> Delete(int userId)
         {
-            var deleted = await _service.DeleteAsync(userId);
-
-            if (!deleted)
-                return BadRequest("Delete failed");
-
-            return Ok(new
+            try
             {
-                Success = true,
-                Message = "Deleted successfully"
-            });
+                var deleted = await _service.DeleteAsync(userId);
+
+                if (!deleted)
+                {
+                    return BadRequest(new
+                    {
+                        Success = false,
+                        Message = "Delete failed"
+                    });
+                }
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = "Deleted successfully"
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
         }
 
         [HttpGet("profile/{userId}")]
