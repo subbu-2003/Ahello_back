@@ -118,11 +118,11 @@ namespace ahello_backend.Repositorys.Classes
                         }
 
         public async Task SendBookingConfirmationEmailAsync(
-    string toEmail,
-    string clientName,
-    string serviceName,
-    string date,
-    string time)
+        string toEmail,
+        string clientName,
+        string serviceName,
+        string date,
+        string time)
         {
             await SendEmailAsync(
                 toEmail,
@@ -137,18 +137,19 @@ namespace ahello_backend.Repositorys.Classes
                 <body style='margin:0;padding:0;background:#f5f7fa;font-family:Segoe UI,Arial;'>
                 <table width='100%' cellpadding='0' cellspacing='0'>
                 <tr><td align='center'>
-                <table width='600' cellpadding='0' cellspacing='0' style='background:#ffffff;'>
+                <table width=""600"" cellpadding=""0"" cellspacing=""0""
+       style=""background:#ffffff;
+              border-radius:22px;
+              overflow:hidden;"">
 
                 <!-- Header Banner -->
                 <tr>
-                <td style='background:#005B71;padding:24px 40px;'>
-
-                  <div>
-                    <span style='font-size:24px;font-weight:bold;color:#ffffff;letter-spacing:1px;'>Ahllo</span>
-                    <span style='font-size:24px;color:#ffffff;margin:0 8px;'>·</span>
-                    <span style='font-size:24px;font-weight:bold;color:#4DD9C0;'>Booking Confirmed</span>
+                <td style='background:#005B71;padding:18px 20px;'>
+                  <div style='white-space:nowrap;font-size:0;'>
+                    <span style='font-size:20px;font-weight:bold;color:#ffffff;letter-spacing:1px;'>Ahllo</span>
+                    <span style='font-size:20px;color:#ffffff;margin:0 6px;'>-</span>
+                    <span style='font-size:20px;font-weight:bold;color:#4DD9C0;'>Booking Confirmed</span>
                   </div>
-
                 </td>
                 </tr>
 
@@ -161,22 +162,30 @@ namespace ahello_backend.Repositorys.Classes
                     Your appointment has been successfully scheduled. Here are the details:
                   </p>
 
-                  <!-- Details Card -->
-                  <table width='100%' cellpadding='0' cellspacing='0'
-                    style='border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;font-size:14px;color:#333;'>
-                    <tr style='background:#f9f9f9;'>
-                      <td style='padding:11px 16px;font-weight:bold;color:#005B71;width:100px;border-bottom:1px solid #eee;'>Service</td>
-                      <td style='padding:11px 16px;border-bottom:1px solid #eee;'>{serviceName}</td>
-                    </tr>
-                    <tr>
-                      <td style='padding:11px 16px;font-weight:bold;color:#005B71;border-bottom:1px solid #eee;'>Date</td>
-                      <td style='padding:11px 16px;border-bottom:1px solid #eee;'>{date}</td>
-                    </tr>
-                    <tr style='background:#f9f9f9;'>
-                      <td style='padding:11px 16px;font-weight:bold;color:#005B71;'>Time</td>
-                      <td style='padding:11px 16px;'>{time}</td>
-                    </tr>
-                  </table>
+                
+             <!-- Details Card -->
+                <table width='100%' cellpadding='0' cellspacing='0'
+                  style='border-collapse:collapse;border:1px solid #e0e0e0;border-radius:8px;table-layout:fixed;'>
+                  <tr>
+                    <td colspan='2' style='padding:0;border-radius:8px;'>
+                      <table width='100%' cellpadding='0' cellspacing='0'
+                        style='border-collapse:collapse;font-size:14px;color:#333;table-layout:fixed;'>
+                        <tr style='background:#f9f9f9;'>
+                          <td valign='top' style='padding:11px 16px;font-weight:bold;color:#005B71;width:90px;border-bottom:1px solid #eee;border-right:1px solid #eee;'>Service</td>
+                          <td valign='top' style='padding:11px 16px;border-bottom:1px solid #eee;'>{serviceName}</td>
+                        </tr>
+                        <tr>
+                          <td valign='top' style='padding:11px 16px;font-weight:bold;color:#005B71;border-bottom:1px solid #eee;border-right:1px solid #eee;'>Date</td>
+                          <td valign='top' style='padding:11px 16px;border-bottom:1px solid #eee;'>{date}</td>
+                        </tr>
+                        <tr>
+                          <td valign='top' style='padding:11px 16px;font-weight:bold;color:#005B71;border-right:1px solid #eee;background:#f9f9f9;'>Time</td>
+                          <td valign='top' style='padding:11px 16px;background:#f9f9f9;'>{time}</td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
 
                   <p style='margin-top:20px;font-size:13px;color:#555;line-height:21px;'>
                     If you need to reschedule or have any questions, feel free to contact us.
