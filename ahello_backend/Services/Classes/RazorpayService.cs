@@ -21,9 +21,6 @@ namespace ahello_backend.Services.Classes
             _keyId = config["Razorpay:Key"] ?? "";
             _keySecret = config["Razorpay:Secret"] ?? "";
 
-            Console.WriteLine($"Key: {_keyId}");
-            Console.WriteLine($"Secret Empty: {string.IsNullOrWhiteSpace(_keySecret)}");
-
             var credentials = Convert.ToBase64String(
                 Encoding.ASCII.GetBytes($"{_keyId}:{_keySecret}")
             );

@@ -288,8 +288,10 @@ namespace ahello_backend.Repositorys.Classes
                                 {
                                     FormFieldId = field.FormFieldId,
                                     FormId = formId,
-                                    option.OptionValue,
-                                    option.OptionLabel,
+                                    OptionValue = string.IsNullOrWhiteSpace(option.OptionValue)
+                                    ? option.OptionLabel
+                                    : option.OptionValue,
+                                    OptionLabel = option.OptionLabel,
                                     option.IsActive,
                                     CreatedBy = model.CreatedBy.ToString()
                                 },
@@ -435,16 +437,17 @@ namespace ahello_backend.Repositorys.Classes
                                 await connection
                                     .ExecuteAsync(
                                     dropdownSql,
-                                    new
-                                    {
-                                        FormFieldId =
-                                            field.FormFieldId,
-                                        FormId = formId,
-                                        option.OptionValue,
-                                        option.OptionLabel,
-                                        option.IsActive,
-                                        model.ModifiedBy
-                                    },
+                                   new
+                                   {
+                                       FormFieldId = field.FormFieldId,
+                                       FormId = formId,
+                                       OptionValue = string.IsNullOrWhiteSpace(option.OptionValue)
+                                        ? option.OptionLabel
+                                        : option.OptionValue,
+                                       OptionLabel = option.OptionLabel,
+                                       option.IsActive,
+                                       model.ModifiedBy
+                                   },
                                     tx);
                             }
                         }
@@ -878,15 +881,17 @@ namespace ahello_backend.Repositorys.Classes
                                 @CreatedBy
                             )
                             ",
-                            new
-                            {
-                                FormFieldId = formFieldId,
-                                FormId = formId,
-                                option.OptionValue,
-                                option.OptionLabel,
-                                option.IsActive,
-                                CreatedBy = model.ModifiedBy
-                            },
+                           new
+                           {
+                               FormFieldId = formFieldId,
+                               FormId = formId,
+                               OptionValue = string.IsNullOrWhiteSpace(option.OptionValue)
+                                ? option.OptionLabel
+                                : option.OptionValue,
+                               OptionLabel = option.OptionLabel,
+                               option.IsActive,
+                               CreatedBy = model.ModifiedBy
+                           },
                             tx);
                     }
                 }

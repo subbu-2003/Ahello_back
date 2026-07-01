@@ -52,7 +52,7 @@ namespace ahello_backend.Models.Forms
 
     public class FormDropdownOptionPost
     {
-        public string OptionValue { get; set; }
+        public string? OptionValue { get; set; }
         public string OptionLabel { get; set; }
         public bool IsActive { get; set; }
     }
