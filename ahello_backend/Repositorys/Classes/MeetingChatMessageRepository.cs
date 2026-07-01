@@ -33,23 +33,36 @@ namespace ahello_backend.Repositorys.Classes
                     query);
         }
 
-        public async Task<IEnumerable<MeetingChatMessage>>
-            GetByMeetingIdAsync(int meetingId)
+        public async Task<IEnumerable<MeetingChatMessageResponse>>
+    GetByMeetingIdAsync(int meetingId)
         {
             var query = @"
-                SELECT *
-                FROM meetingchatmessages
-                WHERE MeetingId = @MeetingId
-                AND IsDeleted = 0
-                ORDER BY SentAt ASC";
+SELECT
+    cm.ChatMessageId,
+    cm.MeetingId,
+    cm.UserId,
+    u.FullName AS UserName,
+    u.ProfileUrl,
+    cm.MessageText,
+    cm.AttachmentUrl,
+    cm.MessageType,
+    cm.IsRead,
+    cm.SentAt
+FROM meetingchatmessages cm
+INNER JOIN users u
+    ON u.UserId = cm.UserId
+WHERE cm.MeetingId = @MeetingId
+AND cm.IsDeleted = 0
+ORDER BY cm.SentAt ASC;";
 
-            using var connection =
-                _db.GetConnection();
+            using var connection = _db.GetConnection();
 
-            return await connection
-                .QueryAsync<MeetingChatMessage>(
-                    query,
-                    new { MeetingId = meetingId });
+            return await connection.QueryAsync<MeetingChatMessageResponse>(
+                query,
+                new
+                {
+                    MeetingId = meetingId
+                });
         }
 
         public async Task<IEnumerable<MeetingChatMessage>>
@@ -72,37 +85,39 @@ namespace ahello_backend.Repositorys.Classes
         }
 
         public async Task<int> CreateAsync(
-            MeetingChatMessageCreate model)
+    MeetingChatMessageCreate model)
         {
             var query = @"
-                INSERT INTO meetingchatmessages
-                (
-                    MeetingId,
-                    UserId,
-                    MessageText,
-                    AttachmentUrl,
-                    MessageType,
-                    IsRead,
-                    SentAt,
-                    CreatedAt
-                )
-                VALUES
-                (
-                    @MeetingId,
-                    @UserId,
-                    @MessageText,
-                    @AttachmentUrl,
-                    @MessageType,
-                    @IsRead,
-                    NOW(),
-                    NOW()
-                )";
+INSERT INTO meetingchatmessages
+(
+    MeetingId,
+    UserId,
+    MessageText,
+    AttachmentUrl,
+    MessageType,
+    IsRead,
+    SentAt,
+    CreatedAt
+)
+VALUES
+(
+    @MeetingId,
+    @UserId,
+    @MessageText,
+    @AttachmentUrl,
+    @MessageType,
+    @IsRead,
+    NOW(),
+    NOW()
+);
 
-            using var connection =
-                _db.GetConnection();
+SELECT LAST_INSERT_ID();";
 
-            return await connection
-                .ExecuteAsync(query, model);
+            using var connection = _db.GetConnection();
+
+            return await connection.ExecuteScalarAsync<int>(
+                query,
+                model);
         }
 
         public async Task<int> UpdateAsync(

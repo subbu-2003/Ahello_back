@@ -69,6 +69,41 @@ namespace ahello_backend.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromForm] ServiceDynamicPost model)
         {
+            if (!model.UserId.HasValue || model.UserId.Value <= 0)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "User is required."
+                });
+            }
+
+            if (!model.ServiceTypeId.HasValue || model.ServiceTypeId.Value <= 0)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "Please select a service type."
+                });
+            }
+
+            if (!model.ServiceCategoryId.HasValue || model.ServiceCategoryId.Value <= 0)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "Please select a service category."
+                });
+            }
+
+            if (!model.Price.HasValue || model.Price.Value <= 0)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "Please enter a valid price."
+                });
+            }
             try
             {
             var rootPath = _env.WebRootPath
@@ -150,11 +185,37 @@ namespace ahello_backend.Controllers
         }
             catch (Exception ex)
             {
+                string message = ex.Message;
+
+                if (message.Contains("Service Title already exists"))
+                {
+                    message = "Service title already exists.";
+                }
+                else if (message.Contains("FK_service_servicecategorydynamic"))
+                {
+                    message = "Selected service category does not exist.";
+                }
+                else if (message.Contains("FK_service_servicetype"))
+                {
+                    message = "Selected service type does not exist.";
+                }
+                else if (message.Contains("FK_service_user"))
+                {
+                    message = "Selected user does not exist.";
+                }
+                else if (message.Contains("foreign key constraint"))
+                {
+                    message = "The selected information is invalid. Please verify and try again.";
+                }
+                else
+                {
+                    message = "Unable to save the service. Please try again.";
+                }
+
                 return StatusCode(500, new
                 {
                     Success = false,
-                    Message = ex.Message
-                    
+                    Message = message
                 });
             }
         }
@@ -164,6 +225,41 @@ namespace ahello_backend.Controllers
             int serviceId,
             [FromForm] ServiceDynamicPut model)
         {
+            if (!model.UserId.HasValue || model.UserId.Value <= 0)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "User is required."
+                });
+            }
+
+            if (!model.ServiceTypeId.HasValue || model.ServiceTypeId.Value <= 0)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "Please select a service type."
+                });
+            }
+
+            if (!model.ServiceCategoryId.HasValue || model.ServiceCategoryId.Value <= 0)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "Please select a service category."
+                });
+            }
+
+            if (!model.Price.HasValue || model.Price.Value <= 0)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "Please enter a valid price."
+                });
+            }
             try { 
             var rootPath = _env.WebRootPath
                 ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
@@ -247,14 +343,61 @@ namespace ahello_backend.Controllers
                 IntroVideoUrl     = model.IntroVideo
             });
         }
-             
+
             catch (Exception ex)
             {
+                var error = ex.Message;
+
+                if (error.Contains("Service Title already exists"))
+                {
+                    return Conflict(new
+                    {
+                        Success = false,
+                        Message = "Service title already exists."
+                    });
+                }
+
+                if (error.Contains("FK_service_servicecategorydynamic"))
+                {
+                    return BadRequest(new
+                    {
+                        Success = false,
+                        Message = "Selected service category is invalid."
+                    });
+                }
+
+                if (error.Contains("FK_service_servicetype"))
+                {
+                    return BadRequest(new
+                    {
+                        Success = false,
+                        Message = "Selected service type is invalid."
+                    });
+                }
+
+                if (error.Contains("FK_service_user"))
+                {
+                    return BadRequest(new
+                    {
+                        Success = false,
+                        Message = "Selected user is invalid."
+                    });
+                }
+
+                if (error.Contains("foreign key constraint"))
+                {
+                    return BadRequest(new
+                    {
+                        Success = false,
+                        Message = "Invalid service details. Please verify your input and try again."
+                    });
+                }
+
                 return StatusCode(500, new
                 {
                     Success = false,
-                    Message = ex.Message
-            });
+                    Message = "Unable to update the service. Please try again later."
+                });
             }
         }
 
