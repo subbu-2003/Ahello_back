@@ -7,8 +7,8 @@ namespace ahello_backend.Services.Interfaces
         Task<IEnumerable<MeetingChatMessage>>
             GetAllAsync();
 
-        Task<IEnumerable<MeetingChatMessage>>
-            GetByMeetingIdAsync(int meetingId);
+        Task<IEnumerable<MeetingChatMessageResponse>>
+    GetByMeetingIdAsync(int meetingId);
 
         Task<IEnumerable<MeetingChatMessage>>
             GetByUserIdAsync(int userId);

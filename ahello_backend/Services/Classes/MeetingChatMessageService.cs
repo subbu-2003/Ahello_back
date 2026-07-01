@@ -24,11 +24,10 @@ namespace ahello_backend.Services.Classes
                 .GetAllAsync();
         }
 
-        public async Task<IEnumerable<MeetingChatMessage>>
-            GetByMeetingIdAsync(int meetingId)
+        public async Task<IEnumerable<MeetingChatMessageResponse>>
+    GetByMeetingIdAsync(int meetingId)
         {
-            return await _repository
-                .GetByMeetingIdAsync(meetingId);
+            return await _repository.GetByMeetingIdAsync(meetingId);
         }
 
         public async Task<IEnumerable<MeetingChatMessage>>
