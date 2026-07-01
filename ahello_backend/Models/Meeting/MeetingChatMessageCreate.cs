@@ -8,7 +8,7 @@
 
         public string MessageText { get; set; }
 
-        public string AttachmentUrl { get; set; }
+        public string? AttachmentUrl { get; set; }
 
         public string MessageType { get; set; }
 
