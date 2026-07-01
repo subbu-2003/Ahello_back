@@ -1,14 +1,22 @@
-﻿namespace ahello_backend.Models.Service
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace ahello_backend.Models.Service
 {
     public class ServiceDynamicPost
     {
-        public int UserId { get; set; }
-        public int ServiceTypeId { get; set; }
+        [Required(ErrorMessage = "User is required.")]
+        public int? UserId { get; set; }
 
-        public int ServiceCategoryId {  get; set; }
+        [Required(ErrorMessage = "Service Type is required.")]
+        public int? ServiceTypeId { get; set; }
+
+        [Required(ErrorMessage = "Service Category is required.")]
+        public int? ServiceCategoryId { get; set; }
 
         public string ServiceTitle { get; set; }
-        public decimal Price { get; set; }
+        [Required(ErrorMessage = "Price is required.")]
+        [Range(0.01, double.MaxValue, ErrorMessage = "Please enter a valid price.")] 
+        public decimal? Price { get; set; }
 
         public string Duration { get; set; }
 
