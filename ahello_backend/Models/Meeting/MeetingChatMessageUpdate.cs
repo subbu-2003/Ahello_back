@@ -17,6 +17,7 @@
         public bool IsRead { get; set; }
 
         public bool IsDeleted { get; set; }
+        public int? FormId { get; set; }
     }
     }
 

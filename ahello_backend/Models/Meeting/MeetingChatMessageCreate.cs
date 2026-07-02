@@ -13,5 +13,6 @@
         public string MessageType { get; set; }
 
         public bool IsRead { get; set; }
+        public int? FormId { get; set; }
     }
 }

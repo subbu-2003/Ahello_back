@@ -21,5 +21,6 @@
         public bool IsRead { get; set; }
 
         public DateTime? SentAt { get; set; }
+        public int? FormId { get; set; }
     }
 }

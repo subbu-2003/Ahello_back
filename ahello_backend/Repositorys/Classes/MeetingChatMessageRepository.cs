@@ -46,6 +46,7 @@ SELECT
     cm.MessageText,
     cm.AttachmentUrl,
     cm.MessageType,
+    cm.FormId,
     cm.IsRead,
     cm.SentAt
 FROM meetingchatmessages cm
@@ -95,6 +96,7 @@ INSERT INTO meetingchatmessages
     MessageText,
     AttachmentUrl,
     MessageType,
+    FormId,
     IsRead,
     SentAt,
     CreatedAt
@@ -106,6 +108,7 @@ VALUES
     @MessageText,
     @AttachmentUrl,
     @MessageType,
+    @FormId,
     @IsRead,
     NOW(),
     NOW()
@@ -126,12 +129,13 @@ SELECT LAST_INSERT_ID();";
             var query = @"
                 UPDATE meetingchatmessages
                 SET
-                    MeetingId = @MeetingId,
-                    UserId = @UserId,
-                    MessageText = @MessageText,
-                    AttachmentUrl = @AttachmentUrl,
-                    MessageType = @MessageType,
-                    IsRead = @IsRead,
+    MeetingId = @MeetingId,
+    UserId = @UserId,
+    MessageText = @MessageText,
+    AttachmentUrl = @AttachmentUrl,
+    MessageType = @MessageType,
+    FormId = @FormId,
+    IsRead = @IsRead,
                     IsDeleted = @IsDeleted,
                     ReadAt = CASE
                         WHEN @IsRead = 1
