@@ -20,6 +20,70 @@ namespace ahello_backend.Controllers
         {
             try
             {
+                if (model.UserId <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "UserId is required."
+                    });
+                }
+
+                if (model.ClientId <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "ClientId is required."
+                    });
+                }
+
+                if (model.ServiceId <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "ServiceId is required."
+                    });
+                }
+
+                if (model.SlotId <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "SlotId is required."
+                    });
+                }
+
+                if (model.ScheduleDate == default)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "ScheduleDate is required."
+                    });
+                }
+
+                if (model.StartTime == default)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "StartTime is required."
+                    });
+                }
+
+                if (model.EndTime == default)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "EndTime is required."
+                    });
+                }
+
+                if (string.IsNullOrWhiteSpace(model.Status))
+                {
+                    return BadRequest(new
+                    {
+                        Message = "Status is required."
+                    });
+                }
+
                 var id = await _service.CreateAsync(model);
 
                 return Ok(new
@@ -152,7 +216,53 @@ namespace ahello_backend.Controllers
             {
                 if (model == null)
                     return BadRequest(new { Message = "Request body is required." });
+                if (model == null)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "Request body is required."
+                    });
+                }
 
+                if (model.BookingId <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "BookingId is required."
+                    });
+                }
+
+                if (model.UserId <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "UserId is required."
+                    });
+                }
+
+                if (model.ClientId <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "ClientId is required."
+                    });
+                }
+
+                if (model.ServiceId <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "ServiceId is required."
+                    });
+                }
+
+                if (model.SlotId <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "SlotId is required."
+                    });
+                }
                 var result = await _service.UpdateAsync(model);
 
                 return Ok(new
@@ -315,12 +425,12 @@ namespace ahello_backend.Controllers
         }
         [HttpGet("clients-service-wise")]
         public async Task<IActionResult> GetClientsServiceWise(
-    int userId,
-    int pageNumber = 1,
-    int pageSize = 10,
-    string? search = null,
-    string? bookingStatus = null,
-    DateTime? lastBookingDate = null)
+        int userId,
+        int pageNumber = 1,
+        int pageSize = 10,
+        string? search = null,
+        string? bookingStatus = null,
+        DateTime? lastBookingDate = null)
         {
             try
             {
