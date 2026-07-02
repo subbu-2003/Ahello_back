@@ -320,7 +320,35 @@ namespace ahello_backend.Controllers
         {
             try
             {
+                if (model == null)
+                    return BadRequest(new { Message = "Request body is required." });
+
+                if (model.MeetingId <= 0)
+                    return BadRequest(new { Message = "MeetingId is required." });
+
+                if (model.UserId <= 0)
+                    return BadRequest(new { Message = "UserId is required." });
+
+                if (model.BookingId <= 0)
+                    return BadRequest(new { Message = "BookingId is required." });
+
+                if (string.IsNullOrWhiteSpace(model.RoomId))
+                    return BadRequest(new { Message = "RoomId is required." });
+
+                if (model.StartTime == default)
+                    return BadRequest(new { Message = "StartTime is required." });
+
+                if (model.EndTime == default)
+                    return BadRequest(new { Message = "EndTime is required." });
+
+                if (string.IsNullOrWhiteSpace(model.Status))
+                    return BadRequest(new { Message = "Status is required." });
+
+                if (string.IsNullOrWhiteSpace(model.ModifiedBy))
+                    return BadRequest(new { Message = "ModifiedBy is required." });
+
                 var result = await _service.UpdateAsync(model);
+
                 return Ok(new
                 {
                     Success = true,
@@ -329,17 +357,9 @@ namespace ahello_backend.Controllers
             }
             catch (Exception ex)
             {
-                string errorMessage = ex.Message;
-
-                if (ex.Message.Contains("FOREIGN KEY"))
-                    errorMessage = "Invalid BookingId. Booking does not exist.";
-                else if (ex.Message.Contains("Duplicate"))
-                    errorMessage = "Duplicate data already exists.";
-
-                return StatusCode(500, new
+                return BadRequest(new
                 {
-                    Success = false,
-                    Message = errorMessage
+                    Message = ex.Message
                 });
             }
         }
