@@ -143,7 +143,8 @@ namespace ahello_backend.Controllers
             if (account == null)
                 return Error("Linked account not created. Create linked account first");
 
-            if (account.AccountStatus != "ACCOUNT_CREATED")
+            if (account.AccountStatus != "ACCOUNT_CREATED" &&
+    account.AccountStatus != "FAILED")
                 return Error("Invalid payout account status", 409, new
                 {
                     currentStatus = account.AccountStatus,
