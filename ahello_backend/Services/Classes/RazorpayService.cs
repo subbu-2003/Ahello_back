@@ -97,11 +97,11 @@ namespace ahello_backend.Services.Classes
                     {
                         registered = new
                         {
-                            street1 = user.Address ?? "Madurai Main Road",
-                            street2 = "",
-                            city = user.City ?? "Madurai",
-                            state = user.State ?? "TAMIL NADU",
-                            postal_code = user.Pincode ?? "625001",
+                            street1 = user.Address,
+                            street2 = "NA",
+                            city = user.City,
+                            state = user.State,
+                            postal_code = user.Pincode,
                             country = "IN"
                         }
                     }
@@ -134,7 +134,10 @@ namespace ahello_backend.Services.Classes
             {
                 name = user.FullName,
                 email = user.Email,
-                phone = user.MobileNumber,
+                phone = new
+                {
+                    primary = user.MobileNumber
+                },
 
                 relationship = new
                 {
@@ -152,12 +155,6 @@ namespace ahello_backend.Services.Classes
                         postal_code = user.Pincode ?? "000000",
                         country = "IN"
                     }
-                },
-
-                kyc_details = new
-                {
-                    pan = dto.Pan,
-                    dob = dto.Dob
                 }
             };
 
