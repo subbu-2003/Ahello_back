@@ -110,8 +110,8 @@ VALUES
     @MessageType,
     @FormId,
     @IsRead,
-    NOW(),
-    NOW()
+    DATE_ADD(UTC_TIMESTAMP(), INTERVAL 5 HOUR 30 MINUTE),
+    DATE_ADD(UTC_TIMESTAMP(), INTERVAL 5 HOUR 30 MINUTE)
 );
 
 SELECT LAST_INSERT_ID();";
@@ -172,6 +172,48 @@ SELECT LAST_INSERT_ID();";
                         ChatMessageId =
                             chatMessageId
                     });
+        }
+        public async Task<int> GetUnreadCountAsync(int meetingId, int userId)
+        {
+            var query = @"
+SELECT COUNT(*)
+FROM meetingchatmessages
+WHERE MeetingId = @MeetingId
+AND UserId <> @UserId
+AND IsRead = 0
+AND IsDeleted = 0;";
+
+            using var connection = _db.GetConnection();
+
+            return await connection.ExecuteScalarAsync<int>(
+                query,
+                new
+                {
+                    MeetingId = meetingId,
+                    UserId = userId
+                });
+        }
+        public async Task<int> MarkAsReadAsync(int meetingId, int userId)
+        {
+            var query = @"
+UPDATE meetingchatmessages
+SET
+    IsRead = 1,
+    ReadAt = NOW()
+WHERE MeetingId = @MeetingId
+AND UserId <> @UserId
+AND IsRead = 0
+AND IsDeleted = 0;";
+
+            using var connection = _db.GetConnection();
+
+            return await connection.ExecuteAsync(
+                query,
+                new
+                {
+                    MeetingId = meetingId,
+                    UserId = userId
+                });
         }
     }
 }
