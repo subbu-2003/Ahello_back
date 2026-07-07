@@ -167,5 +167,45 @@ namespace ahello_backend.Controllers
                 });
             }
         }
+        [HttpGet("unread-count")]
+        public async Task<IActionResult> GetUnreadCount(int meetingId, int userId)
+        {
+            try
+            {
+                var count = await _service.GetUnreadCountAsync(meetingId, userId);
+
+                return Ok(new { count });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+        }
+
+        [HttpPut("mark-read")]
+        public async Task<IActionResult> MarkRead(int meetingId, int userId)
+        {
+            try
+            {
+                await _service.MarkAsReadAsync(meetingId, userId);
+
+                return Ok(new
+                {
+                    Success = true
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+        }
     }
 }
