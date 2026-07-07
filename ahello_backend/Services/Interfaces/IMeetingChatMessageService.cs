@@ -20,5 +20,12 @@ namespace ahello_backend.Services.Interfaces
             MeetingChatMessageUpdate model);
 
         Task<int> DeleteAsync(int chatMessageId);
+        Task<int> GetUnreadCountAsync(
+    int meetingId,
+    int userId);
+
+        Task<int> MarkAsReadAsync(
+            int meetingId,
+            int userId);
     }
 }
