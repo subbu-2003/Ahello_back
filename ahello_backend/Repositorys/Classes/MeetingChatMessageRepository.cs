@@ -110,8 +110,8 @@ VALUES
     @MessageType,
     @FormId,
     @IsRead,
-    DATE_ADD(UTC_TIMESTAMP(), INTERVAL 5 HOUR 30 MINUTE),
-    DATE_ADD(UTC_TIMESTAMP(), INTERVAL 5 HOUR 30 MINUTE)
+    DATE_ADD(UTC_TIMESTAMP(), INTERVAL 330 MINUTE),
+    DATE_ADD(UTC_TIMESTAMP(), INTERVAL 330 MINUTE)
 );
 
 SELECT LAST_INSERT_ID();";
@@ -139,7 +139,7 @@ SELECT LAST_INSERT_ID();";
                     IsDeleted = @IsDeleted,
                     ReadAt = CASE
                         WHEN @IsRead = 1
-                        THEN NOW()
+                        THEN DATE_ADD(UTC_TIMESTAMP(), INTERVAL 330 MINUTE)
                         ELSE NULL
                     END
                 WHERE ChatMessageId =
@@ -199,7 +199,7 @@ AND IsDeleted = 0;";
 UPDATE meetingchatmessages
 SET
     IsRead = 1,
-    ReadAt = NOW()
+    ReadAt = DATE_ADD(UTC_TIMESTAMP(), INTERVAL 330 MINUTE)
 WHERE MeetingId = @MeetingId
 AND UserId <> @UserId
 AND IsRead = 0
