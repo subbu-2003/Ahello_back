@@ -160,5 +160,62 @@ namespace ahello_backend.Services.Classes
             var token = new JwtSecurityToken(header, payload);
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
+        public async Task<(string RoomId, string RoomName, string HostRoomCode, string GuestRoomCode)>
+    CreateInstantRoomAsync(string? title)
+        {
+            var managementToken = GenerateManagementToken();
+
+            var uniqueId = Guid.NewGuid().ToString("N")[..8];
+            var roomName = $"ahllo-public-{uniqueId}";
+
+            var body = JsonSerializer.Serialize(new
+            {
+                name = roomName,
+                description = string.IsNullOrWhiteSpace(title)
+                    ? "Public Meeting"
+                    : title,
+                template_id = _templateId
+            });
+
+            var request = new HttpRequestMessage(
+                HttpMethod.Post,
+                "https://api.100ms.live/v2/rooms");
+
+            request.Headers.Authorization =
+                new AuthenticationHeaderValue("Bearer", managementToken);
+
+            request.Content = new StringContent(
+                body,
+                Encoding.UTF8,
+                "application/json");
+
+            var response = await _http.SendAsync(request);
+
+            var responseBody = await response.Content.ReadAsStringAsync();
+
+            Console.WriteLine(responseBody);
+
+            response.EnsureSuccessStatusCode();
+
+            using var doc = JsonDocument.Parse(responseBody);
+
+            var roomId = doc.RootElement
+                .GetProperty("id")
+                .GetString()!;
+
+            // Get the actual room name returned by 100ms
+            roomName = doc.RootElement
+                .GetProperty("name")
+                .GetString()!;
+
+            var roomCodes = await CreateRoomCodesAsync(roomId);
+
+            return (
+                roomId,
+                roomName,
+                roomCodes.HostCode,
+                roomCodes.ClientCode
+            );
+        }
     }
 }
