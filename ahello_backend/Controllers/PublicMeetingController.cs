@@ -29,7 +29,7 @@ namespace ahello_backend.Controllers
 
 
                 var meetingLink =
-    $"{Request.Scheme}://{Request.Host}/meeting/join/{meeting.RoomName}" +
+    $"https://ahllo.com/meeting/join/{meeting.RoomName}" +
     $"?roomId={Uri.EscapeDataString(meeting.RoomId)}" +
     $"&roomCode={Uri.EscapeDataString(meeting.GuestRoomCode)}";
 
