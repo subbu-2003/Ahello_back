@@ -35,11 +35,11 @@ namespace ahello_backend.Services.Classes
             => await _repository.DeleteAsync(instantMessageId);
 
         public async Task<int> GetUnreadCountAsync(
-            string roomId)
-            => await _repository.GetUnreadCountAsync(roomId);
+            string roomId, string peerId)
+            => await _repository.GetUnreadCountAsync(roomId,peerId);
 
         public async Task<int> MarkAsReadAsync(
-            string roomId)
-            => await _repository.MarkAsReadAsync(roomId);
+            string roomId, string peerId)
+            => await _repository.MarkAsReadAsync(roomId, peerId);
     }
 }

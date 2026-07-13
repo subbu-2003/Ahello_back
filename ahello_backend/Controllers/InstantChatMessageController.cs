@@ -90,9 +90,9 @@ namespace ahello_backend.Controllers
         }
 
         [HttpGet("unread-count")]
-        public async Task<IActionResult>  GetUnreadCount( string roomId)
+        public async Task<IActionResult>  GetUnreadCount( string roomId, string peerId)
         {
-            var count = await _service.GetUnreadCountAsync( roomId);
+            var count = await _service.GetUnreadCountAsync( roomId, peerId);
 
             return Ok(new
             {
@@ -101,9 +101,9 @@ namespace ahello_backend.Controllers
         }
 
         [HttpPut("mark-read")]
-        public async Task<IActionResult> MarkRead( string roomId)
+        public async Task<IActionResult> MarkRead( string roomId, string peerId)
         {
-            await _service.MarkAsReadAsync( roomId);
+            await _service.MarkAsReadAsync( roomId, peerId);
 
             return Ok(new
             {

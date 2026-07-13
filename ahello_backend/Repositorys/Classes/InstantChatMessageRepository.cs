@@ -133,12 +133,13 @@ namespace ahello_backend.Repositorys.Classes
                 });
         }
 
-        public async Task<int> GetUnreadCountAsync(string roomId)
+        public async Task<int> GetUnreadCountAsync(string roomId, string peerId)
         {
             var query = @"
             SELECT COUNT(*)
             FROM instantchatmessages
             WHERE RoomId = @RoomId
+            AND PeerId <> @PeerId
             AND IsRead = 0
             AND IsDeleted = 0";
 
@@ -148,11 +149,12 @@ namespace ahello_backend.Repositorys.Classes
                 query,
                 new
                 {
-                    RoomId = roomId
+                    RoomId = roomId,
+                    PeerId = peerId
                 });
         }
 
-        public async Task<int> MarkAsReadAsync(string roomId)
+        public async Task<int> MarkAsReadAsync(string roomId, string peerId)
         {
             var query = @"
             UPDATE instantchatmessages
@@ -163,6 +165,7 @@ namespace ahello_backend.Repositorys.Classes
                         UTC_TIMESTAMP(),
                         INTERVAL 330 MINUTE)
             WHERE RoomId = @RoomId
+            AND PeerId <> @PeerId
             AND IsRead = 0
             AND IsDeleted = 0";
 
@@ -173,7 +176,8 @@ namespace ahello_backend.Repositorys.Classes
                 query,
                 new
                 {
-                    RoomId = roomId
+                    RoomId = roomId,
+                    PeerId = peerId
                 });
         }
     }
