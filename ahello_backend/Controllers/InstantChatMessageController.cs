@@ -9,11 +9,14 @@ namespace ahello_backend.Controllers
     public class InstantChatMessageController: ControllerBase
     {
         private readonly IInstantChatMessageService _service;
+        private readonly FileUploadService _fileUpload;
 
         public InstantChatMessageController(
-            IInstantChatMessageService service)
+            IInstantChatMessageService service,
+            FileUploadService fileUpload)
         {
             _service = service;
+            _fileUpload = fileUpload;
         }
 
         [HttpGet]
@@ -34,15 +37,32 @@ namespace ahello_backend.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create( InstantChatMessageCreate model)
+        public async Task<IActionResult> Create([FromForm] InstantChatMessageCreate model)
         {
-            var result = await _service.CreateAsync(model);
-
-            return Ok(new
+            try
             {
-                Success = true,
-                Data = result
-            });
+                if (model.File != null && model.File.Length > 0)
+                {
+                    model.AttachmentUrl =
+                        await _fileUpload.SaveChatFileAsync(model.File);
+                }
+
+                var result = await _service.CreateAsync(model);
+
+                return Ok(new
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
         }
 
         [HttpPut]
