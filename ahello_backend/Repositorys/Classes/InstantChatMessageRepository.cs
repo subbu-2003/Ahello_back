@@ -54,6 +54,8 @@ namespace ahello_backend.Repositorys.Classes
             INSERT INTO instantchatmessages
             (
                 RoomId,
+                PeerId,
+                UserName,
                 MessageText,
                 AttachmentUrl,
                 MessageType,
@@ -65,6 +67,8 @@ namespace ahello_backend.Repositorys.Classes
             VALUES
             (
                 @RoomId,
+                @PeerId,
+                @UserName,
                 @MessageText,
                 @AttachmentUrl,
                 @MessageType,
@@ -90,6 +94,8 @@ namespace ahello_backend.Repositorys.Classes
             UPDATE instantchatmessages
             SET
                 RoomId = @RoomId,
+                PeerId = @PeerId,
+                UserName = @UserName,
                 MessageText = @MessageText,
                 AttachmentUrl = @AttachmentUrl,
                 MessageType = @MessageType,
@@ -127,12 +133,13 @@ namespace ahello_backend.Repositorys.Classes
                 });
         }
 
-        public async Task<int> GetUnreadCountAsync(string roomId)
+        public async Task<int> GetUnreadCountAsync(string roomId, string peerId)
         {
             var query = @"
             SELECT COUNT(*)
             FROM instantchatmessages
             WHERE RoomId = @RoomId
+            AND PeerId <> @PeerId
             AND IsRead = 0
             AND IsDeleted = 0";
 
@@ -142,11 +149,12 @@ namespace ahello_backend.Repositorys.Classes
                 query,
                 new
                 {
-                    RoomId = roomId
+                    RoomId = roomId,
+                    PeerId = peerId
                 });
         }
 
-        public async Task<int> MarkAsReadAsync(string roomId)
+        public async Task<int> MarkAsReadAsync(string roomId, string peerId)
         {
             var query = @"
             UPDATE instantchatmessages
@@ -157,6 +165,7 @@ namespace ahello_backend.Repositorys.Classes
                         UTC_TIMESTAMP(),
                         INTERVAL 330 MINUTE)
             WHERE RoomId = @RoomId
+            AND PeerId <> @PeerId
             AND IsRead = 0
             AND IsDeleted = 0";
 
@@ -167,7 +176,8 @@ namespace ahello_backend.Repositorys.Classes
                 query,
                 new
                 {
-                    RoomId = roomId
+                    RoomId = roomId,
+                    PeerId = peerId
                 });
         }
     }

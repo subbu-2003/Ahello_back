@@ -5,6 +5,9 @@
         public int InstantMessageId { get; set; }
 
         public string RoomId { get; set; }
+        public string PeerId { get; set; }
+
+        public string UserName { get; set; }
 
         public string? MessageText { get; set; }
 

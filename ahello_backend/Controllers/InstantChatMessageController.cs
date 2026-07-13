@@ -9,11 +9,14 @@ namespace ahello_backend.Controllers
     public class InstantChatMessageController: ControllerBase
     {
         private readonly IInstantChatMessageService _service;
+        private readonly FileUploadService _fileUpload;
 
         public InstantChatMessageController(
-            IInstantChatMessageService service)
+            IInstantChatMessageService service,
+            FileUploadService fileUpload)
         {
             _service = service;
+            _fileUpload = fileUpload;
         }
 
         [HttpGet]
@@ -34,15 +37,32 @@ namespace ahello_backend.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create( InstantChatMessageCreate model)
+        public async Task<IActionResult> Create([FromForm] InstantChatMessageCreate model)
         {
-            var result = await _service.CreateAsync(model);
-
-            return Ok(new
+            try
             {
-                Success = true,
-                Data = result
-            });
+                if (model.File != null && model.File.Length > 0)
+                {
+                    model.AttachmentUrl =
+                        await _fileUpload.SaveChatFileAsync(model.File);
+                }
+
+                var result = await _service.CreateAsync(model);
+
+                return Ok(new
+                {
+                    Success = true,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
         }
 
         [HttpPut]
@@ -70,9 +90,9 @@ namespace ahello_backend.Controllers
         }
 
         [HttpGet("unread-count")]
-        public async Task<IActionResult>  GetUnreadCount( string roomId)
+        public async Task<IActionResult>  GetUnreadCount( string roomId, string peerId)
         {
-            var count = await _service.GetUnreadCountAsync( roomId);
+            var count = await _service.GetUnreadCountAsync( roomId, peerId);
 
             return Ok(new
             {
@@ -81,9 +101,9 @@ namespace ahello_backend.Controllers
         }
 
         [HttpPut("mark-read")]
-        public async Task<IActionResult> MarkRead( string roomId)
+        public async Task<IActionResult> MarkRead( string roomId, string peerId)
         {
-            await _service.MarkAsReadAsync( roomId);
+            await _service.MarkAsReadAsync( roomId, peerId);
 
             return Ok(new
             {

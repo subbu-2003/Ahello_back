@@ -14,8 +14,8 @@ namespace ahello_backend.Repositorys.Interfaces
 
         Task<int> DeleteAsync(int instantMessageId);
 
-        Task<int> GetUnreadCountAsync(string roomId);
+        Task<int> GetUnreadCountAsync(string roomId, string peerId);
 
-        Task<int> MarkAsReadAsync(string roomId);
+        Task<int> MarkAsReadAsync(string roomId,string peerId);
     }
 }

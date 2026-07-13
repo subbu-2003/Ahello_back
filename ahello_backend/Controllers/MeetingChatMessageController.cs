@@ -12,11 +12,13 @@ namespace ahello_backend.Controllers
         private readonly
             IMeetingChatMessageService
             _service;
+        private readonly FileUploadService _fileUpload;
 
         public MeetingChatMessageController(
-            IMeetingChatMessageService service)
+            IMeetingChatMessageService service, FileUploadService fileUpload)
         {
             _service = service;
+            _fileUpload = fileUpload;
         }
 
         [HttpGet]
@@ -80,13 +82,26 @@ namespace ahello_backend.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create(
-              MeetingChatMessageCreate model)
+        public async Task<IActionResult> Create([FromForm] MeetingChatMessageCreate model)
         {
             try
             {
-                var result =
-                    await _service.CreateAsync(model);
+                // Upload attachment if present
+                if (model.File != null && model.File.Length > 0)
+                {
+                    model.AttachmentUrl =
+                        await _fileUpload.SaveChatFileAsync(model.File);
+
+                    // Set message type automatically
+                    model.MessageType = "FILE";
+                }
+                else
+                {
+                    model.AttachmentUrl = null;
+                    model.MessageType ??= "TEXT";
+                }
+
+                var result = await _service.CreateAsync(model);
 
                 return Ok(new
                 {
@@ -98,13 +113,10 @@ namespace ahello_backend.Controllers
             {
                 string errorMessage = ex.Message;
 
-                // Foreign Key Error
                 if (ex.Message.Contains("FOREIGN KEY"))
                 {
                     errorMessage = "Invalid MeetingId. Meeting does not exist.";
                 }
-
-                // Duplicate Error
                 else if (ex.Message.Contains("Duplicate"))
                 {
                     errorMessage = "Duplicate data already exists.";
