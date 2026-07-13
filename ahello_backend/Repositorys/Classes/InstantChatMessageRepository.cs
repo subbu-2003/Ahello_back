@@ -54,6 +54,8 @@ namespace ahello_backend.Repositorys.Classes
             INSERT INTO instantchatmessages
             (
                 RoomId,
+                PeerId,
+                UserName,
                 MessageText,
                 AttachmentUrl,
                 MessageType,
@@ -65,6 +67,8 @@ namespace ahello_backend.Repositorys.Classes
             VALUES
             (
                 @RoomId,
+                @PeerId,
+                @UserName,
                 @MessageText,
                 @AttachmentUrl,
                 @MessageType,
@@ -90,6 +94,8 @@ namespace ahello_backend.Repositorys.Classes
             UPDATE instantchatmessages
             SET
                 RoomId = @RoomId,
+                PeerId = @PeerId,
+                UserName = @UserName,
                 MessageText = @MessageText,
                 AttachmentUrl = @AttachmentUrl,
                 MessageType = @MessageType,
