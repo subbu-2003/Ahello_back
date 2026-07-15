@@ -1,13 +1,13 @@
 ﻿namespace ahello_backend.Models.Meeting
 {
-    public class PublicMeetingTokenPost
+    public class InstantMeetingTokenPost
     {
         public string RoomId { get; set; } = "";
 
-        public string RoomCode { get; set; } = "";
+        public string RoomName { get; set; } = "";
 
         public string Name { get; set; } = "";
 
-        public bool IsHost { get; set; }
+        public string? HostKey { get; set; }
     }
 }
