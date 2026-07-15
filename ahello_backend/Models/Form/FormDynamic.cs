@@ -59,7 +59,8 @@ namespace ahello_backend.Models.Forms
 
     public class FormDynamicPost
     {
-        public int UserId { get; set; }
+        public int? UserId { get; set; }
+        public string FormType { get; set; } = "Normal";
         public string Title { get; set; }
         public string Description { get; set; }
         public bool IsActive { get; set; }
@@ -76,7 +77,8 @@ namespace ahello_backend.Models.Forms
 
     public class FormDynamicPut
     {
-        public int UserId { get; set; }
+        public int? UserId { get; set; }
+        public string FormType { get; set; } = "Normal";
         public string Title { get; set; }
         public string Description { get; set; }
         public bool IsActive { get; set; }

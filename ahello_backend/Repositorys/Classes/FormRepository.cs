@@ -57,6 +57,7 @@ namespace ahello_backend.Repositorys.Classes
                         (
                             UserId,
                             ClientId,
+                            FormType,
                             Title,
                             Description,
                             IsActive,
@@ -67,6 +68,7 @@ namespace ahello_backend.Repositorys.Classes
                         (
                             @UserId,
                             @ClientId,
+                            @FormType,
                             @Title,
                             @Description,
                             @IsActive,
@@ -89,6 +91,7 @@ namespace ahello_backend.Repositorys.Classes
                           SET
                               UserId = @UserId,
                               ClientId = @ClientId,
+                              FormType = @FormType,
                               Title = @Title,
                               Description = @Description,
                               IsActive = @IsActive,
