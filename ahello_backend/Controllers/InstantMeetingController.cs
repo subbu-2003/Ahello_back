@@ -88,6 +88,7 @@ namespace ahello_backend.Controllers
                     message = "Meeting not found."
                 });
             }
+            var meetingLink = $"https://ahllo.com/meeting/join/{meeting.RoomName}";
 
             return Ok(new
             {
@@ -95,7 +96,8 @@ namespace ahello_backend.Controllers
 
                 roomId = meeting.RoomId,
 
-                roomName = meeting.RoomName
+                roomName = meeting.RoomName,
+                meetingLink
             });
         }
 
