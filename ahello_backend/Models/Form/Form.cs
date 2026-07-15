@@ -7,6 +7,7 @@
         public int UserId { get; set; }
 
         public string Title { get; set; }
+        public string FormType { get; set; } = "Normal";
 
         public string Description { get; set; }
 

@@ -218,9 +218,9 @@ namespace ahello_backend.Repositorys.Classes
             {
                 var formSql = @"
             INSERT INTO forms
-            (UserId, Title, Description, IsActive, CreatedAt, CreatedBy)
+            (UserId,FormType, Title, Description, IsActive, CreatedAt, CreatedBy)
             VALUES
-            (@UserId, @Title, @Description, @IsActive, NOW(), @CreatedBy);
+            (@UserId, @FormType, @Title, @Description, @IsActive, NOW(), @CreatedBy);
             SELECT LAST_INSERT_ID();";
 
                 var formId = await connection.ExecuteScalarAsync<int>(formSql, model, tx);
@@ -328,6 +328,7 @@ namespace ahello_backend.Repositorys.Classes
                     UPDATE forms
                     SET
                         UserId = @UserId,
+                        FormType = @FormType,
                         Title = @Title,
                         Description = @Description,
                         IsActive = @IsActive,
@@ -342,6 +343,7 @@ namespace ahello_backend.Repositorys.Classes
                     {
                         FormId = formId,
                         model.UserId,
+                        model.FormType,
                         model.Title,
                         model.Description,
                         model.IsActive,
@@ -522,6 +524,7 @@ namespace ahello_backend.Repositorys.Classes
                     @"INSERT INTO forms
             (
                 UserId,
+                FormType,
                 Title,
                 Description,
                 IsActive,
@@ -531,6 +534,7 @@ namespace ahello_backend.Repositorys.Classes
             VALUES
             (
                 @UserId,
+                @FormType,
                 @Title,
                 @Description,
                 1,
@@ -542,6 +546,7 @@ namespace ahello_backend.Repositorys.Classes
                     new
                     {
                         model.UserId,
+                        model.FormType,
                         model.Title,
                         model.Description,
                         model.CreatedBy
@@ -731,6 +736,7 @@ namespace ahello_backend.Repositorys.Classes
             UPDATE forms
             SET
                 UserId = @UserId,
+                FormType = @FormType,
                 Title = @Title,
                 Description = @Description,
                 ModifiedAt = NOW(),
@@ -741,6 +747,7 @@ namespace ahello_backend.Repositorys.Classes
             {
                 FormId = formId,
                 model.UserId,
+                model.FormType,
                 model.Title,
                 model.Description,
                 model.ModifiedBy
