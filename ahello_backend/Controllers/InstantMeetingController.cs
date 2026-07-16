@@ -46,7 +46,7 @@ namespace ahello_backend.Controllers
                 });
 
                 var meetingLink =
-                    $"https://ahllo.com/meeting/join/{meeting.RoomName}";
+                    $"https://ahllo.com/meeting/join/{meeting.RoomName}?roomId={meeting.RoomId}";
 
                 return Ok(new
                 {
@@ -88,7 +88,7 @@ namespace ahello_backend.Controllers
                     message = "Meeting not found."
                 });
             }
-            var meetingLink = $"https://ahllo.com/meeting/join/{meeting.RoomName}";
+            var meetingLink = $"https://ahllo.com/meeting/join/{meeting.RoomName}?roomId={meeting.RoomId}";
 
             return Ok(new
             {
