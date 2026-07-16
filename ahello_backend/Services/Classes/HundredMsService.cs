@@ -160,7 +160,7 @@ namespace ahello_backend.Services.Classes
             var token = new JwtSecurityToken(header, payload);
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
-        public async Task<(string RoomId, string RoomName, string HostRoomCode, string GuestRoomCode)>
+        public async Task<(string RoomId, string RoomName)>
     CreateInstantRoomAsync(string? title)
         {
             var managementToken = GenerateManagementToken();
@@ -208,13 +208,9 @@ namespace ahello_backend.Services.Classes
                 .GetProperty("name")
                 .GetString()!;
 
-            var roomCodes = await CreateRoomCodesAsync(roomId);
-
             return (
                 roomId,
-                roomName,
-                roomCodes.HostCode,
-                roomCodes.ClientCode
+                roomName
             );
         }
     }
