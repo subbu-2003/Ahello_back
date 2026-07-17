@@ -48,11 +48,11 @@ namespace ahello_backend.Services.Classes
         {
             var result = await _repo.UpdateAsync(model);
 
-            if (result && !string.IsNullOrEmpty(model.Status) &&
+            if (result &&
+                !string.IsNullOrEmpty(model.Status) &&
                 model.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase))
             {
-                _ = Task.Run(async () =>
-                    await OnMeetingCompletedAsync(model.BookingId));
+                await OnMeetingCompletedAsync(model.BookingId);
             }
 
             return result;
@@ -111,18 +111,24 @@ namespace ahello_backend.Services.Classes
 
             return true;
         }
-        public async Task<bool> UpdateStatusAsync(int meetingId, string status, string? modifiedBy)
+        public async Task<bool> UpdateStatusAsync(
+      int meetingId,
+      string status,
+      string? modifiedBy)
         {
-            var result = await _repo.UpdateStatusAsync(meetingId, status, modifiedBy);
+            var result = await _repo.UpdateStatusAsync(
+                meetingId,
+                status,
+                modifiedBy);
 
-            if (result && status.Equals("Completed", StringComparison.OrdinalIgnoreCase))
+            if (result &&
+                status.Equals("Completed", StringComparison.OrdinalIgnoreCase))
             {
                 var meeting = await _repo.GetByIdAsync(meetingId);
 
                 if (meeting != null)
                 {
-                    _ = Task.Run(async () =>
-                        await OnMeetingCompletedAsync(meeting.BookingId));
+                    await OnMeetingCompletedAsync(meeting.BookingId);
                 }
             }
 

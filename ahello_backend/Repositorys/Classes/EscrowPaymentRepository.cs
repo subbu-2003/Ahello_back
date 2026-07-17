@@ -17,40 +17,54 @@ namespace ahello_backend.Repositorys.Classes
         public async Task<int> InsertAsync(EscrowPayment payment)
         {
             var query = @"
-                INSERT INTO EscrowPayments
-                (
-                    BookingId,
-                    UserId,
-                    ClientId,
-                    RazorpayAccountId,
-                    RazorpayOrderId,
-                    TotalAmount,
-                    PlatformFee,
-                    ExpertAmount,
-                    Currency,
-                    Status,
-                    OrderResponseJson,
-                    CreatedAt,
-                    CreatedBy
-                )
-                VALUES
-                (
-                    @BookingId,
-                    @UserId,
-                    @ClientId,
-                    @RazorpayAccountId,
-                    @RazorpayOrderId,
-                    @TotalAmount,
-                    @PlatformFee,
-                    @ExpertAmount,
-                    @Currency,
-                    'CREATED',
-                    @OrderResponseJson,
-                    NOW(),
-                    @CreatedBy
-                );
+        INSERT INTO EscrowPayments
+        (
+            BookingId,
+            UserId,
+            ClientId,
+            RazorpayAccountId,
+            RazorpayOrderId,
+            RazorpayPaymentId,
+            RazorpaySignature,
+            RazorpayTransferId,
+            TotalAmount,
+            PlatformFee,
+            ExpertAmount,
+            Currency,
+            Status,
+            OrderResponseJson,
+            VerifyResponseJson,
+            TransferResponseJson,
+            PaidAt,
+            HeldAt,
+            CreatedAt,
+            CreatedBy
+        )
+        VALUES
+        (
+            @BookingId,
+            @UserId,
+            @ClientId,
+            @RazorpayAccountId,
+            @RazorpayOrderId,
+            @RazorpayPaymentId,
+            @RazorpaySignature,
+            @RazorpayTransferId,
+            @TotalAmount,
+            @PlatformFee,
+            @ExpertAmount,
+            @Currency,
+            @Status,
+            @OrderResponseJson,
+            @VerifyResponseJson,
+            @TransferResponseJson,
+            @PaidAt,
+            @HeldAt,
+            NOW(),
+            @CreatedBy
+        );
 
-                SELECT LAST_INSERT_ID();";
+        SELECT LAST_INSERT_ID();";
 
             using var connection = _db.GetConnection();
 
@@ -219,6 +233,22 @@ namespace ahello_backend.Repositorys.Classes
                 Signature = signature,
                 VerifyResponseJson = verifyResponseJson
             });
+        }
+
+
+        public async Task<decimal?> GetServicePriceAsync(int serviceId)
+        {
+            var query = @"
+        SELECT Price
+        FROM services
+        WHERE ServiceId = @ServiceId
+        LIMIT 1";
+
+            using var connection = _db.GetConnection();
+
+            return await connection.QuerySingleOrDefaultAsync<decimal?>(
+                query,
+                new { ServiceId = serviceId });
         }
     }
 }

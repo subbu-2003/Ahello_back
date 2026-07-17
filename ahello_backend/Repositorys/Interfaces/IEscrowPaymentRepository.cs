@@ -1,5 +1,4 @@
 ﻿using ahello_backend.Models.Payment;
-
 namespace ahello_backend.Repositorys.Interfaces
 {
     public interface IEscrowPaymentRepository
@@ -7,7 +6,7 @@ namespace ahello_backend.Repositorys.Interfaces
         Task<int> InsertAsync(EscrowPayment payment);
         Task<EscrowPayment?> GetByBookingIdAsync(int bookingId);
         Task<dynamic?> GetBookingPaymentInfoAsync(int bookingId);
-
+        Task<decimal?> GetServicePriceAsync(int serviceId);
         Task UpdateAfterPaymentAsync(
             int escrowPaymentId,
             string paymentId,
@@ -19,10 +18,8 @@ namespace ahello_backend.Repositorys.Interfaces
     string paymentId,
     string signature,
     string verifyResponseJson);
-
         Task UpdateReleaseAsync(int escrowPaymentId, string releaseJson);
         Task UpdateRefundAsync(int escrowPaymentId, string refundJson);
-
         Task UpdateStatusAsync(
             int escrowPaymentId,
             string status,

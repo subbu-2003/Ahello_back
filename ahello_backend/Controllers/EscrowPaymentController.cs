@@ -1,4 +1,5 @@
 ﻿using ahello_backend.DTO.Payment;
+using ahello_backend.Models.Bookings;
 using ahello_backend.Models.Payment;
 using ahello_backend.Repositorys.Interfaces;
 using ahello_backend.Services.Interfaces;
@@ -13,15 +14,21 @@ namespace ahello_backend.Controllers
         private readonly IEscrowPaymentRepository _escrowRepo;
         private readonly IEscrowPaymentLogRepository _logRepo;
         private readonly IRazorpayService _razorpayService;
+        private readonly IBookingRepository _bookingRepo;
+        private readonly IExpertPayoutRepository _expertPayoutRepo;
 
         public EscrowPaymentController(
             IEscrowPaymentRepository escrowRepo,
             IEscrowPaymentLogRepository logRepo,
-            IRazorpayService razorpayService)
+            IRazorpayService razorpayService,
+            IBookingRepository bookingRepo,
+            IExpertPayoutRepository expertPayoutRepo)
         {
             _escrowRepo = escrowRepo;
             _logRepo = logRepo;
             _razorpayService = razorpayService;
+            _bookingRepo = bookingRepo;
+            _expertPayoutRepo = expertPayoutRepo;
         }
 
         private IActionResult Error(string message, int statusCode = 400, object? details = null)
@@ -47,108 +54,53 @@ namespace ahello_backend.Controllers
         [HttpPost("create-order")]
         public async Task<IActionResult> CreateOrder([FromBody] CreateOrderDto dto)
         {
-            if (dto.BookingId <= 0)
-                return Error("Valid BookingId is required");
+            if (dto.UserId <= 0 || dto.ServiceId <= 0 || dto.SlotId <= 0)
+                return Error("Valid booking details are required");
 
-            var existingPayment = await _escrowRepo.GetByBookingIdAsync(dto.BookingId);
+            // Never trust client-sent amount — look up the real price server-side
+            var servicePrice = await _escrowRepo.GetServicePriceAsync(dto.ServiceId);
+            if (servicePrice == null || servicePrice <= 0)
+                return Error("Invalid service");
 
-            if (existingPayment != null &&
-                !string.IsNullOrWhiteSpace(existingPayment.RazorpayOrderId))
-            {
-                return Success("Order already created", new
-                {
-                    escrowPaymentId = existingPayment.EscrowPaymentId,
-                    orderId = existingPayment.RazorpayOrderId,
-                    amount = existingPayment.TotalAmount,
-                    currency = existingPayment.Currency,
-                    status = existingPayment.Status
-                });
-            }
-
-            var bookingInfo = await _escrowRepo.GetBookingPaymentInfoAsync(dto.BookingId);
-
-            if (bookingInfo == null)
-                return Error("Booking not found", 404);
-
-            decimal totalAmount = Convert.ToDecimal(bookingInfo.Price);
-
-            if (totalAmount <= 0)
-                return Error("Invalid service price");
-
-            decimal platformFee = Math.Round(totalAmount * 0.10m, 2);
-            decimal expertAmount = totalAmount - platformFee;
-
-            string receipt = $"booking_{dto.BookingId}";
+            string receipt = $"slot_{dto.SlotId}_{DateTime.UtcNow:yyyyMMddHHmmss}";
 
             try
             {
                 var orderResult = await _razorpayService.CreateOrderAsync(
-                    totalAmount,
-                    "INR",
-                    receipt);
-
-                var payment = new EscrowPayment
-                {
-                    BookingId = Convert.ToInt32(bookingInfo.BookingId),
-                    UserId = Convert.ToInt32(bookingInfo.UserId),
-                    ClientId = Convert.ToInt32(bookingInfo.ClientId),
-
-                    // Route not enabled now, so keep placeholder
-                    RazorpayAccountId = "ROUTE_NOT_ENABLED",
-
-                    RazorpayOrderId = orderResult.orderId,
-
-                    TotalAmount = totalAmount,
-                    PlatformFee = platformFee,
-                    ExpertAmount = expertAmount,
-                    Currency = "INR",
-                    Status = "CREATED",
-                    OrderResponseJson = orderResult.responseJson,
-                    CreatedBy = Convert.ToString(bookingInfo.ClientId)
-                };
-
-                int escrowPaymentId = await _escrowRepo.InsertAsync(payment);
+                    servicePrice.Value, "INR", receipt);
 
                 await _logRepo.InsertAsync(
-                    escrowPaymentId,
-                    dto.BookingId,
-                    "CREATE_ORDER",
-                    "SUCCESS",
-                    requestJson: $"BookingId: {dto.BookingId}",
+                    null, null, "CREATE_ORDER", "SUCCESS",
+                    requestJson: System.Text.Json.JsonSerializer.Serialize(dto),
                     responseJson: orderResult.responseJson,
-                    createdBy: Convert.ToString(bookingInfo.ClientId));
+                    createdBy: dto.CreatedBy);
 
                 return Success("Order created successfully", new
                 {
-                    escrowPaymentId,
                     orderId = orderResult.orderId,
-                    amount = totalAmount,
-                    amountInPaise = totalAmount * 100,
-                    currency = "INR",
-                    bookingId = dto.BookingId
+                    amount = servicePrice.Value,
+                    amountInPaise = servicePrice.Value * 100,
+                    currency = "INR"
                 });
             }
             catch (Exception ex)
             {
                 await _logRepo.InsertAsync(
-                    null,
-                    dto.BookingId,
-                    "CREATE_ORDER",
-                    "ERROR",
-                    requestJson: $"BookingId: {dto.BookingId}",
+                    null, null, "CREATE_ORDER", "ERROR",
+                    requestJson: System.Text.Json.JsonSerializer.Serialize(dto),
                     errorMessage: ex.Message);
 
-                return Error("Failed to create Razorpay order", 500, new
-                {
-                    razorpayError = ex.Message
-                });
+                return Error("Failed to create Razorpay order", 500, new { razorpayError = ex.Message });
             }
         }
+
         [HttpPost("verify-payment")]
         public async Task<IActionResult> VerifyPayment([FromBody] VerifyAndHoldDto dto)
         {
-            if (dto.BookingId <= 0)
-                return Error("Valid BookingId is required");
+            var bp = dto.BookingPayload;
+
+            if (bp.UserId <= 0 || bp.ServiceId <= 0 || bp.SlotId <= 0)
+                return Error("Valid booking details are required");
 
             if (string.IsNullOrWhiteSpace(dto.RazorpayOrderId))
                 return Error("RazorpayOrderId is required");
@@ -159,97 +111,171 @@ namespace ahello_backend.Controllers
             if (string.IsNullOrWhiteSpace(dto.RazorpaySignature))
                 return Error("RazorpaySignature is required");
 
-            var escrow = await _escrowRepo.GetByBookingIdAsync(dto.BookingId);
-
-            if (escrow == null)
-                return Error("Escrow payment record not found", 404);
-
-            if (escrow.Status == "PAYMENT_VERIFIED")
-            {
-                return Success("Payment already verified", new
-                {
-                    escrowPaymentId = escrow.EscrowPaymentId,
-                    bookingId = escrow.BookingId,
-                    paymentId = escrow.RazorpayPaymentId,
-                    status = escrow.Status
-                });
-            }
-
-            if (escrow.Status != "CREATED")
-            {
-                return Error("Invalid payment status", 409, new
-                {
-                    currentStatus = escrow.Status,
-                    requiredStatus = "CREATED"
-                });
-            }
-
-            if (escrow.RazorpayOrderId != dto.RazorpayOrderId)
-            {
-                return Error("Razorpay order id mismatch", 400, new
-                {
-                    savedOrderId = escrow.RazorpayOrderId,
-                    receivedOrderId = dto.RazorpayOrderId
-                });
-            }
-
             bool isValid = _razorpayService.VerifySignature(
-                dto.RazorpayOrderId,
-                dto.RazorpayPaymentId,
-                dto.RazorpaySignature);
+                dto.RazorpayOrderId, dto.RazorpayPaymentId, dto.RazorpaySignature);
 
             if (!isValid)
             {
-                await _escrowRepo.UpdateStatusAsync(
-                    escrow.EscrowPaymentId,
-                    "PAYMENT_FAILED",
-                    "Invalid Razorpay payment signature");
-
                 await _logRepo.InsertAsync(
-                    escrow.EscrowPaymentId,
-                    dto.BookingId,
-                    "VERIFY_PAYMENT",
-                    "FAILED",
+                    null, null, "VERIFY_PAYMENT", "FAILED",
                     requestJson: System.Text.Json.JsonSerializer.Serialize(dto),
                     errorMessage: "Invalid Razorpay payment signature",
-                    createdBy: escrow.ClientId.ToString());
+                    createdBy: bp.CreatedBy);
 
                 return Error("Invalid Razorpay payment signature", 400);
             }
 
-            var verifyJson = System.Text.Json.JsonSerializer.Serialize(new
+            try
             {
-                dto.BookingId,
-                dto.RazorpayOrderId,
-                dto.RazorpayPaymentId,
-                dto.RazorpaySignature,
-                VerifiedAt = DateTime.Now
-            });
+                // Re-fetch authoritative price server-side — never trust client TotalAmount
+                var servicePrice = await _escrowRepo.GetServicePriceAsync(bp.ServiceId);
+                if (servicePrice == null || servicePrice <= 0)
+                {
+                    await _logRepo.InsertAsync(
+                        null, null, "VERIFY_PAYMENT", "ERROR",
+                        requestJson: System.Text.Json.JsonSerializer.Serialize(dto),
+                        errorMessage: $"Invalid ServiceId {bp.ServiceId} at verify time",
+                        createdBy: bp.CreatedBy);
 
-            await _escrowRepo.UpdatePaymentVerifiedAsync(
-                escrow.EscrowPaymentId,
-                dto.RazorpayPaymentId,
-                dto.RazorpaySignature,
-                verifyJson);
+                    return Error("Invalid service", 400);
+                }
 
-            await _logRepo.InsertAsync(
-                escrow.EscrowPaymentId,
-                dto.BookingId,
-                "VERIFY_PAYMENT",
-                "SUCCESS",
-                requestJson: System.Text.Json.JsonSerializer.Serialize(dto),
-                responseJson: verifyJson,
-                createdBy: escrow.ClientId.ToString());
+                // 1. Insert booking NOW — payment confirmed
+                var bookingId = await _bookingRepo.CreateAsync(new BookingPost
+                {
+                    UserId = bp.UserId,
+                    ClientId = bp.ClientId,
+                    ServiceId = bp.ServiceId,
+                    SlotId = bp.SlotId,
+                    ScheduleDate = bp.ScheduleDate,
+                    StartTime = bp.StartTime,
+                    EndTime = bp.EndTime,
+                    Status = bp.Status,
+                    CreatedBy = bp.CreatedBy
+                });
 
-            return Success("Payment verified successfully", new
+                // Fetch expert's real Razorpay linked account (bp.UserId = expert/host)
+                var expertAccount = await _expertPayoutRepo.GetByUserIdAsync(bp.UserId);
+
+                if (expertAccount == null || expertAccount.AccountStatus != "ACTIVE" ||
+                    string.IsNullOrWhiteSpace(expertAccount.RazorpayAccountId))
+                {
+                    await _logRepo.InsertAsync(
+                        null, bookingId, "VERIFY_PAYMENT", "ERROR",
+                        requestJson: System.Text.Json.JsonSerializer.Serialize(dto),
+                        errorMessage: $"Expert {bp.UserId} payout account not ACTIVE (status: {expertAccount?.AccountStatus ?? "NOT_CREATED"}). Payment captured, escrow blocked pending manual reconciliation.",
+                        createdBy: bp.CreatedBy);
+
+                    return Error(
+                        $"Payment captured but expert's payout account isn't active yet. Contact support with PaymentId {dto.RazorpayPaymentId}.",
+                        500,
+                        new { expertStatus = expertAccount?.AccountStatus ?? "NOT_CREATED" });
+                }
+
+                decimal platformFee = Math.Round(servicePrice.Value * 0.10m, 2);
+                decimal expertAmount = servicePrice.Value - platformFee;
+
+                // Create held transfer to expert's linked account now that
+                // payment is verified and expert account is ACTIVE
+                string transferId;
+                string transferJson;
+                try
+                {
+                    (transferId, transferJson) = await _razorpayService.CreateHeldTransferAsync(
+                        dto.RazorpayPaymentId,
+                        expertAccount.RazorpayAccountId,
+                        expertAmount);
+                }
+                catch (Exception ex)
+                {
+                    // Payment is verified but transfer failed — needs reconciliation,
+                    // do not lose the payment record.
+                    await _logRepo.InsertAsync(
+                        null, bookingId, "CREATE_HELD_TRANSFER", "ERROR",
+                        requestJson: System.Text.Json.JsonSerializer.Serialize(new { bookingId, dto.RazorpayPaymentId, expertAccount.RazorpayAccountId, expertAmount }),
+                        errorMessage: ex.Message,
+                        createdBy: bp.CreatedBy);
+
+                    return Error(
+                        $"Payment verified but transfer to expert failed. Contact support with PaymentId {dto.RazorpayPaymentId}.",
+                        500,
+                        new { razorpayError = ex.Message });
+                }
+
+                var now = DateTime.Now;
+
+                var verifyJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    bookingId,
+                    dto.RazorpayOrderId,
+                    dto.RazorpayPaymentId,
+                    dto.RazorpaySignature,
+                    VerifiedAt = now
+                });
+
+                // 2. Insert escrow row referencing the new bookingId
+                var payment = new EscrowPayment
+                {
+                    BookingId = bookingId,
+                    UserId = bp.UserId,
+                    ClientId = bp.ClientId,
+                    RazorpayAccountId = expertAccount.RazorpayAccountId,
+                    RazorpayOrderId = dto.RazorpayOrderId,
+                    RazorpayPaymentId = dto.RazorpayPaymentId,
+                    RazorpaySignature = dto.RazorpaySignature,
+                    RazorpayTransferId = transferId,
+                    TotalAmount = servicePrice.Value,
+                    PlatformFee = platformFee,
+                    ExpertAmount = expertAmount,
+                    Currency = "INR",
+                    Status = "HELD",
+                    VerifyResponseJson = verifyJson,
+                    TransferResponseJson = transferJson,
+                    PaidAt = now,
+                    HeldAt = now,
+                    CreatedBy = bp.CreatedBy
+                };
+
+                int escrowPaymentId = await _escrowRepo.InsertAsync(payment);
+
+                await _logRepo.InsertAsync(
+                    escrowPaymentId, bookingId, "VERIFY_PAYMENT", "SUCCESS",
+                    requestJson: System.Text.Json.JsonSerializer.Serialize(dto),
+                    responseJson: verifyJson,
+                    createdBy: bp.CreatedBy);
+
+                await _logRepo.InsertAsync(
+                    escrowPaymentId, bookingId, "CREATE_HELD_TRANSFER", "SUCCESS",
+                    responseJson: transferJson,
+                    createdBy: bp.CreatedBy);
+
+                return Success("Payment verified, booking created, transfer held", new
+                {
+                    escrowPaymentId,
+                    bookingId,
+                    orderId = dto.RazorpayOrderId,
+                    paymentId = dto.RazorpayPaymentId,
+                    transferId,
+                    status = "HELD"
+                });
+            }
+            catch (Exception ex)
             {
-                escrowPaymentId = escrow.EscrowPaymentId,
-                bookingId = escrow.BookingId,
-                orderId = dto.RazorpayOrderId,
-                paymentId = dto.RazorpayPaymentId,
-                status = "PAYMENT_VERIFIED"
-            });
+                // Razorpay already captured the payment at this point — this needs
+                // manual reconciliation, not a silent failure.
+                await _logRepo.InsertAsync(
+                    null, null, "VERIFY_PAYMENT", "ERROR",
+                    requestJson: System.Text.Json.JsonSerializer.Serialize(dto),
+                    errorMessage: ex.Message,
+                    createdBy: bp.CreatedBy);
+
+                return Error(
+                    $"Payment captured but booking/escrow creation failed. Contact support with PaymentId {dto.RazorpayPaymentId}.",
+                    500,
+                    new { razorpayError = ex.Message });
+            }
         }
+
         // POST /api/EscrowPayment/release
         [HttpPost("release")]
         public async Task<IActionResult> Release([FromBody] ReleaseDto dto)
