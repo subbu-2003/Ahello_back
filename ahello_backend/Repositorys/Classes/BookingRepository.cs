@@ -67,6 +67,26 @@ namespace ahello_backend.Repositorys.Classes
 
             try
             {
+                // ── NEW: Check slot isn't already booked before inserting ──
+                var alreadyBooked = await connection.ExecuteScalarAsync<int>(@"
+            SELECT COUNT(1)
+            FROM bookedslots
+            WHERE SlotId = @SlotId
+            AND SlotDate = @SlotDate
+            AND StartTime = @StartTime
+            AND EndTime = @EndTime",
+                    new
+                    {
+                        model.SlotId,
+                        SlotDate = model.ScheduleDate,
+                        StartTime = model.StartTime,
+                        EndTime = model.EndTime
+                    },
+                    tx);
+
+                if (alreadyBooked > 0)
+                    throw new Exception("This slot has already been booked. Please choose another time.");
+
                 var bookingSql = @"
         INSERT INTO bookings
         (UserId, ClientId, ServiceId, ScheduleDate, StartTime, EndTime, Status, CreatedAt, CreatedBy)
