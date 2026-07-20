@@ -2,6 +2,7 @@
 using ahello_backend.Models.Bookings;
 using ahello_backend.Models.Payment;
 using ahello_backend.Repositorys.Interfaces;
+using ahello_backend.Services.Classes;
 using ahello_backend.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,19 +17,22 @@ namespace ahello_backend.Controllers
         private readonly IRazorpayService _razorpayService;
         private readonly IBookingRepository _bookingRepo;
         private readonly IExpertPayoutRepository _expertPayoutRepo;
+        private readonly IEscrowPaymentService _escrowPaymentService;
 
         public EscrowPaymentController(
             IEscrowPaymentRepository escrowRepo,
             IEscrowPaymentLogRepository logRepo,
             IRazorpayService razorpayService,
             IBookingRepository bookingRepo,
-            IExpertPayoutRepository expertPayoutRepo)
+            IExpertPayoutRepository expertPayoutRepo,
+            IEscrowPaymentService escrowPaymentService)
         {
             _escrowRepo = escrowRepo;
             _logRepo = logRepo;
             _razorpayService = razorpayService;
             _bookingRepo = bookingRepo;
             _expertPayoutRepo = expertPayoutRepo;
+            _escrowPaymentService = escrowPaymentService;
         }
 
         private IActionResult Error(string message, int statusCode = 400, object? details = null)
@@ -370,6 +374,19 @@ namespace ahello_backend.Controllers
             var escrow = await _escrowRepo.GetByBookingIdAsync(bookingId);
             if (escrow == null) return Error("Not found", 404);
             return Success("Escrow payment fetched", escrow);
+        }
+        [HttpGet("user/{userId}/timeline")]
+        public async Task<IActionResult> GetTimelineByUserId(int userId)
+        {
+            if (userId <= 0)
+                return Error("Valid UserId is required");
+
+            var timeline = await _escrowPaymentService.GetTimelineByUserIdAsync(userId);
+
+            if (!timeline.Any())
+                return Error("No escrow payments found for this user", 404);
+
+            return Success("Escrow payment timeline fetched", timeline);
         }
     }
 }

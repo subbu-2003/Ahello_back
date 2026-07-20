@@ -250,5 +250,44 @@ namespace ahello_backend.Repositorys.Classes
                 query,
                 new { ServiceId = serviceId });
         }
+        public async Task<IEnumerable<EscrowPaymentDetails>> GetEscrowDetailsByUserIdAsync(int userId)
+        {
+            var query = @"
+        SELECT
+            ep.EscrowPaymentId,
+            ep.BookingId,
+            ep.UserId,
+            ep.ClientId,
+            b.ServiceId,
+            s.ServiceTitle,
+            ep.RazorpayOrderId,
+            ep.RazorpayPaymentId,
+            ep.RazorpayTransferId,
+            ep.TotalAmount,
+            ep.PlatformFee,
+            ep.ExpertAmount,
+            ep.Currency,
+            ep.Status,
+            ep.VerifyResponseJson,
+            ep.TransferResponseJson,
+            ep.ReleaseResponseJson,
+            ep.RefundResponseJson,
+            ep.PaidAt,
+            ep.HeldAt,
+            ep.ReleasedAt,
+            ep.RefundedAt,
+            ep.CreatedAt
+        FROM EscrowPayments ep
+        INNER JOIN bookings b ON b.BookingId = ep.BookingId
+        INNER JOIN services s ON s.ServiceId = b.ServiceId
+        WHERE ep.UserId = @UserId
+        ORDER BY ep.CreatedAt DESC";
+
+            using var connection = _db.GetConnection();
+
+            return await connection.QueryAsync<EscrowPaymentDetails>(
+                query,
+                new { UserId = userId });
+        }
     }
 }
