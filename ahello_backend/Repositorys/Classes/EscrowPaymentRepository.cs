@@ -289,5 +289,24 @@ namespace ahello_backend.Repositorys.Classes
                 query,
                 new { UserId = userId });
         }
+        public async Task UpdateTransferResponseAsync(
+    int escrowPaymentId,
+    string transferJson)
+        {
+            var sql = @"
+        UPDATE EscrowPayments
+        SET
+            TransferResponseJson = @TransferJson,
+            ModifiedAt = NOW()
+        WHERE EscrowPaymentId = @EscrowPaymentId";
+
+            using var connection = _db.GetConnection();
+
+            await connection.ExecuteAsync(sql, new
+            {
+                EscrowPaymentId = escrowPaymentId,
+                TransferJson = transferJson
+            });
+        }
     }
 }

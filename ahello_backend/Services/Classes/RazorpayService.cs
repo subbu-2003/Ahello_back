@@ -358,5 +358,15 @@ namespace ahello_backend.Services.Classes
 
             return json;
         }
+        public async Task<string> GetTransferAsync(string transferId)
+        {
+            var response = await _http.GetAsync($"v1/transfers/{transferId}");
+
+            var json = await response.Content.ReadAsStringAsync();
+
+            await EnsureSuccessAsync(response);
+
+            return json;
+        }
     }
 }
