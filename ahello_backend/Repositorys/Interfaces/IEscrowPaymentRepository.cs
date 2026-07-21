@@ -15,15 +15,16 @@ namespace ahello_backend.Repositorys.Interfaces
             string transferId,
             string transferJson);
         Task UpdatePaymentVerifiedAsync(
-    int escrowPaymentId,
-    string paymentId,
-    string signature,
-    string verifyResponseJson);
+        int escrowPaymentId,
+        string paymentId,
+        string signature,
+        string verifyResponseJson); 
         Task UpdateReleaseAsync(int escrowPaymentId, string releaseJson);
         Task UpdateRefundAsync(int escrowPaymentId, string refundJson);
         Task UpdateStatusAsync(
             int escrowPaymentId,
             string status,
             string? failureReason = null);
+        Task UpdateTransferResponseAsync(int escrowPaymentId, string transferJson);
     }
 }
