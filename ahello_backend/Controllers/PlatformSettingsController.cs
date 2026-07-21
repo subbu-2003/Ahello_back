@@ -27,7 +27,17 @@ namespace ahello_backend.Controllers
 
             return Ok(result);
         }
+        // ============================================================
+        // GET ACTIVE PLATFORM SETTINGS
+        // ============================================================
 
+        [HttpGet("active")]
+        public async Task<IActionResult> GetActive()
+        {
+            var result = await _service.GetActiveAsync();
+
+            return Ok(result);
+        }
         // ============================================================
         // GET BY PLATFORM SETTING ID
         // ============================================================

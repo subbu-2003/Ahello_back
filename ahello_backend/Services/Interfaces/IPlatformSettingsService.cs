@@ -5,7 +5,7 @@ namespace ahello_backend.Services.Interfaces
     public interface IPlatformSettingsService
     {
         Task<IEnumerable<PlatformSettings>> GetAllAsync();
-
+        Task<IEnumerable<PlatformSettings>> GetActiveAsync();
         Task<PlatformSettings?> GetByIdAsync(
             int platformSettingId);
 

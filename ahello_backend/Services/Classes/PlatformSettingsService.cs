@@ -22,7 +22,14 @@ namespace ahello_backend.Services.Classes
         {
             return await _repository.GetAllAsync();
         }
+        // ============================================================
+        // GET ACTIVE PLATFORM SETTINGS
+        // ============================================================
 
+        public async Task<IEnumerable<PlatformSettings>> GetActiveAsync()
+        {
+            return await _repository.GetActiveAsync();
+        }
         // ============================================================
         // GET BY ID
         // ============================================================

@@ -35,7 +35,28 @@ namespace ahello_backend.Repositorys.Classes
 
             return await connection.QueryAsync<PlatformSettings>(query);
         }
+        // ============================================================
+        // GET ACTIVE PLATFORM SETTINGS
+        // ============================================================
 
+        public async Task<IEnumerable<PlatformSettings>> GetActiveAsync()
+        {
+            using var connection = _context.GetConnection();
+
+            var query = @"
+        SELECT
+            PlatformSettingId,
+            FeePercentage,
+            IsActive,
+            ModifiedAt,
+            ModifiedBy
+        FROM PlatformSettings
+        WHERE IsActive = 1
+        ORDER BY PlatformSettingId DESC;
+    ";
+
+            return await connection.QueryAsync<PlatformSettings>(query);
+        }
         // ============================================================
         // GET BY PLATFORM SETTING ID
         // ============================================================
