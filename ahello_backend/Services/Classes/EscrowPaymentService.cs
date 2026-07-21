@@ -45,7 +45,7 @@ namespace ahello_backend.Services.Classes
                 BookingId = row.BookingId,
                 UserId = row.UserId,
                 ClientId = row.ClientId,
-                ServiceName = row.ServiceName,
+                ServiceName = row.ServiceTitle,
                 RazorpayOrderId = row.RazorpayOrderId,
                 RazorpayPaymentId = row.RazorpayPaymentId,
                 RazorpayTransferId = row.RazorpayTransferId,
