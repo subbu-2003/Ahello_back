@@ -7,7 +7,7 @@
         public int UserId { get; set; }
         public int ClientId { get; set; }
         public int ServiceId { get; set; }
-        public string ServiceName { get; set; } = string.Empty;
+        public string ServiceTitle { get; set; } = string.Empty;
 
         public string? RazorpayOrderId { get; set; }
         public string? RazorpayPaymentId { get; set; }

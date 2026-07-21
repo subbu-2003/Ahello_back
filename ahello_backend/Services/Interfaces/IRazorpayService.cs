@@ -45,5 +45,6 @@ namespace ahello_backend.Services.Interfaces
         Task<string> RefundPaymentAsync(
             string paymentId,
             decimal amount);
+        Task<string> GetTransferAsync(string transferId);
     }
 }
