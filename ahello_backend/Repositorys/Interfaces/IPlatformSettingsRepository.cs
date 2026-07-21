@@ -5,7 +5,7 @@ namespace ahello_backend.Repositorys.Interfaces
     public interface IPlatformSettingsRepository
     {
         Task<IEnumerable<PlatformSettings>> GetAllAsync();
-
+        Task<IEnumerable<PlatformSettings>> GetActiveAsync();
         Task<PlatformSettings?> GetByIdAsync(int platformSettingId);
 
         Task<int> CreateAsync(CreatePlatformSettingsRequest request);
