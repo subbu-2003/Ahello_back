@@ -4,6 +4,11 @@ namespace ahello_backend.Services.Interfaces
 {
     public interface IEscrowPaymentService
     {
-        Task<IEnumerable<EscrowTimelineResponseDto>> GetTimelineByUserIdAsync(int userId);
+        Task<EscrowTimelinePagedResponseDto> GetTimelineByUserIdAsync(
+        int userId,
+        string? search,
+        string? key,
+        int pageNumber,
+        int pageSize);
     }
 }
