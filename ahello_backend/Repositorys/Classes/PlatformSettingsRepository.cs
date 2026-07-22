@@ -25,7 +25,9 @@ namespace ahello_backend.Repositorys.Classes
             var query = @"
                 SELECT
                     PlatformSettingId,
+                    FeeType,
                     FeePercentage,
+                    FeeAmount,
                     IsActive,
                     ModifiedAt,
                     ModifiedBy
@@ -44,16 +46,19 @@ namespace ahello_backend.Repositorys.Classes
             using var connection = _context.GetConnection();
 
             var query = @"
-        SELECT
-            PlatformSettingId,
-            FeePercentage,
-            IsActive,
-            ModifiedAt,
-            ModifiedBy
-        FROM PlatformSettings
-        WHERE IsActive = 1
-        ORDER BY PlatformSettingId DESC;
-    ";
+                SELECT
+                    PlatformSettingId,
+                    FeeType,
+                    FeePercentage,
+                    FeeAmount,
+                    IsActive,
+                    ModifiedAt,
+                    ModifiedBy
+                FROM PlatformSettings
+                WHERE IsActive = 1
+                ORDER BY PlatformSettingId DESC;
+            ";
+
 
             return await connection.QueryAsync<PlatformSettings>(query);
         }
@@ -69,7 +74,9 @@ namespace ahello_backend.Repositorys.Classes
             var query = @"
                 SELECT
                     PlatformSettingId,
+                    FeeType,
                     FeePercentage,
+                    FeeAmount,
                     IsActive,
                     ModifiedAt,
                     ModifiedBy
@@ -92,19 +99,25 @@ namespace ahello_backend.Repositorys.Classes
         public async Task<int> CreateAsync(
             CreatePlatformSettingsRequest request)
         {
+            ValidateFee(request.FeeType, request.FeePercentage, request.FeeAmount);
+
             using var connection = _context.GetConnection();
 
             var query = @"
                 INSERT INTO PlatformSettings
                 (
+                    FeeType,
                     FeePercentage,
+                    FeeAmount,
                     IsActive,
                     ModifiedAt,
                     ModifiedBy
                 )
                 VALUES
                 (
+                    @FeeType,
                     @FeePercentage,
+                    @FeeAmount,
                     1,
                     NOW(),
                     @ModifiedBy
@@ -115,7 +128,13 @@ namespace ahello_backend.Repositorys.Classes
 
             return await connection.ExecuteScalarAsync<int>(
                 query,
-                request);
+                new
+                {
+                    request.FeeType,
+                    request.FeePercentage,
+                    request.FeeAmount,
+                    request.ModifiedBy
+                });
         }
 
         // ============================================================
@@ -126,12 +145,16 @@ namespace ahello_backend.Repositorys.Classes
             int platformSettingId,
             UpdatePlatformSettingsRequest request)
         {
+            ValidateFee(request.FeeType, request.FeePercentage, request.FeeAmount);
+
             using var connection = _context.GetConnection();
 
             var query = @"
                 UPDATE PlatformSettings
                 SET
+                    FeeType = @FeeType,
                     FeePercentage = @FeePercentage,
+                    FeeAmount = @FeeAmount,
                     ModifiedAt = NOW(),
                     ModifiedBy = @ModifiedBy
                 WHERE PlatformSettingId = @PlatformSettingId;
@@ -142,7 +165,9 @@ namespace ahello_backend.Repositorys.Classes
                 new
                 {
                     PlatformSettingId = platformSettingId,
+                    request.FeeType,
                     request.FeePercentage,
+                    request.FeeAmount,
                     request.ModifiedBy
                 });
 
@@ -178,6 +203,71 @@ namespace ahello_backend.Repositorys.Classes
                 });
 
             return rowsAffected > 0;
+        }
+        // ============================================================
+        // VALIDATE FEE
+        // ============================================================
+
+        private static void ValidateFee(
+            string feeType,
+            decimal? feePercentage,
+            decimal? feeAmount)
+        {
+            if (string.IsNullOrWhiteSpace(feeType))
+            {
+                throw new ArgumentException(
+                    "FeeType is required.");
+            }
+
+            feeType = feeType.ToLower();
+
+            if (feeType != "percentage" && feeType != "amount")
+            {
+                throw new ArgumentException(
+                    "FeeType must be either 'percentage' or 'amount'.");
+            }
+
+            if (feeType == "percentage")
+            {
+                if (!feePercentage.HasValue)
+                {
+                    throw new ArgumentException(
+                        "FeePercentage is required when FeeType is 'percentage'.");
+                }
+
+                if (feePercentage < 0)
+                {
+                    throw new ArgumentException(
+                        "FeePercentage cannot be negative.");
+                }
+
+                if (feeAmount.HasValue)
+                {
+                    throw new ArgumentException(
+                        "FeeAmount must be null when FeeType is 'percentage'.");
+                }
+            }
+
+            if (feeType == "amount")
+            {
+                if (!feeAmount.HasValue)
+                {
+                    throw new ArgumentException(
+                        "FeeAmount is required when FeeType is 'amount'.");
+                }
+
+                if (feeAmount < 0)
+                {
+                    throw new ArgumentException(
+                        "FeeAmount cannot be negative.");
+                }
+
+                if (feePercentage.HasValue)
+                {
+                    throw new ArgumentException(
+                        "FeePercentage must be null when FeeType is 'amount'.");
+                }
+            }
         }
     }
 }
