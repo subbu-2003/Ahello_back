@@ -225,7 +225,8 @@ namespace ahello_backend.Services.Classes
         public async Task<(string orderId, string responseJson)> CreateOrderAsync(
             decimal amount,
             string currency,
-            string receipt)
+            string receipt,
+             string serviceName)
         {
             var paise = (long)(amount * 100);
 
@@ -234,7 +235,12 @@ namespace ahello_backend.Services.Classes
                 amount = paise,
                 currency = currency,
                 receipt = receipt,
-                payment_capture = 1
+                payment_capture = 1,
+                notes = new
+                {
+                    app_name = "Ahllo",
+                    service_name = serviceName ?? ""
+                }
             };
 
             var response = await _http.PostAsJsonAsync("v1/orders", payload);

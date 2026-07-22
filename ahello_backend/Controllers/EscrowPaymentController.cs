@@ -65,13 +65,14 @@ namespace ahello_backend.Controllers
             var servicePrice = await _escrowRepo.GetServicePriceAsync(dto.ServiceId);
             if (servicePrice == null || servicePrice <= 0)
                 return Error("Invalid service");
+            var serviceName = await _escrowRepo.GetServiceNameAsync(dto.ServiceId);
 
             string receipt = $"slot_{dto.SlotId}_{DateTime.UtcNow:yyyyMMddHHmmss}";
 
             try
             {
                 var orderResult = await _razorpayService.CreateOrderAsync(
-                    servicePrice.Value, "INR", receipt);
+                    servicePrice.Value, "INR", receipt, serviceName ?? "");
 
                 await _logRepo.InsertAsync(
                     null, null, "CREATE_ORDER", "SUCCESS",
