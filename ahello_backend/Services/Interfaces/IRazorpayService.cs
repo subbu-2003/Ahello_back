@@ -24,7 +24,8 @@ namespace ahello_backend.Services.Interfaces
         Task<(string orderId, string responseJson)> CreateOrderAsync(
             decimal amount,
             string currency,
-            string receipt);
+            string receipt,
+             string serviceName);
 
         bool VerifySignature(
             string orderId,

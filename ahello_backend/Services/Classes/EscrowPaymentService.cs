@@ -15,18 +15,66 @@ namespace ahello_backend.Services.Classes
             _razorpayService = razorpayService;
         }
 
-        public async Task<IEnumerable<EscrowTimelineResponseDto>> GetTimelineByUserIdAsync(int userId)
+        public async Task<EscrowTimelinePagedResponseDto>
+     GetTimelineByUserIdAsync(
+         int userId,
+         string? search,
+         string? key,
+         int pageNumber,
+         int pageSize)
         {
-            var rows = (await _escrowRepo.GetEscrowDetailsByUserIdAsync(userId)).ToList();
+            if (pageNumber < 1)
+                pageNumber = 1;
+
+            if (pageSize < 1)
+                pageSize = 10;
+
+            if (pageSize > 100)
+                pageSize = 100;
+
+            // Validate timeline key
+            var validTimelineKeys = new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase)
+    {
+        "PAYMENT_CREATED",
+        "PAYMENT_AUTHORIZED",
+        "PAYMENT_CAPTURED",
+        "HELD_IN_ESCROW",
+        "TRANSFER_PROCESSED",
+        "SETTLEMENT_INITIATED",
+        "SETTLEMENT_PENDING",
+        "SETTLEMENT_COMPLETED",
+        "RELEASED",
+        "REFUNDED"
+    };
+
+            if (!string.IsNullOrWhiteSpace(key) &&
+                !validTimelineKeys.Contains(key))
+            {
+                throw new ArgumentException(
+                    $"Invalid timeline key: {key}");
+            }
+
+            var result =
+                await _escrowRepo.GetEscrowDetailsByUserIdAsync(
+                    userId,
+                    search,
+                    null, // No database key filter
+                    pageNumber,
+                    pageSize);
+
+            var rows = result.Data.ToList();
 
             foreach (var row in rows)
             {
                 if (!string.IsNullOrWhiteSpace(row.RazorpayTransferId))
                 {
                     var latestTransferJson =
-                        await _razorpayService.GetTransferAsync(row.RazorpayTransferId);
+                        await _razorpayService.GetTransferAsync(
+                            row.RazorpayTransferId);
 
-                    row.TransferResponseJson = latestTransferJson;
+                    row.TransferResponseJson =
+                        latestTransferJson;
 
                     await _escrowRepo.UpdateTransferResponseAsync(
                         row.EscrowPaymentId,
@@ -34,7 +82,41 @@ namespace ahello_backend.Services.Classes
                 }
             }
 
-            return rows.Select(BuildTimelineDto);
+            var timelineData =
+                rows
+                    .Select(BuildTimelineDto)
+                    .ToList();
+
+            // Filter timeline by Key
+            if (!string.IsNullOrWhiteSpace(key))
+            {
+                timelineData = timelineData
+                    .Select(dto =>
+                    {
+                        dto.Timeline = dto.Timeline
+                            .Where(t =>
+                                string.Equals(
+                                    t.Key,
+                                    key,
+                                    StringComparison.OrdinalIgnoreCase))
+                            .ToList();
+
+                        return dto;
+                    })
+                    .Where(dto => dto.Timeline.Any())
+                    .ToList();
+            }
+
+            return new EscrowTimelinePagedResponseDto
+            {
+                Data = timelineData,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalRecords = result.TotalRecords,
+                TotalPages = (int)Math.Ceiling(
+                    result.TotalRecords /
+                    (double)pageSize)
+            };
         }
 
         private EscrowTimelineResponseDto BuildTimelineDto(EscrowPaymentDetails row)
