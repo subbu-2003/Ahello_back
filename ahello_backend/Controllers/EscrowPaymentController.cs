@@ -18,6 +18,7 @@ namespace ahello_backend.Controllers
         private readonly IBookingRepository _bookingRepo;
         private readonly IExpertPayoutRepository _expertPayoutRepo;
         private readonly IEscrowPaymentService _escrowPaymentService;
+        private readonly IPlatformSettingsRepository _platformSettingsRepo;
 
         public EscrowPaymentController(
             IEscrowPaymentRepository escrowRepo,
@@ -25,7 +26,8 @@ namespace ahello_backend.Controllers
             IRazorpayService razorpayService,
             IBookingRepository bookingRepo,
             IExpertPayoutRepository expertPayoutRepo,
-            IEscrowPaymentService escrowPaymentService)
+            IEscrowPaymentService escrowPaymentService,
+            IPlatformSettingsRepository platformSettingsRepo)
         {
             _escrowRepo = escrowRepo;
             _logRepo = logRepo;
@@ -33,6 +35,7 @@ namespace ahello_backend.Controllers
             _bookingRepo = bookingRepo;
             _expertPayoutRepo = expertPayoutRepo;
             _escrowPaymentService = escrowPaymentService;
+            _platformSettingsRepo = platformSettingsRepo;
         }
 
         private IActionResult Error(string message, int statusCode = 400, object? details = null)
@@ -176,7 +179,60 @@ namespace ahello_backend.Controllers
                         new { expertStatus = expertAccount?.AccountStatus ?? "NOT_CREATED" });
                 }
 
-                decimal platformFee = Math.Round(servicePrice.Value * 0.10m, 2);
+                var platformSetting = await _platformSettingsRepo.GetActiveSettingAsync();
+
+                if (platformSetting == null)
+                {
+                    await _logRepo.InsertAsync(
+                        null,
+                        bookingId,
+                        "VERIFY_PAYMENT",
+                        "ERROR",
+                        requestJson: System.Text.Json.JsonSerializer.Serialize(dto),
+                        errorMessage: "No active platform fee setting found.",
+                        createdBy: bp.CreatedBy);
+
+                    return Error(
+                        "Platform fee configuration is not available. Contact support.",
+                        500);
+                }
+
+                decimal platformFee;
+
+                if (platformSetting.FeeType.Equals(
+                        "percentage",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!platformSetting.FeePercentage.HasValue)
+                        return Error("Platform fee percentage is not configured.", 500);
+
+                    platformFee = Math.Round(
+                        servicePrice.Value * platformSetting.FeePercentage.Value / 100m,
+                        2);
+                }
+                else if (platformSetting.FeeType.Equals(
+                             "amount",
+                             StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!platformSetting.FeeAmount.HasValue)
+                        return Error("Platform fee amount is not configured.", 500);
+
+                    platformFee = Math.Round(
+                        platformSetting.FeeAmount.Value,
+                        2);
+                }
+                else
+                {
+                    return Error("Invalid platform fee configuration.", 500);
+                }
+
+                if (platformFee > servicePrice.Value)
+                {
+                    return Error(
+                        "Platform fee cannot be greater than the service price.",
+                        400);
+                }
+
                 decimal expertAmount = servicePrice.Value - platformFee;
 
                 // Create held transfer to expert's linked account now that
