@@ -25,5 +25,38 @@ namespace ahello_backend.Services.Classes
         {
             return await _repository.GetByRoomNameAsync(roomName);
         }
+        public async Task<int> CreateJoinRequestAsync(
+            InstantMeetingJoinRequest model)
+        {
+            return await _repository.CreateJoinRequestAsync(model);
+        }
+
+        public async Task<IEnumerable<InstantMeetingJoinRequest>> GetWaitingUsersAsync(
+            int instantMeetingId)
+        {
+            return await _repository.GetWaitingUsersAsync(instantMeetingId);
+        }
+
+        public async Task<InstantMeetingJoinRequest?> GetJoinRequestByIdAsync(
+            int requestId)
+        {
+            return await _repository.GetJoinRequestByIdAsync(requestId);
+        }
+
+        public async Task<int> UpdateJoinRequestStatusAsync(
+            int requestId,
+            string status)
+        {
+            return await _repository.UpdateJoinRequestStatusAsync(requestId, status);
+        }
+
+        public async Task<int> UpdateAllJoinRequestStatusAsync(
+            int instantMeetingId,
+            string status)
+        {
+            return await _repository.UpdateAllJoinRequestStatusAsync(
+                instantMeetingId,
+                status);
+        }
     }
 }
