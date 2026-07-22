@@ -7,13 +7,7 @@ namespace ahello_backend.Repositorys.Interfaces
         Task<EscrowPayment?> GetByBookingIdAsync(int bookingId);
         Task<dynamic?> GetBookingPaymentInfoAsync(int bookingId);
         Task<decimal?> GetServicePriceAsync(int serviceId);
-        Task<(IEnumerable<EscrowPaymentDetails> Data, int TotalRecords)>
-        GetEscrowDetailsByUserIdAsync(
-         int userId,
-         string? search,
-         string? key,
-         int pageNumber,
-         int pageSize);
+        Task<IEnumerable<EscrowPaymentDetails>> GetEscrowDetailsByUserIdAsync(int userId);
         Task UpdateAfterPaymentAsync(
             int escrowPaymentId,
             string paymentId,

@@ -109,6 +109,21 @@ namespace ahello_backend.Repositorys.Classes
                 new { BookingId = bookingId });
         }
 
+        public async Task<string?> GetServiceNameAsync(int serviceId)
+        {
+            var query = @"
+        SELECT ServiceTitle
+        FROM services
+        WHERE ServiceId = @ServiceId
+        LIMIT 1";
+
+            using var connection = _db.GetConnection();
+
+            return await connection.QuerySingleOrDefaultAsync<string?>(
+                query,
+                new { ServiceId = serviceId });
+        }
+
         public async Task UpdateAfterPaymentAsync(
             int escrowPaymentId,
             string paymentId,
