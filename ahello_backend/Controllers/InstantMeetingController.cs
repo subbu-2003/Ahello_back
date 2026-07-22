@@ -163,6 +163,39 @@ namespace ahello_backend.Controllers
                         ? "host"
                         : "client";
 
+                if (role == "client")
+                {
+                    if (!model.RequestId.HasValue)
+                    {
+                        return BadRequest(new
+                        {
+                            success = false,
+                            message = "RequestId is required."
+                        });
+                    }
+
+                    var request = await _instantMeetingService
+                        .GetJoinRequestByIdAsync(model.RequestId.Value);
+
+                    if (request == null)
+                    {
+                        return NotFound(new
+                        {
+                            success = false,
+                            message = "Join request not found."
+                        });
+                    }
+
+                    if (request.Status != "Approved")
+                    {
+                        return BadRequest(new
+                        {
+                            success = false,
+                            message = "Waiting for host approval."
+                        });
+                    }
+                }
+
                 var authToken = _hundredMsService.GenerateAuthToken(
                     meeting.RoomId,
                     role,
@@ -191,6 +224,105 @@ namespace ahello_backend.Controllers
                     message = ex.Message
                 });
             }
+        }
+        [HttpPost("join-request")]
+        public async Task<IActionResult> JoinRequest(
+    [FromBody] InstantMeetingJoinRequestPost model)
+        {
+            var meeting = await _instantMeetingService
+                .GetByRoomNameAsync(model.RoomName);
+
+            if (meeting == null)
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = "Meeting not found."
+                });
+            }
+
+            var requestId = await _instantMeetingService
+                .CreateJoinRequestAsync(new InstantMeetingJoinRequest
+                {
+                    InstantMeetingId = meeting.Id,
+                    UserName = model.UserName,
+                    Status = "Waiting"
+                });
+
+            return Ok(new
+            {
+                success = true,
+                requestId,
+                status = "Waiting"
+            });
+        }
+
+        [HttpGet("waiting-users/{roomName}")]
+        public async Task<IActionResult> GetWaitingUsers(
+    string roomName)
+        {
+            var meeting = await _instantMeetingService
+                .GetByRoomNameAsync(roomName);
+
+            if (meeting == null)
+            {
+                return NotFound();
+            }
+
+            var users = await _instantMeetingService
+                .GetWaitingUsersAsync(meeting.Id);
+
+            return Ok(users);
+        }
+
+        [HttpPut("join-request/{requestId}/status")]
+        public async Task<IActionResult> UpdateJoinRequestStatus(
+    int requestId,
+    [FromBody] InstantMeetingJoinRequestStatusPut model)
+        {
+            await _instantMeetingService
+                .UpdateJoinRequestStatusAsync(
+                    requestId,
+                    model.Status);
+
+            return Ok(new
+            {
+                success = true
+            });
+        }
+
+        [HttpPut("join-requests/status")]
+        public async Task<IActionResult> UpdateAllJoinRequestStatus(
+    [FromBody] InstantMeetingJoinRequestsStatusPut model)
+        {
+            await _instantMeetingService
+                .UpdateAllJoinRequestStatusAsync(
+                    model.InstantMeetingId,
+                    model.Status);
+
+            return Ok(new
+            {
+                success = true
+            });
+        }
+
+        [HttpGet("request-status/{requestId}")]
+        public async Task<IActionResult> GetRequestStatus(
+    int requestId)
+        {
+            var request = await _instantMeetingService
+                .GetJoinRequestByIdAsync(requestId);
+
+            if (request == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(new
+            {
+                success = true,
+                status = request.Status
+            });
         }
     }
 }

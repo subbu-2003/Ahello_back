@@ -9,5 +9,6 @@
         public string Name { get; set; } = "";
 
         public string? HostKey { get; set; }
+        public int ? RequestId { get; set; }
     }
 }
