@@ -431,18 +431,50 @@ namespace ahello_backend.Controllers
             if (escrow == null) return Error("Not found", 404);
             return Success("Escrow payment fetched", escrow);
         }
+
         [HttpGet("user/{userId}/timeline")]
-        public async Task<IActionResult> GetTimelineByUserId(int userId)
+        public async Task<IActionResult> GetTimelineByUserId(int userId,
+        [FromQuery] string? search = null,
+        [FromQuery] string? key = null,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
         {
             if (userId <= 0)
                 return Error("Valid UserId is required");
 
-            var timeline = await _escrowPaymentService.GetTimelineByUserIdAsync(userId);
+            if (pageNumber < 1)
+                return Error("PageNumber must be greater than 0");
 
-            if (!timeline.Any())
-                return Error("No escrow payments found for this user", 404);
+            if (pageSize < 1 || pageSize > 100)
+                return Error(
+                    "PageSize must be between 1 and 100");
 
-            return Success("Escrow payment timeline fetched", timeline);
+            try
+            {
+                var result =
+                    await _escrowPaymentService
+                        .GetTimelineByUserIdAsync(
+                            userId,
+                            search,
+                            key,
+                            pageNumber,
+                            pageSize);
+
+                if (!result.Data.Any())
+                    return Error(
+                        "No escrow payments found for this user",
+                        404);
+
+                return Success(
+                    "Escrow payment timeline fetched",
+                    result);
+            }
+            catch (ArgumentException ex)
+            {
+                return Error(
+                    ex.Message,
+                    400);
+            }
         }
     }
 }
