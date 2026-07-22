@@ -265,9 +265,97 @@ namespace ahello_backend.Repositorys.Classes
                 query,
                 new { ServiceId = serviceId });
         }
-        public async Task<IEnumerable<EscrowPaymentDetails>> GetEscrowDetailsByUserIdAsync(int userId)
+        public async Task<(IEnumerable<EscrowPaymentDetails> Data, int TotalRecords)>
+     GetEscrowDetailsByUserIdAsync(
+         int userId,
+         string? search,
+         string? key,
+         int pageNumber,
+         int pageSize)
         {
-            var query = @"
+            var whereConditions = new List<string>
+    {
+        "ep.UserId = @UserId"
+    };
+
+            var parameters = new DynamicParameters();
+            parameters.Add("UserId", userId);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                if (string.IsNullOrWhiteSpace(key))
+                {
+                    whereConditions.Add(@"
+            (
+                s.ServiceTitle LIKE @Search
+                OR ep.RazorpayOrderId LIKE @Search
+                OR ep.RazorpayPaymentId LIKE @Search
+                OR ep.RazorpayTransferId LIKE @Search
+                OR ep.Status LIKE @Search
+                OR CAST(ep.BookingId AS CHAR) LIKE @Search
+                OR CAST(ep.EscrowPaymentId AS CHAR) LIKE @Search
+            )");
+
+                    parameters.Add("Search", $"%{search}%");
+                }
+                else
+                {
+                    switch (key.ToLower())
+                    {
+                        case "servicetitle":
+                        case "servicename":
+                            whereConditions.Add("s.ServiceTitle LIKE @Search");
+                            break;
+
+                        case "status":
+                            whereConditions.Add("ep.Status LIKE @Search");
+                            break;
+
+                        case "razorpayorderid":
+                            whereConditions.Add("ep.RazorpayOrderId LIKE @Search");
+                            break;
+
+                        case "razorpaypaymentid":
+                            whereConditions.Add("ep.RazorpayPaymentId LIKE @Search");
+                            break;
+
+                        case "razorpaytransferid":
+                            whereConditions.Add("ep.RazorpayTransferId LIKE @Search");
+                            break;
+
+                        case "bookingid":
+                            whereConditions.Add("CAST(ep.BookingId AS CHAR) LIKE @Search");
+                            break;
+
+                        case "escrowpaymentid":
+                            whereConditions.Add("CAST(ep.EscrowPaymentId AS CHAR) LIKE @Search");
+                            break;
+
+                        default:
+                            throw new ArgumentException(
+                                $"Invalid search key: {key}");
+                    }
+
+                    parameters.Add("Search", $"%{search}%");
+                }
+            }
+
+            var whereClause = string.Join(
+                " AND ",
+                whereConditions);
+
+            // Count
+            var countQuery = $@"
+        SELECT COUNT(*)
+        FROM EscrowPayments ep
+        INNER JOIN bookings b
+            ON b.BookingId = ep.BookingId
+        INNER JOIN services s
+            ON s.ServiceId = b.ServiceId
+        WHERE {whereClause}";
+
+            // Data
+            var dataQuery = $@"
         SELECT
             ep.EscrowPaymentId,
             ep.BookingId,
@@ -293,20 +381,34 @@ namespace ahello_backend.Repositorys.Classes
             ep.RefundedAt,
             ep.CreatedAt
         FROM EscrowPayments ep
-        INNER JOIN bookings b ON b.BookingId = ep.BookingId
-        INNER JOIN services s ON s.ServiceId = b.ServiceId
-        WHERE ep.UserId = @UserId
-        ORDER BY ep.CreatedAt DESC";
+        INNER JOIN bookings b
+            ON b.BookingId = ep.BookingId
+        INNER JOIN services s
+            ON s.ServiceId = b.ServiceId
+        WHERE {whereClause}
+        ORDER BY ep.CreatedAt DESC
+        LIMIT @PageSize OFFSET @Offset";
+
+            parameters.Add("PageSize", pageSize);
+            parameters.Add(
+                "Offset",
+                (pageNumber - 1) * pageSize);
 
             using var connection = _db.GetConnection();
 
-            return await connection.QueryAsync<EscrowPaymentDetails>(
-                query,
-                new { UserId = userId });
+            var totalRecords = await connection.ExecuteScalarAsync<int>(
+                countQuery,
+                parameters);
+
+            var data = await connection.QueryAsync<EscrowPaymentDetails>(
+                dataQuery,
+                parameters);
+
+            return (data, totalRecords);
         }
         public async Task UpdateTransferResponseAsync(
-    int escrowPaymentId,
-    string transferJson)
+        int escrowPaymentId,
+        string transferJson)
         {
             var sql = @"
         UPDATE EscrowPayments

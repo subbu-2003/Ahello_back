@@ -17,5 +17,6 @@ namespace ahello_backend.Repositorys.Interfaces
         Task<bool> UpdateIsActiveAsync(
             int platformSettingId,
             UpdatePlatformSettingsStatusRequest request);
+        Task<PlatformSettings?> GetActiveSettingAsync();
     }
 }

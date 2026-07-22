@@ -18,6 +18,7 @@ namespace ahello_backend.Controllers
         private readonly IBookingRepository _bookingRepo;
         private readonly IExpertPayoutRepository _expertPayoutRepo;
         private readonly IEscrowPaymentService _escrowPaymentService;
+        private readonly IPlatformSettingsRepository _platformSettingsRepo;
 
         public EscrowPaymentController(
             IEscrowPaymentRepository escrowRepo,
@@ -25,7 +26,8 @@ namespace ahello_backend.Controllers
             IRazorpayService razorpayService,
             IBookingRepository bookingRepo,
             IExpertPayoutRepository expertPayoutRepo,
-            IEscrowPaymentService escrowPaymentService)
+            IEscrowPaymentService escrowPaymentService,
+            IPlatformSettingsRepository platformSettingsRepo)
         {
             _escrowRepo = escrowRepo;
             _logRepo = logRepo;
@@ -33,6 +35,7 @@ namespace ahello_backend.Controllers
             _bookingRepo = bookingRepo;
             _expertPayoutRepo = expertPayoutRepo;
             _escrowPaymentService = escrowPaymentService;
+            _platformSettingsRepo = platformSettingsRepo;
         }
 
         private IActionResult Error(string message, int statusCode = 400, object? details = null)
@@ -177,7 +180,60 @@ namespace ahello_backend.Controllers
                         new { expertStatus = expertAccount?.AccountStatus ?? "NOT_CREATED" });
                 }
 
-                decimal platformFee = Math.Round(servicePrice.Value * 0.10m, 2);
+                var platformSetting = await _platformSettingsRepo.GetActiveSettingAsync();
+
+                if (platformSetting == null)
+                {
+                    await _logRepo.InsertAsync(
+                        null,
+                        bookingId,
+                        "VERIFY_PAYMENT",
+                        "ERROR",
+                        requestJson: System.Text.Json.JsonSerializer.Serialize(dto),
+                        errorMessage: "No active platform fee setting found.",
+                        createdBy: bp.CreatedBy);
+
+                    return Error(
+                        "Platform fee configuration is not available. Contact support.",
+                        500);
+                }
+
+                decimal platformFee;
+
+                if (platformSetting.FeeType.Equals(
+                        "percentage",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!platformSetting.FeePercentage.HasValue)
+                        return Error("Platform fee percentage is not configured.", 500);
+
+                    platformFee = Math.Round(
+                        servicePrice.Value * platformSetting.FeePercentage.Value / 100m,
+                        2);
+                }
+                else if (platformSetting.FeeType.Equals(
+                             "amount",
+                             StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!platformSetting.FeeAmount.HasValue)
+                        return Error("Platform fee amount is not configured.", 500);
+
+                    platformFee = Math.Round(
+                        platformSetting.FeeAmount.Value,
+                        2);
+                }
+                else
+                {
+                    return Error("Invalid platform fee configuration.", 500);
+                }
+
+                if (platformFee > servicePrice.Value)
+                {
+                    return Error(
+                        "Platform fee cannot be greater than the service price.",
+                        400);
+                }
+
                 decimal expertAmount = servicePrice.Value - platformFee;
 
                 // Create held transfer to expert's linked account now that
@@ -376,18 +432,50 @@ namespace ahello_backend.Controllers
             if (escrow == null) return Error("Not found", 404);
             return Success("Escrow payment fetched", escrow);
         }
+
         [HttpGet("user/{userId}/timeline")]
-        public async Task<IActionResult> GetTimelineByUserId(int userId)
+        public async Task<IActionResult> GetTimelineByUserId(int userId,
+        [FromQuery] string? search = null,
+        [FromQuery] string? key = null,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
         {
             if (userId <= 0)
                 return Error("Valid UserId is required");
 
-            var timeline = await _escrowPaymentService.GetTimelineByUserIdAsync(userId);
+            if (pageNumber < 1)
+                return Error("PageNumber must be greater than 0");
 
-            if (!timeline.Any())
-                return Error("No escrow payments found for this user", 404);
+            if (pageSize < 1 || pageSize > 100)
+                return Error(
+                    "PageSize must be between 1 and 100");
 
-            return Success("Escrow payment timeline fetched", timeline);
+            try
+            {
+                var result =
+                    await _escrowPaymentService
+                        .GetTimelineByUserIdAsync(
+                            userId,
+                            search,
+                            key,
+                            pageNumber,
+                            pageSize);
+
+                if (!result.Data.Any())
+                    return Error(
+                        "No escrow payments found for this user",
+                        404);
+
+                return Success(
+                    "Escrow payment timeline fetched",
+                    result);
+            }
+            catch (ArgumentException ex)
+            {
+                return Error(
+                    ex.Message,
+                    400);
+            }
         }
     }
 }
