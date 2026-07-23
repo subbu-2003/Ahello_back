@@ -407,17 +407,29 @@ namespace ahello_backend.Repositorys.Classes
         }
         // REMOVE SendMeetingReminderEmailAsync entirely from this file
 
-        public async Task<bool> SendMeetingReminderMailAsync(Meeting meeting, int minutesLeft)
+        public async Task<bool> SendMeetingReminderMailAsync(
+     Meeting meeting,
+     int minutesLeft)
         {
-            if (meeting == null || string.IsNullOrWhiteSpace(meeting.ClientEmail))
+            if (meeting == null ||
+                string.IsNullOrWhiteSpace(meeting.ClientEmail) ||
+                string.IsNullOrWhiteSpace(meeting.MeetingLink))
+            {
                 return false;
+            }
+
+            // Build the same client-specific link used in invitation email
+            var clientMeetingLink =
+                $"{meeting.MeetingLink}" +
+                $"?userId={meeting.ClientId}" +
+                $"&email={Uri.EscapeDataString(meeting.ClientEmail)}";
 
             await _emailRepository.SendMeetingReminderEmailAsync(
                 meeting.ClientEmail,
                 meeting.ClientName,
                 meeting.StartTime,
-                meeting.MeetingLink,
-                minutesLeft); // ✅ pass it
+                clientMeetingLink,
+                minutesLeft);
 
             return true;
         }
@@ -443,6 +455,7 @@ namespace ahello_backend.Repositorys.Classes
         SELECT
             m.MeetingId,
             m.UserId,
+            b.ClientId,
             m.BookingId,
             m.StartTime,
             m.EndTime,
