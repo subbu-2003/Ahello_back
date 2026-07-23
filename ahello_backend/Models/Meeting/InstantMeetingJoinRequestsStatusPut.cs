@@ -2,7 +2,7 @@
 {
     public class InstantMeetingJoinRequestsStatusPut
     {
-        public int InstantMeetingId { get; set; }
+        public string RoomName { get; set; } = "";
 
         public string Status { get; set; } = string.Empty;
     }
