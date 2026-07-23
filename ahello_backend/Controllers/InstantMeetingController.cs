@@ -295,10 +295,20 @@ namespace ahello_backend.Controllers
         public async Task<IActionResult> UpdateAllJoinRequestStatus(
     [FromBody] InstantMeetingJoinRequestsStatusPut model)
         {
-            await _instantMeetingService
-                .UpdateAllJoinRequestStatusAsync(
-                    model.InstantMeetingId,
-                    model.Status);
+            var meeting = await _instantMeetingService.GetByRoomNameAsync(model.RoomName);
+
+            if (meeting == null)
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = "Meeting not found."
+                });
+            }
+
+            await _instantMeetingService.UpdateAllJoinRequestStatusAsync(
+                meeting.Id,
+                model.Status);
 
             return Ok(new
             {
