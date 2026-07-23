@@ -39,8 +39,13 @@ namespace ahello_backend.Controllers
                 return NotFound(new { reason = "Meeting not found." });
 
             if (meeting.UserId != userId && meeting.ClientId != userId)
-                return StatusCode(403, new { reason = "You are not part of this meeting." });
-
+            {
+                return StatusCode(403, new
+                {
+                    allowed = false,
+                    reason = "You are not part of this meeting."
+                });
+            }
             var isHost = meeting.UserId == userId;
 
             var roomCode = isHost
@@ -186,20 +191,27 @@ namespace ahello_backend.Controllers
                     });
 
                 // 8. Fetch booking and verify user belongs to it
+                // 8. Fetch booking and verify user belongs to it
                 var booking = await _bookingService.GetByIdAsync(meeting.BookingId);
+
                 if (booking == null)
+                {
                     return NotFound(new
                     {
                         allowed = false,
                         reason = "Booking not found."
                     });
+                }
 
+                // User is neither host nor client
                 if (booking.UserId != userId && booking.ClientId != userId)
-                    return Unauthorized(new
+                {
+                    return StatusCode(403, new
                     {
                         allowed = false,
                         reason = "You are not part of this meeting."
                     });
+                }
 
                 // 9. Block if booking itself is cancelled/rejected/rescheduled/no-show
                 if (booking.Status == "Cancelled")

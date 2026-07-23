@@ -158,7 +158,9 @@ namespace ahello_backend.Repositorys.Classes
             string clientFullName = client.FullName;
             string serviceName = service?.ServiceTitle ?? "the service";
             string formattedDate = model.ScheduleDate.ToString("dddd, MMMM dd yyyy");
-            string formattedTime = meetingStartTime.ToString("hh:mm tt", CultureInfo.InvariantCulture);
+            string formattedTime = model.StartTime.Hours >= 12
+            ? $"{(model.StartTime.Hours > 12 ? model.StartTime.Hours - 12 : model.StartTime.Hours):00}:{model.StartTime.Minutes:00} PM"
+            : $"{(model.StartTime.Hours == 0 ? 12 : model.StartTime.Hours):00}:{model.StartTime.Minutes:00} AM";
             string capturedMeetingLink = $"{meetingLink}?userId={model.ClientId}&email={Uri.EscapeDataString(clientEmail)}";
 
             _ = Task.Run(async () =>
