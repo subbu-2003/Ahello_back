@@ -1,4 +1,6 @@
-﻿namespace ahello_backend.Models.Users
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace ahello_backend.Models.Users
 {
     public class UserDynamicPut
     {
@@ -6,11 +8,14 @@
 
         public string FullName { get; set; }
 
-        public string Email { get; set; }
+        [Required(ErrorMessage = "Email is required")]
+        [EmailAddress(ErrorMessage = "Invalid email format")]
+        public string Email { get; set; } = string.Empty;
 
         public string? ProfileUrl { get; set; }
         public IFormFile? ProfileFile { get; set; }
-        public string? MobileNumber { get; set; }
+        [Required(ErrorMessage = "Mobile number is required")]
+        public string MobileNumber { get; set; } = string.Empty;
 
         public string? WhatsAppNumber { get; set; }
 

@@ -244,18 +244,18 @@ namespace ahello_backend.Repositorys.Classes
             user.Fields = fields.ToList();
 
             var dropdownOptions =
-await connection.QueryAsync<UserDropdownOptionResponse>(
-@"SELECT
-    UserDropDownId,
-    UserFieldId,
-    UserId,
-    OptionValue,
-    OptionLabel,
-    IsActive
-FROM userdropdownoptions
-WHERE UserId = @UserId
-AND IsActive = 1",
-new { UserId = user.UserId });
+            await connection.QueryAsync<UserDropdownOptionResponse>(
+            @"SELECT
+                UserDropDownId,
+                UserFieldId,
+                UserId,
+                OptionValue,
+                OptionLabel,
+                IsActive
+            FROM userdropdownoptions
+            WHERE UserId = @UserId
+            AND IsActive = 1",
+            new { UserId = user.UserId });
 
             user.DropdownOptions = dropdownOptions.ToList();
 
@@ -267,7 +267,7 @@ new { UserId = user.UserId });
             using var connection = _db.GetConnection();
 
             var users = (await connection.QueryAsync<UserDynamicGetResponse>(
-                @"SELECT
+            @"SELECT
             u.UserId,
             u.CategoryId,
             c.CategoryName,
@@ -410,37 +410,37 @@ new { UserId = user.UserId });
                     SELECT LAST_INSERT_ID();";
 
                 var userId = await connection.ExecuteScalarAsync<int>(
-    userSql,
-    new
-    {
-        CategoryId = model.CategoryId == 0 ? (int?)null : model.CategoryId,  // ✅ 0 → NULL
-        model.FullName,
-        model.Email,
-        model.ProfileUrl,
-        model.MobileNumber,
-        model.WhatsAppNumber,
-        Gender = string.IsNullOrWhiteSpace(model.Gender)
-                    ? (object)DBNull.Value
-                    : model.Gender,
+                userSql,
+                new
+                {
+                    CategoryId = model.CategoryId == 0 ? (int?)null : model.CategoryId,  // ✅ 0 → NULL
+                    model.FullName,
+                    model.Email,
+                    model.ProfileUrl,
+                    model.MobileNumber,
+                    model.WhatsAppNumber,
+                    Gender = string.IsNullOrWhiteSpace(model.Gender)
+                                ? (object)DBNull.Value
+                                : model.Gender,
 
-        DateOfBirth = model.DateOfBirth == null
-                    ? (object)DBNull.Value
-                    : model.DateOfBirth,
-        model.Address,
-        model.City,
-        model.State,
-        model.Country,
-        model.Pincode,
-        model.Qualification,
-        model.Occupation,
-        model.CompanyName,
-        model.Experience,
-        model.SocialMediaLinks,
-        model.WebsiteURL,
-        model.Notes,
-        model.CreatedBy
-    },
-    tx);
+                    DateOfBirth = model.DateOfBirth == null
+                                ? (object)DBNull.Value
+                                : model.DateOfBirth,
+                    model.Address,
+                    model.City,
+                    model.State,
+                    model.Country,
+                    model.Pincode,
+                    model.Qualification,
+                    model.Occupation,
+                    model.CompanyName,
+                    model.Experience,
+                    model.SocialMediaLinks,
+                    model.WebsiteURL,
+                    model.Notes,
+                    model.CreatedBy
+                },
+                tx);
 
                 if (model.Fields != null && model.Fields.Any())
                 {
@@ -501,6 +501,16 @@ new { UserId = user.UserId });
 
             try
             {
+                // Required field validation
+                if (string.IsNullOrWhiteSpace(model.Email))
+                {
+                    throw new Exception("Email is required.");
+                }
+
+                if (string.IsNullOrWhiteSpace(model.MobileNumber))
+                {
+                    throw new Exception("Mobile number is required.");
+                }
                 await ValidateDuplicateFieldsAsync(
                 connection,
                 model.Email,
