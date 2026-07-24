@@ -6,7 +6,7 @@
 
         public int UserId { get; set; }
 
-        public string MessageText { get; set; }
+        public string? MessageText { get; set; }
 
         public string? AttachmentUrl { get; set; }
         public IFormFile? File { get; set; }
