@@ -92,8 +92,6 @@ namespace ahello_backend.Controllers
                     model.AttachmentUrl =
                         await _fileUpload.SaveChatFileAsync(model.File);
 
-                    // Set message type automatically
-                    model.MessageType = "FILE";
                 }
                 else
                 {
