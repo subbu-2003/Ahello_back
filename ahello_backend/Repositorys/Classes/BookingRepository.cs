@@ -37,7 +37,7 @@ namespace ahello_backend.Repositorys.Classes
         public async Task<int> CreateAsync(BookingPost model)
         {
             if (model.UserId == model.ClientId)
-                throw new Exception("UserId and ClientId cannot be same.");
+                throw new Exception("You cannot book your own service.");
 
             using var clientConn = _dbConn.GetMyConnection();
             using var serviceConn = _dbConn.GetMyConnection();
@@ -69,12 +69,12 @@ namespace ahello_backend.Repositorys.Classes
             {
                 // ── NEW: Check slot isn't already booked before inserting ──
                 var alreadyBooked = await connection.ExecuteScalarAsync<int>(@"
-            SELECT COUNT(1)
-            FROM bookedslots
-            WHERE SlotId = @SlotId
-            AND SlotDate = @SlotDate
-            AND StartTime = @StartTime
-            AND EndTime = @EndTime",
+                SELECT COUNT(1)
+                FROM bookedslots
+                WHERE SlotId = @SlotId
+                AND SlotDate = @SlotDate
+                AND StartTime = @StartTime
+                AND EndTime = @EndTime",
                     new
                     {
                         model.SlotId,
@@ -88,11 +88,11 @@ namespace ahello_backend.Repositorys.Classes
                     throw new Exception("This slot has already been booked. Please choose another time.");
 
                 var bookingSql = @"
-        INSERT INTO bookings
-        (UserId, ClientId, ServiceId, ScheduleDate, StartTime, EndTime, Status, CreatedAt, CreatedBy)
-        VALUES
-        (@UserId, @ClientId, @ServiceId, @ScheduleDate, @StartTime, @EndTime, @Status, NOW(), @CreatedBy);
-        SELECT LAST_INSERT_ID();";
+                INSERT INTO bookings
+                (UserId, ClientId, ServiceId, ScheduleDate, StartTime, EndTime, Status, CreatedAt, CreatedBy)
+                VALUES
+                (@UserId, @ClientId, @ServiceId, @ScheduleDate, @StartTime, @EndTime, @Status, NOW(), @CreatedBy);
+                SELECT LAST_INSERT_ID();";
 
                 bookingId = await connection.ExecuteScalarAsync<int>(bookingSql, model, tx);
 
@@ -104,18 +104,18 @@ namespace ahello_backend.Repositorys.Classes
                 var meetingEndTime = model.ScheduleDate.Date.Add(model.EndTime);
 
                 await connection.ExecuteAsync(@"
-        INSERT INTO meetings
-        (
-            UserId, BookingId, StartTime, EndTime,
-            MeetingLink, RoomId, HostRoomCode, ClientRoomCode,
-            Status, CreatedAt, CreatedBy
-        )
-        VALUES
-        (
-            @UserId, @BookingId, @StartTime, @EndTime,
-            @MeetingLink, @RoomId, @HostRoomCode, @ClientRoomCode,
-            'Pending', NOW(), @CreatedBy
-        );",
+                INSERT INTO meetings
+                (
+                    UserId, BookingId, StartTime, EndTime,
+                    MeetingLink, RoomId, HostRoomCode, ClientRoomCode,
+                    Status, CreatedAt, CreatedBy
+                )
+                VALUES
+                (
+                    @UserId, @BookingId, @StartTime, @EndTime,
+                    @MeetingLink, @RoomId, @HostRoomCode, @ClientRoomCode,
+                    'Pending', NOW(), @CreatedBy
+                );",
                 new
                 {
                     model.UserId,
@@ -130,10 +130,10 @@ namespace ahello_backend.Repositorys.Classes
                 }, tx);
 
                 var bookedSlotSql = @"
-        INSERT INTO bookedslots
-        (SlotId, UserId, ServiceId, BookingId, SlotDate, StartTime, EndTime, CreatedAt)
-        VALUES
-        (@SlotId, @UserId, @ServiceId, @BookingId, @SlotDate, @StartTime, @EndTime, NOW())";
+                INSERT INTO bookedslots
+                (SlotId, UserId, ServiceId, BookingId, SlotDate, StartTime, EndTime, CreatedAt)
+                VALUES
+                (@SlotId, @UserId, @ServiceId, @BookingId, @SlotDate, @StartTime, @EndTime, NOW())";
 
                 await connection.ExecuteAsync(bookedSlotSql, new
                 {

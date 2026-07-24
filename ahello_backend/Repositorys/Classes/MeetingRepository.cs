@@ -412,26 +412,50 @@ namespace ahello_backend.Repositorys.Classes
      int minutesLeft)
         {
             if (meeting == null ||
-                string.IsNullOrWhiteSpace(meeting.ClientEmail) ||
                 string.IsNullOrWhiteSpace(meeting.MeetingLink))
             {
                 return false;
             }
 
-            // Build the same client-specific link used in invitation email
-            var clientMeetingLink =
-                $"{meeting.MeetingLink}" +
-                $"?userId={meeting.ClientId}" +
-                $"&email={Uri.EscapeDataString(meeting.ClientEmail)}";
+            bool emailSent = false;
 
-            await _emailRepository.SendMeetingReminderEmailAsync(
-                meeting.ClientEmail,
-                meeting.ClientName,
-                meeting.StartTime,
-                clientMeetingLink,
-                minutesLeft);
+            // Client meeting link
+            if (!string.IsNullOrWhiteSpace(meeting.ClientEmail))
+            {
+                var clientMeetingLink =
+                    $"{meeting.MeetingLink}" +
+                    $"?userId={meeting.ClientId}" +
+                    $"&email={Uri.EscapeDataString(meeting.ClientEmail)}";
 
-            return true;
+                await _emailRepository.SendMeetingReminderEmailAsync(
+                    meeting.ClientEmail,
+                    meeting.ClientName,
+                    meeting.StartTime,
+                    clientMeetingLink,
+                    minutesLeft);
+
+                emailSent = true;
+            }
+
+            // User meeting link
+            if (!string.IsNullOrWhiteSpace(meeting.Email))
+            {
+                var userMeetingLink =
+                    $"{meeting.MeetingLink}" +
+                    $"?userId={meeting.UserId}" +
+                    $"&email={Uri.EscapeDataString(meeting.Email)}";
+
+                await _emailRepository.SendMeetingReminderEmailAsync(
+                    meeting.Email,
+                    meeting.UserName,
+                    meeting.StartTime,
+                    userMeetingLink,
+                    minutesLeft);
+
+                emailSent = true;
+            }
+
+            return emailSent;
         }
 
         public async Task UpdateReminderSentAsync(int meetingId)
