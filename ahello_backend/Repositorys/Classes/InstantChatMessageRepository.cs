@@ -102,10 +102,11 @@ namespace ahello_backend.Repositorys.Classes
                 FormId = @FormId,
                 IsRead = @IsRead,
                 IsDeleted = @IsDeleted,
+UpdatedAt = DATE_ADD(UTC_TIMESTAMP(), INTERVAL 330 MINUTE),
                 ReadAt = CASE
                     WHEN @IsRead = 1
                     THEN DATE_ADD(UTC_TIMESTAMP(), INTERVAL 330 MINUTE)
-                    ELSE NULL
+                    ELSE ReadAt
                 END
             WHERE InstantMessageId = @InstantMessageId";
 

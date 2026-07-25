@@ -48,7 +48,9 @@ SELECT
     cm.MessageType,
     cm.FormId,
     cm.IsRead,
-    cm.SentAt
+    cm.SentAt,
+cm.CreatedAt,
+cm.UpdatedAt
 FROM meetingchatmessages cm
 INNER JOIN users u
     ON u.UserId = cm.UserId
@@ -137,10 +139,11 @@ SELECT LAST_INSERT_ID();";
     FormId = @FormId,
     IsRead = @IsRead,
                     IsDeleted = @IsDeleted,
+UpdatedAt = DATE_ADD(UTC_TIMESTAMP(), INTERVAL 330 MINUTE),
                     ReadAt = CASE
                         WHEN @IsRead = 1
                         THEN DATE_ADD(UTC_TIMESTAMP(), INTERVAL 330 MINUTE)
-                        ELSE NULL
+                        ELSE ReadAt
                     END
                 WHERE ChatMessageId =
                     @ChatMessageId";
