@@ -24,5 +24,6 @@
 
         public DateTime? CreatedAt { get; set; }
         public int? FormId { get; set; }
+        public DateTime? UpdatedAt { get; set; }
     }
 }
