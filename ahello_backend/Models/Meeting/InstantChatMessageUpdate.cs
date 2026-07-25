@@ -20,5 +20,6 @@
         public bool IsDeleted { get; set; }
 
         public int? FormId { get; set; }
+        public DateTime? UpdatedAt { get; set; }
     }
 }
