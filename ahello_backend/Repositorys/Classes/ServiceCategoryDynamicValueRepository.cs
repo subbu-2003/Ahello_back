@@ -175,124 +175,118 @@ namespace ahello_backend.Repositorys.Classes
         }
 
         public async Task<PagedResult<ServiceCategoryDynamicGetResponse>> GetAllAsync(
-        int pageNumber,
-        int pageSize,
-        string? search,
-        DateTime? createdDate)
+     int pageNumber,
+     int pageSize,
+     string? search,
+     DateTime? createdDate)
         {
             using var connection = _db.GetConnection();
-
             int offset = (pageNumber - 1) * pageSize;
 
-            var whereConditions = new List<string>
-            {
-                "IsActive = 1"
-            };
-
+            var whereConditions = new List<string> { "IsActive = 1" };
             var parameters = new DynamicParameters();
 
             if (!string.IsNullOrWhiteSpace(search))
             {
-                whereConditions.Add(
-                    "LOWER(ServiceCategoryName) LIKE LOWER(@Search)");
-
-                parameters.Add(
-                    "Search",
-                    $"%{search}%");
+                whereConditions.Add("LOWER(ServiceCategoryName) LIKE LOWER(@Search)");
+                parameters.Add("Search", $"%{search}%");
             }
 
             if (createdDate.HasValue)
             {
-                whereConditions.Add(
-                    "DATE(CreatedAt) = @CreatedDate");
-
-                parameters.Add(
-                    "CreatedDate",
-                    createdDate.Value.Date);
+                whereConditions.Add("DATE(CreatedAt) = @CreatedDate");
+                parameters.Add("CreatedDate", createdDate.Value.Date);
             }
 
-            string whereClause =
-                $"WHERE {string.Join(" AND ", whereConditions)}";
-
+            string whereClause = $"WHERE {string.Join(" AND ", whereConditions)}";
             parameters.Add("PageSize", pageSize);
             parameters.Add("Offset", offset);
 
-            var totalRecords =
-                await connection.ExecuteScalarAsync<int>(
+            var totalRecords = await connection.ExecuteScalarAsync<int>(
                 $@"SELECT COUNT(*)
-               FROM servicecategorydynamic
-               {whereClause}",
+           FROM servicecategorydynamic
+           {whereClause}",
                 parameters);
 
-            var categories =
-                (await connection.QueryAsync<
-                    ServiceCategoryDynamicGetResponse>(
+            var categories = (await connection.QueryAsync<ServiceCategoryDynamicGetResponse>(
                 $@"SELECT
-                ServiceCategoryId,
-                ServiceCategoryName,
-                IsActive,
-                CreatedAt
-              FROM servicecategorydynamic
-              {whereClause}
-              ORDER BY ServiceCategoryId DESC
-              LIMIT @PageSize OFFSET @Offset",
-                parameters))
+             ServiceCategoryId,
+             ServiceCategoryName,
+             IsActive,
+             CreatedAt
+           FROM servicecategorydynamic
+           {whereClause}
+           ORDER BY ServiceCategoryId DESC
+           LIMIT @PageSize OFFSET @Offset",
+                parameters)).ToList();
+
+            if (categories.Count == 0)
+            {
+                return new PagedResult<ServiceCategoryDynamicGetResponse>
+                {
+                    PageNumber = pageNumber,
+                    PageSize = pageSize,
+                    TotalCount = totalRecords,
+                    Details = categories
+                };
+            }
+
+            var categoryIds = categories.Select(c => c.ServiceCategoryId).ToList();
+
+            // Batched fields query for ALL categories on the page
+            var allFields = (await connection.QueryAsync<ServiceCategoryDynamicFieldResponse, int, (ServiceCategoryDynamicFieldResponse Field, int CategoryId)>(
+                @"SELECT
+            scf.ServiceCategoryFieldId,
+            scf.FieldName,
+            scf.FieldCode,
+            scf.Placeholder,
+            scf.IsRequired,
+            scf.DataTypeId,
+            scfv.FieldValue,
+            scfv.ServiceCategoryId
+          FROM servicecategoryfieldvalues scfv
+          INNER JOIN servicecategoryfields scf
+              ON scfv.ServiceCategoryFieldId = scf.ServiceCategoryFieldId
+          WHERE scfv.ServiceCategoryId IN @CategoryIds",
+                (field, categoryId) => (field, categoryId),
+                new { CategoryIds = categoryIds },
+                splitOn: "ServiceCategoryId"))
                 .ToList();
+
+            var fieldsByCategory = allFields
+                .GroupBy(x => x.CategoryId)
+                .ToDictionary(g => g.Key, g => g.Select(x => x.Field).ToList());
+
+            // Batched dropdown options query for ALL categories on the page
+            var allDropdownOptions = (await connection.QueryAsync<ServiceCategoryDropdownOptionResponse>(
+                @"SELECT DISTINCT
+            scdo.ServiceCategoryDropDownId,
+            scdo.ServiceCategoryFieldId,
+            scdo.ServiceCategoryId,
+            scdo.OptionValue,
+            scdo.OptionLabel,
+            scdo.IsActive
+          FROM servicecategorydropdownoption scdo
+          INNER JOIN servicecategoryfieldvalues scfv
+              ON scdo.ServiceCategoryFieldId = scfv.ServiceCategoryFieldId
+              AND scdo.ServiceCategoryId = scfv.ServiceCategoryId
+          WHERE scdo.ServiceCategoryId IN @CategoryIds",
+                new { CategoryIds = categoryIds }))
+                .ToList();
+
+            var dropdownsByCategory = allDropdownOptions
+                .GroupBy(x => x.ServiceCategoryId)
+                .ToDictionary(g => g.Key, g => g.ToList());
 
             foreach (var category in categories)
             {
-                var fields =
-                    await connection.QueryAsync<
-                        ServiceCategoryDynamicFieldResponse>(
-                    @"SELECT
-                        scf.ServiceCategoryFieldId,
-                        scf.FieldName,
-                        scf.FieldCode,
-                        scf.Placeholder,
-                        scf.IsRequired,
-                        scf.DataTypeId,
-                        scfv.FieldValue
+                category.Fields = fieldsByCategory.TryGetValue(category.ServiceCategoryId, out var f)
+                    ? f
+                    : new List<ServiceCategoryDynamicFieldResponse>();
 
-                    FROM servicecategoryfieldvalues scfv
-
-                    INNER JOIN servicecategoryfields scf
-                        ON scfv.ServiceCategoryFieldId =
-                           scf.ServiceCategoryFieldId
-
-                    WHERE scfv.ServiceCategoryId =
-                          @ServiceCategoryId",
-                    new
-                    {
-                        category.ServiceCategoryId
-                    });
-
-                category.Fields = fields.ToList();
-                var dropdownOptions = await connection.QueryAsync< ServiceCategoryDropdownOptionResponse>(
-                @"SELECT DISTINCT
-                    scdo.ServiceCategoryDropDownId,
-                    scdo.ServiceCategoryFieldId,
-                    scdo.ServiceCategoryId,
-                    scdo.OptionValue,
-                    scdo.OptionLabel,
-                    scdo.IsActive
-
-                FROM servicecategorydropdownoption scdo
-
-                INNER JOIN servicecategoryfieldvalues scfv
-                    ON scdo.ServiceCategoryFieldId =
-                       scfv.ServiceCategoryFieldId
-
-                    AND scdo.ServiceCategoryId =
-                        scfv.ServiceCategoryId
-
-                WHERE scdo.ServiceCategoryId =
-                      @ServiceCategoryId",
-                new
-                {
-                    category.ServiceCategoryId
-                });
-
-                category.DropdownOptions = dropdownOptions.ToList();
+                category.DropdownOptions = dropdownsByCategory.TryGetValue(category.ServiceCategoryId, out var d)
+                    ? d
+                    : new List<ServiceCategoryDropdownOptionResponse>();
             }
 
             return new PagedResult<ServiceCategoryDynamicGetResponse>
