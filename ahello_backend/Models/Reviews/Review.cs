@@ -17,5 +17,7 @@
         public DateTime? ModifiedAt { get; set; }
 
         public string ModifiedBy { get; set; }
+        public string? ClientName { get; set; }
+        public string? ServiceTitle { get; set; } 
     }
 }

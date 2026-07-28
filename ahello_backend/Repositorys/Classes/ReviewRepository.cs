@@ -16,7 +16,19 @@ namespace ahello_backend.Repositorys.Implementations
 
         public async Task<IEnumerable<Review>> GetAllAsync()
         {
-            var query = "SELECT * FROM reviews ORDER BY ReviewId DESC";
+            var query = @"
+                SELECT 
+                    r.*,
+                    u.FullName AS ClientName,
+                    s.ServiceTitle
+                FROM reviews r
+                INNER JOIN bookings b
+                    ON r.BookingId = b.BookingId
+                LEFT JOIN users u
+                    ON b.ClientId = u.UserId
+                LEFT JOIN services s
+                    ON b.ServiceId = s.ServiceId
+                ORDER BY r.ReviewId DESC";
 
             using var connection = _db.GetConnection();
 
@@ -25,7 +37,19 @@ namespace ahello_backend.Repositorys.Implementations
 
         public async Task<Review> GetByIdAsync(int reviewId)
         {
-            var query = "SELECT * FROM reviews WHERE ReviewId = @ReviewId";
+            var query = @"
+                SELECT 
+                    r.*,
+                    u.FullName AS ClientName,
+                    s.ServiceTitle
+                FROM reviews r
+                INNER JOIN bookings b
+                    ON r.BookingId = b.BookingId
+                LEFT JOIN users u
+                    ON b.ClientId = u.UserId
+                LEFT JOIN services s
+                    ON b.ServiceId = s.ServiceId
+                WHERE r.ReviewId = @ReviewId";
 
             using var connection = _db.GetConnection();
 
@@ -36,10 +60,20 @@ namespace ahello_backend.Repositorys.Implementations
 
         public async Task<IEnumerable<Review>> GetByBookingIdAsync(int bookingId)
         {
-            var query = @"SELECT * 
-                          FROM reviews 
-                          WHERE BookingId = @BookingId
-                          ORDER BY ReviewId DESC";
+            var query = @"
+                SELECT 
+                    r.*,
+                    u.FullName AS ClientName,
+                    s.ServiceTitle
+                FROM reviews r
+                INNER JOIN bookings b
+                    ON r.BookingId = b.BookingId
+                LEFT JOIN users u
+                    ON b.ClientId = u.UserId
+                LEFT JOIN services s
+                    ON b.ServiceId = s.ServiceId
+                WHERE r.BookingId = @BookingId
+                ORDER BY r.ReviewId DESC";
 
             using var connection = _db.GetConnection();
 
@@ -76,14 +110,22 @@ namespace ahello_backend.Repositorys.Implementations
         public async Task<IEnumerable<Review>> GetByUserIdAsync(int userId)
         {
             var query = @"
-        SELECT r.*
-        FROM reviews r
-        INNER JOIN bookings b
-            ON r.BookingId = b.BookingId
-        WHERE b.UserId = @UserId
-        ORDER BY r.ReviewId DESC";
+                SELECT 
+                    r.*,
+                    u.FullName AS ClientName,
+                    s.ServiceTitle
+                FROM reviews r
+                INNER JOIN bookings b
+                    ON r.BookingId = b.BookingId
+                LEFT JOIN users u
+                    ON b.ClientId = u.UserId
+                LEFT JOIN services s
+                    ON b.ServiceId = s.ServiceId
+                WHERE b.UserId = @UserId
+                ORDER BY r.ReviewId DESC";
 
             using var connection = _db.GetConnection();
+
             return await connection.QueryAsync<Review>(
                 query,
                 new { UserId = userId });

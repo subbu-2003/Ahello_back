@@ -778,7 +778,7 @@ namespace ahello_backend.Repositorys.Classes
                     u.Notes,
                     u.ProfileUrl,
 
-                    IFNULL(AVG(CAST(r.Rating AS DECIMAL(10,2))), 0) AS AverageRating,
+                     IFNULL(ROUND(AVG(r.Rating), 1), 0) AS AverageRating,
                     COUNT(r.ReviewId) AS TotalRatingCount
 
                 FROM users u
