@@ -154,6 +154,52 @@ namespace ahello_backend.Repositorys.Classes
                 TransferId = transferId,
                 TransferJson = transferJson
             });
+            // Already have an invoice for this booking? Skip (idempotency guard).
+            var alreadyExists = await connection.ExecuteScalarAsync<int>(
+                "SELECT COUNT(1) FROM invoices WHERE EscrowPaymentId = @EscrowPaymentId",
+                new { EscrowPaymentId = escrowPaymentId }) > 0;
+
+            if (!alreadyExists)
+            {
+                // Pull everything the invoice needs in one query
+                var data = await connection.QuerySingleOrDefaultAsync<dynamic>(@"
+            SELECT
+                ep.EscrowPaymentId, ep.BookingId, ep.UserId, ep.ClientId,
+                ep.TotalAmount, ep.PlatformFee, ep.ExpertAmount, ep.Currency,
+                b.ServiceId
+            FROM EscrowPayments ep
+            INNER JOIN bookings b ON b.BookingId = ep.BookingId
+            WHERE ep.EscrowPaymentId = @EscrowPaymentId",
+                    new { EscrowPaymentId = escrowPaymentId });
+
+                if (data != null)
+                {
+                    var invoiceNumber = $"INV-{(int)data.BookingId:D6}";
+
+                    await connection.ExecuteAsync(@"
+                INSERT INTO invoices
+                    (InvoiceNumber, BookingId, EscrowPaymentId, UserId, ClientId, ServiceId,
+                     TotalAmount, PlatformFee, ExpertAmount, Currency, Status,
+                     IssuedAt, CreatedAt, CreatedBy)
+                VALUES
+                    (@InvoiceNumber, @BookingId, @EscrowPaymentId, @UserId, @ClientId, @ServiceId,
+                     @TotalAmount, @PlatformFee, @ExpertAmount, @Currency, 'Issued',
+                     NOW(), NOW(), 'System')",
+                        new
+                        {
+                            InvoiceNumber = invoiceNumber,
+                            BookingId = (int)data.BookingId,
+                            EscrowPaymentId = escrowPaymentId,
+                            UserId = (int)data.UserId,
+                            ClientId = (int)data.ClientId,
+                            ServiceId = (int)data.ServiceId,
+                            TotalAmount = (decimal)data.TotalAmount,
+                            PlatformFee = (decimal)data.PlatformFee,
+                            ExpertAmount = (decimal)data.ExpertAmount,
+                            Currency = (string)data.Currency
+                        });
+                }
+            }
         }
 
         public async Task UpdateReleaseAsync(
