@@ -119,89 +119,107 @@ namespace ahello_backend.Repositorys.Classes
         }
 
         public async Task<PagedResult<FormDynamicGetResponse>>
-                    GetByUserIdAsync(FormSearchRequest model)
+     GetByUserIdAsync(FormSearchRequest model)
         {
             using var connection = _db.GetConnection();
 
+            // 🔹 Step 1: Get forms only (FAST)
             var forms = (await connection.QueryAsync<FormDynamicGetResponse>(
-                 @"
-                SELECT DISTINCT f.*
-                FROM forms f
-                LEFT JOIN formfields ff
-                    ON f.FormId = ff.FormId
-                LEFT JOIN formfieldvalues ffv
-                    ON ff.FormFieldId = ffv.FormFieldId
-                WHERE f.UserId = @UserId
-                  AND (@IsActive IS NULL OR f.IsActive = @IsActive)
-                  AND (@Date IS NULL OR DATE(f.CreatedAt) = DATE(@Date))
-                  AND (
-                      @SearchText IS NULL
-                      OR @SearchText = ''
-                      OR f.Title LIKE CONCAT('%', @SearchText, '%')
-                      OR f.Description LIKE CONCAT('%', @SearchText, '%')
-                      OR ff.FieldName LIKE CONCAT('%', @SearchText, '%')
-                      OR ff.FieldCode LIKE CONCAT('%', @SearchText, '%')
-                      OR ff.Description LIKE CONCAT('%', @SearchText, '%')
-                      OR ff.Placeholder LIKE CONCAT('%', @SearchText, '%')
-                      OR ffv.FieldCode LIKE CONCAT('%', @SearchText, '%')
-                      OR ffv.FieldValue LIKE CONCAT('%', @SearchText, '%')
-                  )
-                ORDER BY f.FormId DESC
-                LIMIT @PageSize OFFSET @Offset",
-                 new
-                 {
-                     model.UserId,
-                     model.SearchText,
-                     model.IsActive,
-                     model.Date,
-                     model.PageSize,
-                     Offset = (model.PageNumber - 1) * model.PageSize
-                 })).ToList();
+                @"
+        SELECT f.*
+        FROM forms f
+        WHERE f.UserId = @UserId
+          AND (@IsActive IS NULL OR f.IsActive = @IsActive)
+          AND (@Date IS NULL OR (f.CreatedAt >= @Date AND f.CreatedAt < DATE_ADD(@Date, INTERVAL 1 DAY)))
+          AND (
+              @SearchText IS NULL OR @SearchText = ''
+              OR f.Title LIKE CONCAT('%', @SearchText, '%')
+              OR f.Description LIKE CONCAT('%', @SearchText, '%')
+          )
+        ORDER BY f.FormId DESC
+        LIMIT @PageSize OFFSET @Offset",
+                new
+                {
+                    model.UserId,
+                    model.SearchText,
+                    model.IsActive,
+                    model.Date,
+                    model.PageSize,
+                    Offset = (model.PageNumber - 1) * model.PageSize
+                })).ToList();
+
+            if (!forms.Any())
+            {
+                return new PagedResult<FormDynamicGetResponse>
+                {
+                    TotalCount = 0,
+                    PageNumber = model.PageNumber,
+                    PageSize = model.PageSize,
+                    Details = new List<FormDynamicGetResponse>()
+                };
+            }
+
+            // 🔹 Step 2: Collect FormIds
+            var formIds = forms.Select(f => f.FormId).ToList();
+
+            // 🔹 Step 3: Get ALL fields in one query
+            var allFields = (await connection.QueryAsync<FormDynamicFieldResponse>(
+                @"
+        SELECT 
+            ff.FormFieldId,
+            ff.FormId,
+            ff.FieldName,
+            ff.FieldCode,
+            ff.Placeholder,
+            ff.Description,
+            ff.IsRequired,
+            ff.DataTypeId,
+            ff.IsActive,
+            dt.DataTypeName
+        FROM formfields ff
+        LEFT JOIN datatypes dt ON ff.DataTypeId = dt.DataTypeId
+        WHERE ff.FormId IN @FormIds
+          AND ff.IsActive = 1",
+                new { FormIds = formIds }
+            )).ToList();
+
+            // 🔹 Step 4: Get ALL dropdowns in one query
+            var allDropdowns = (await connection.QueryAsync<FormDropdownOptionResponse>(
+                @"
+        SELECT 
+            FormDropDownId,
+            FormFieldId,
+            FormId,
+            OptionValue,
+            OptionLabel,
+            IsActive
+        FROM formdropdownoptions
+        WHERE FormId IN @FormIds
+          AND IsActive = 1",
+                new { FormIds = formIds }
+            )).ToList();
+
+            // 🔹 Step 5: Map using Dictionary (VERY FAST)
+            var fieldDict = allFields.GroupBy(f => f.FormId)
+                                     .ToDictionary(g => g.Key, g => g.ToList());
+
+            var dropdownDict = allDropdowns.GroupBy(d => d.FormId)
+                                           .ToDictionary(g => g.Key, g => g.ToList());
 
             foreach (var form in forms)
             {
-                var fields = await connection.QueryAsync<FormDynamicFieldResponse>(
-                    @"
-            SELECT
-                ff.FormFieldId,
-                ff.FieldName,
-                ff.FieldCode,
-                ff.Placeholder,
-                ff.Description,
-                ff.IsRequired,
-                ff.DataTypeId,
-                ff.IsActive,
-                dt.DataTypeName
-            FROM formfields ff
-            LEFT JOIN datatypes dt
-                ON ff.DataTypeId = dt.DataTypeId
-            WHERE ff.FormId = @FormId
-              AND ff.IsActive = 1
-            ORDER BY ff.FormFieldId",
-                    new { FormId = form.FormId });
+                form.Fields = fieldDict.ContainsKey(form.FormId)
+                    ? fieldDict[form.FormId]
+                    : new List<FormDynamicFieldResponse>();
 
-                form.Fields = fields.ToList();
-
-                var dropdowns = await connection.QueryAsync<FormDropdownOptionResponse>(
-                    @"
-            SELECT DISTINCT
-                FormDropDownId,
-                FormFieldId,
-                FormId,
-                OptionValue,
-                OptionLabel,
-                IsActive
-            FROM formdropdownoptions
-            WHERE FormId = @FormId
-              AND IsActive = 1",
-                    new { FormId = form.FormId });
-
-                form.DropdownOptions = dropdowns.ToList();
+                form.DropdownOptions = dropdownDict.ContainsKey(form.FormId)
+                    ? dropdownDict[form.FormId]
+                    : new List<FormDropdownOptionResponse>();
             }
 
             return new PagedResult<FormDynamicGetResponse>
             {
-                TotalCount = forms.Count,
+                TotalCount = forms.Count, // (Optional: use COUNT(*) query for exact total)
                 PageNumber = model.PageNumber,
                 PageSize = model.PageSize,
                 Details = forms
