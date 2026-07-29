@@ -19,6 +19,7 @@ namespace ahello_backend.Controllers
         private readonly IExpertPayoutRepository _expertPayoutRepo;
         private readonly IEscrowPaymentService _escrowPaymentService;
         private readonly IPlatformSettingsRepository _platformSettingsRepo;
+        private readonly IInvoiceService _invoiceService;
 
         public EscrowPaymentController(
             IEscrowPaymentRepository escrowRepo,
@@ -27,7 +28,8 @@ namespace ahello_backend.Controllers
             IBookingRepository bookingRepo,
             IExpertPayoutRepository expertPayoutRepo,
             IEscrowPaymentService escrowPaymentService,
-            IPlatformSettingsRepository platformSettingsRepo)
+            IPlatformSettingsRepository platformSettingsRepo,
+            IInvoiceService invoiceService)
         {
             _escrowRepo = escrowRepo;
             _logRepo = logRepo;
@@ -36,6 +38,7 @@ namespace ahello_backend.Controllers
             _expertPayoutRepo = expertPayoutRepo;
             _escrowPaymentService = escrowPaymentService;
             _platformSettingsRepo = platformSettingsRepo;
+            _invoiceService = invoiceService;
         }
 
         private IActionResult Error(string message, int statusCode = 400, object? details = null)
@@ -298,7 +301,21 @@ namespace ahello_backend.Controllers
                 };
 
                 int escrowPaymentId = await _escrowRepo.InsertAsync(payment);
+                payment.EscrowPaymentId = escrowPaymentId;
 
+                try
+                {
+                    var bookingRead = await _bookingRepo.GetByIdAsync(bookingId);
+                    await _invoiceService.CreateInvoiceFromVerifiedPaymentAsync(payment, bookingRead, bp.CreatedBy);
+                }
+                catch (Exception ex)
+                {
+                    // Don't fail the payment response if invoice creation has an issue —
+                    // payment + escrow are already committed. Log it for follow-up instead.
+                    await _logRepo.InsertAsync(
+                        escrowPaymentId, bookingId, "CREATE_INVOICE", "ERROR",
+                        errorMessage: ex.Message, createdBy: bp.CreatedBy);
+                }
                 await _logRepo.InsertAsync(
                     escrowPaymentId, bookingId, "VERIFY_PAYMENT", "SUCCESS",
                     requestJson: System.Text.Json.JsonSerializer.Serialize(dto),
