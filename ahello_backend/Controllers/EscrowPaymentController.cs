@@ -67,18 +67,47 @@ namespace ahello_backend.Controllers
             if (dto.UserId <= 0 || dto.ServiceId <= 0 || dto.SlotId <= 0)
                 return Error("Valid booking details are required");
 
-            // Never trust client-sent amount — look up the real price server-side
             var servicePrice = await _escrowRepo.GetServicePriceAsync(dto.ServiceId);
             if (servicePrice == null || servicePrice <= 0)
                 return Error("Invalid service");
             var serviceName = await _escrowRepo.GetServiceNameAsync(dto.ServiceId);
+
+            var platformSetting = await _platformSettingsRepo.GetActiveSettingAsync();
+            if (platformSetting == null)
+                return Error("Platform fee configuration is not available. Contact support.", 500);
+
+            decimal platformFee;
+            if (platformSetting.FeeType.Equals("percentage", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!platformSetting.FeePercentage.HasValue)
+                    return Error("Platform fee percentage is not configured.", 500);
+
+                platformFee = Math.Round(servicePrice.Value * platformSetting.FeePercentage.Value / 100m, 2);
+            }
+            else if (platformSetting.FeeType.Equals("amount", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!platformSetting.FeeAmount.HasValue)
+                    return Error("Platform fee amount is not configured.", 500);
+
+                platformFee = Math.Round(platformSetting.FeeAmount.Value, 2);
+            }
+            else
+            {
+                return Error("Invalid platform fee configuration.", 500);
+            }
+
+            if (platformFee > servicePrice.Value)
+                return Error("Platform fee cannot be greater than the service price.", 400);
+
+            var taxAmount = Math.Round(platformFee * platformSetting.GstRate, 2);
+            var grandTotal = servicePrice.Value + taxAmount;
 
             string receipt = $"slot_{dto.SlotId}_{DateTime.UtcNow:yyyyMMddHHmmss}";
 
             try
             {
                 var orderResult = await _razorpayService.CreateOrderAsync(
-                    servicePrice.Value, "INR", receipt, serviceName ?? "");
+                    grandTotal, "INR", receipt, serviceName ?? "");
 
                 await _logRepo.InsertAsync(
                     null, null, "CREATE_ORDER", "SUCCESS",
@@ -89,8 +118,12 @@ namespace ahello_backend.Controllers
                 return Success("Order created successfully", new
                 {
                     orderId = orderResult.orderId,
-                    amount = servicePrice.Value,
-                    amountInPaise = servicePrice.Value * 100,
+                    servicePrice = servicePrice.Value,
+                    platformFee,
+                    taxAmount,
+                    taxLabel = "GST",
+                    amount = grandTotal,
+                    amountInPaise = grandTotal * 100,
                     currency = "INR"
                 });
             }
@@ -237,6 +270,9 @@ namespace ahello_backend.Controllers
                         400);
                 }
 
+                var taxAmount = Math.Round(platformFee * platformSetting.GstRate, 2);
+                var grandTotal = servicePrice.Value + taxAmount;
+
                 decimal expertAmount = servicePrice.Value - platformFee;
 
                 // Create held transfer to expert's linked account now that
@@ -288,8 +324,10 @@ namespace ahello_backend.Controllers
                     RazorpayPaymentId = dto.RazorpayPaymentId,
                     RazorpaySignature = dto.RazorpaySignature,
                     RazorpayTransferId = transferId,
-                    TotalAmount = servicePrice.Value,
+                    TotalAmount = grandTotal,          // ← was servicePrice.Value
                     PlatformFee = platformFee,
+                    TaxAmount = taxAmount,             // ← add this
+                    TaxRate = platformSetting.GstRate, // ← add this
                     ExpertAmount = expertAmount,
                     Currency = "INR",
                     Status = "HELD",

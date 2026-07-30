@@ -17,54 +17,58 @@ namespace ahello_backend.Repositorys.Classes
         public async Task<int> InsertAsync(EscrowPayment payment)
         {
             var query = @"
-        INSERT INTO EscrowPayments
-        (
-            BookingId,
-            UserId,
-            ClientId,
-            RazorpayAccountId,
-            RazorpayOrderId,
-            RazorpayPaymentId,
-            RazorpaySignature,
-            RazorpayTransferId,
-            TotalAmount,
-            PlatformFee,
-            ExpertAmount,
-            Currency,
-            Status,
-            OrderResponseJson,
-            VerifyResponseJson,
-            TransferResponseJson,
-            PaidAt,
-            HeldAt,
-            CreatedAt,
-            CreatedBy
-        )
-        VALUES
-        (
-            @BookingId,
-            @UserId,
-            @ClientId,
-            @RazorpayAccountId,
-            @RazorpayOrderId,
-            @RazorpayPaymentId,
-            @RazorpaySignature,
-            @RazorpayTransferId,
-            @TotalAmount,
-            @PlatformFee,
-            @ExpertAmount,
-            @Currency,
-            @Status,
-            @OrderResponseJson,
-            @VerifyResponseJson,
-            @TransferResponseJson,
-            @PaidAt,
-            @HeldAt,
-            NOW(),
-            @CreatedBy
-        );
+INSERT INTO EscrowPayments
+(
+    BookingId,
+    UserId,
+    ClientId,
+    RazorpayAccountId,
+    RazorpayOrderId,
+    RazorpayPaymentId,
+    RazorpaySignature,
+    RazorpayTransferId,
+    TotalAmount,
+    PlatformFee,
+    TaxAmount,
+    TaxRate,
+    ExpertAmount,
+    Currency,
+    Status,
+    OrderResponseJson,
+    VerifyResponseJson,
+    TransferResponseJson,
+    PaidAt,
+    HeldAt,
+    CreatedAt,
+    CreatedBy
+)
+VALUES
+(
+    @BookingId,
+    @UserId,
+    @ClientId,
+    @RazorpayAccountId,
+    @RazorpayOrderId,
+    @RazorpayPaymentId,
+    @RazorpaySignature,
+    @RazorpayTransferId,
+    @TotalAmount,
+    @PlatformFee,
+    @TaxAmount,
+    @TaxRate,
+    @ExpertAmount,
+    @Currency,
+    @Status,
+    @OrderResponseJson,
+    @VerifyResponseJson,
+    @TransferResponseJson,
+    @PaidAt,
+    @HeldAt,
+    NOW(),
+    @CreatedBy
+);
 
-        SELECT LAST_INSERT_ID();";
+SELECT LAST_INSERT_ID();";
 
             using var connection = _db.GetConnection();
 
@@ -125,11 +129,11 @@ namespace ahello_backend.Repositorys.Classes
         }
 
         public async Task UpdateAfterPaymentAsync(
-     int escrowPaymentId,
-     string paymentId,
-     string signature,
-     string transferId,
-     string transferJson)
+        int escrowPaymentId,
+        string paymentId,
+        string signature,
+        string transferId,
+        string transferJson)
         {
             var query = @"
         UPDATE EscrowPayments
@@ -170,7 +174,8 @@ namespace ahello_backend.Repositorys.Classes
                     var data = await connection.QuerySingleOrDefaultAsync<dynamic>(@"
                 SELECT
                     ep.EscrowPaymentId, ep.BookingId, ep.UserId, ep.ClientId,
-                    ep.TotalAmount, ep.PlatformFee, ep.ExpertAmount, ep.Currency,
+                    ep.TotalAmount, ep.PlatformFee, ep.TaxAmount, ep.TaxRate,
+                    ep.ExpertAmount, ep.Currency,
                     b.ServiceId
                 FROM EscrowPayments ep
                 INNER JOIN bookings b ON b.BookingId = ep.BookingId
@@ -186,11 +191,11 @@ namespace ahello_backend.Repositorys.Classes
                         var rows = await connection.ExecuteAsync(@"
                     INSERT INTO invoices
                         (InvoiceNumber, BookingId, EscrowPaymentId, UserId, ClientId, ServiceId,
-                         TotalAmount, PlatformFee, ExpertAmount, Currency, Status,
+                         TotalAmount, PlatformFee, TaxAmount, TaxRate, ExpertAmount, Currency, Status,
                          IssuedAt, CreatedAt, CreatedBy)
                     VALUES
                         (@InvoiceNumber, @BookingId, @EscrowPaymentId, @UserId, @ClientId, @ServiceId,
-                         @TotalAmount, @PlatformFee, @ExpertAmount, @Currency, 'Issued',
+                         @TotalAmount, @PlatformFee, @TaxAmount, @TaxRate, @ExpertAmount, @Currency, 'Issued',
                          NOW(), NOW(), 'System')",
                             new
                             {
@@ -202,6 +207,8 @@ namespace ahello_backend.Repositorys.Classes
                                 ServiceId = (int)data.ServiceId,
                                 TotalAmount = (decimal)data.TotalAmount,
                                 PlatformFee = (decimal)data.PlatformFee,
+                                TaxAmount = (decimal)data.TaxAmount,
+                                TaxRate = (decimal)data.TaxRate,
                                 ExpertAmount = (decimal)data.ExpertAmount,
                                 Currency = (string)data.Currency
                             });
@@ -417,38 +424,40 @@ namespace ahello_backend.Repositorys.Classes
 
             // Data
             var dataQuery = $@"
-        SELECT
-            ep.EscrowPaymentId,
-            ep.BookingId,
-            ep.UserId,
-            ep.ClientId,
-            b.ServiceId,
-            s.ServiceTitle,
-            ep.RazorpayOrderId,
-            ep.RazorpayPaymentId,
-            ep.RazorpayTransferId,
-            ep.TotalAmount,
-            ep.PlatformFee,
-            ep.ExpertAmount,
-            ep.Currency,
-            ep.Status,
-            ep.VerifyResponseJson,
-            ep.TransferResponseJson,
-            ep.ReleaseResponseJson,
-            ep.RefundResponseJson,
-            ep.PaidAt,
-            ep.HeldAt,
-            ep.ReleasedAt,
-            ep.RefundedAt,
-            ep.CreatedAt
-        FROM EscrowPayments ep
-        INNER JOIN bookings b
-            ON b.BookingId = ep.BookingId
-        INNER JOIN services s
-            ON s.ServiceId = b.ServiceId
-        WHERE {whereClause}
-        ORDER BY ep.CreatedAt DESC
-        LIMIT @PageSize OFFSET @Offset";
+    SELECT
+        ep.EscrowPaymentId,
+        ep.BookingId,
+        ep.UserId,
+        ep.ClientId,
+        b.ServiceId,
+        s.ServiceTitle,
+        ep.RazorpayOrderId,
+        ep.RazorpayPaymentId,
+        ep.RazorpayTransferId,
+        ep.TotalAmount,
+        ep.PlatformFee,
+        ep.TaxAmount,
+        ep.TaxRate,
+        ep.ExpertAmount,
+        ep.Currency,
+        ep.Status,
+        ep.VerifyResponseJson,
+        ep.TransferResponseJson,
+        ep.ReleaseResponseJson,
+        ep.RefundResponseJson,
+        ep.PaidAt,
+        ep.HeldAt,
+        ep.ReleasedAt,
+        ep.RefundedAt,
+        ep.CreatedAt
+    FROM EscrowPayments ep
+    INNER JOIN bookings b
+        ON b.BookingId = ep.BookingId
+    INNER JOIN services s
+        ON s.ServiceId = b.ServiceId
+    WHERE {whereClause}
+    ORDER BY ep.CreatedAt DESC
+    LIMIT @PageSize OFFSET @Offset";
 
             parameters.Add("PageSize", pageSize);
             parameters.Add(

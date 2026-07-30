@@ -28,6 +28,7 @@ namespace ahello_backend.Repositorys.Classes
                     FeeType,
                     FeePercentage,
                     FeeAmount,
+                    GstRate,
                     IsActive,
                     ModifiedAt,
                     ModifiedBy
@@ -37,6 +38,7 @@ namespace ahello_backend.Repositorys.Classes
 
             return await connection.QueryAsync<PlatformSettings>(query);
         }
+
         // ============================================================
         // GET ACTIVE PLATFORM SETTINGS
         // ============================================================
@@ -51,6 +53,7 @@ namespace ahello_backend.Repositorys.Classes
                     FeeType,
                     FeePercentage,
                     FeeAmount,
+                    GstRate,
                     IsActive,
                     ModifiedAt,
                     ModifiedBy
@@ -59,9 +62,9 @@ namespace ahello_backend.Repositorys.Classes
                 ORDER BY PlatformSettingId DESC;
             ";
 
-
             return await connection.QueryAsync<PlatformSettings>(query);
         }
+
         // ============================================================
         // GET BY PLATFORM SETTING ID
         // ============================================================
@@ -77,6 +80,7 @@ namespace ahello_backend.Repositorys.Classes
                     FeeType,
                     FeePercentage,
                     FeeAmount,
+                    GstRate,
                     IsActive,
                     ModifiedAt,
                     ModifiedBy
@@ -109,6 +113,7 @@ namespace ahello_backend.Repositorys.Classes
                     FeeType,
                     FeePercentage,
                     FeeAmount,
+                    GstRate,
                     IsActive,
                     ModifiedAt,
                     ModifiedBy
@@ -118,6 +123,7 @@ namespace ahello_backend.Repositorys.Classes
                     @FeeType,
                     @FeePercentage,
                     @FeeAmount,
+                    @GstRate,
                     1,
                     NOW(),
                     @ModifiedBy
@@ -133,6 +139,7 @@ namespace ahello_backend.Repositorys.Classes
                     request.FeeType,
                     request.FeePercentage,
                     request.FeeAmount,
+                    request.GstRate,
                     request.ModifiedBy
                 });
         }
@@ -155,6 +162,7 @@ namespace ahello_backend.Repositorys.Classes
                     FeeType = @FeeType,
                     FeePercentage = @FeePercentage,
                     FeeAmount = @FeeAmount,
+                    GstRate = @GstRate,
                     ModifiedAt = NOW(),
                     ModifiedBy = @ModifiedBy
                 WHERE PlatformSettingId = @PlatformSettingId;
@@ -168,6 +176,7 @@ namespace ahello_backend.Repositorys.Classes
                     request.FeeType,
                     request.FeePercentage,
                     request.FeeAmount,
+                    request.GstRate,
                     request.ModifiedBy
                 });
 
@@ -204,27 +213,30 @@ namespace ahello_backend.Repositorys.Classes
 
             return rowsAffected > 0;
         }
+
         public async Task<PlatformSettings?> GetActiveSettingAsync()
         {
             using var connection = _context.GetConnection();
 
             var query = @"
-        SELECT
-            PlatformSettingId,
-            FeeType,
-            FeePercentage,
-            FeeAmount,
-            IsActive,
-            ModifiedAt,
-            ModifiedBy
-        FROM PlatformSettings
-        WHERE IsActive = 1
-        ORDER BY PlatformSettingId DESC
-        LIMIT 1;
-    ";
+                SELECT
+                    PlatformSettingId,
+                    FeeType,
+                    FeePercentage,
+                    FeeAmount,
+                    GstRate,
+                    IsActive,
+                    ModifiedAt,
+                    ModifiedBy
+                FROM PlatformSettings
+                WHERE IsActive = 1
+                ORDER BY PlatformSettingId DESC
+                LIMIT 1;
+            ";
 
             return await connection.QueryFirstOrDefaultAsync<PlatformSettings>(query);
         }
+
         // ============================================================
         // VALIDATE FEE
         // ============================================================
