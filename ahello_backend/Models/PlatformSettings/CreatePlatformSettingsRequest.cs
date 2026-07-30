@@ -8,6 +8,7 @@
         public decimal? FeePercentage { get; set; }
 
         public decimal? FeeAmount { get; set; }
+        public decimal GstRate { get; set; }
 
         public int? ModifiedBy { get; set; }
     }
