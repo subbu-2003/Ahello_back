@@ -20,6 +20,8 @@ namespace ahello_backend.Models.Forms
 
     public class FormDynamicFieldResponse
     {
+        public int FormId { get; set; }
+
         public int FormFieldId { get; set; }
         public string FieldName { get; set; }
         public string FieldCode { get; set; }

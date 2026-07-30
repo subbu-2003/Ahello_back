@@ -791,7 +791,8 @@ namespace ahello_backend.Repositorys.Classes
                         LIKE CONCAT('%', @Search, '%')
                 )
 
-                ORDER BY b.BookingId DESC
+                ORDER BY b.ScheduleDate DESC, b.StartTime DESC, b.BookingId DESC
+
 
                 LIMIT @PageSize OFFSET @Offset;";
 
@@ -953,7 +954,8 @@ namespace ahello_backend.Repositorys.Classes
                         LIKE CONCAT('%', @Search, '%')
                 )
 
-                ORDER BY b.BookingId DESC
+               ORDER BY b.ScheduleDate DESC, b.StartTime DESC, b.BookingId DESC
+
 
                 LIMIT @PageSize OFFSET @Offset;";
 
