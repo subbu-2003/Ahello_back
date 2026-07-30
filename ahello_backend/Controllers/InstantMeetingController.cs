@@ -26,27 +26,24 @@ namespace ahello_backend.Controllers
         // =========================================================
         [HttpPost("create")]
         public async Task<IActionResult> CreateMeeting(
-            [FromBody] InstantMeetingCreatePost model)
+            [FromBody] InstantMeetingCreatePost model, [FromQuery] int userId)
         {
             try
             {
                 var meeting = await _hundredMsService.CreateInstantRoomAsync(
                     model.Title);
 
-                // Generate secure host key
-                var hostKey = Convert.ToHexString(
-                    RandomNumberGenerator.GetBytes(32));
+                var meetingLink =
+                    $"https://ahllo.com/meeting/join/{meeting.RoomName}?roomId={meeting.RoomId}";
 
-                // Save meeting
                 await _instantMeetingService.CreateAsync(new InstantMeeting
                 {
                     RoomId = meeting.RoomId,
                     RoomName = meeting.RoomName,
-                    HostKey = hostKey
+                    MeetingLink = meetingLink,
+                    UserId = userId,
+                    HostKey = ""
                 });
-
-                var meetingLink =
-                    $"https://ahllo.com/meeting/join/{meeting.RoomName}?roomId={meeting.RoomId}";
 
                 return Ok(new
                 {
@@ -58,7 +55,6 @@ namespace ahello_backend.Controllers
 
                     meetingLink,
 
-                    hostKey
                 });
             }
             catch (Exception ex)
@@ -88,7 +84,7 @@ namespace ahello_backend.Controllers
                     message = "Meeting not found."
                 });
             }
-            var meetingLink = $"https://ahllo.com/meeting/join/{meeting.RoomName}?roomId={meeting.RoomId}";
+            var meetingLink = meeting.MeetingLink;
 
             return Ok(new
             {
@@ -106,7 +102,7 @@ namespace ahello_backend.Controllers
         // =========================================================
         [HttpPost("sdk-token")]
         public async Task<IActionResult> GenerateSdkToken(
-            [FromBody] InstantMeetingTokenPost model)
+            [FromBody] InstantMeetingTokenPost model, [FromQuery] int userId)
         {
             try
             {
@@ -157,29 +153,24 @@ namespace ahello_backend.Controllers
                     });
                 }
 
+                var currentUserId = userId;
+
                 var role =
-                    !string.IsNullOrWhiteSpace(model.HostKey) &&
-                    meeting.HostKey == model.HostKey
+                    meeting.UserId == currentUserId
                         ? "host"
                         : "client";
 
                 if (role == "client")
                 {
-                    if (!model.RequestId.HasValue)
-                    {
-                        return BadRequest(new
-                        {
-                            success = false,
-                            message = "RequestId is required."
-                        });
-                    }
 
                     var request = await _instantMeetingService
-                        .GetJoinRequestByIdAsync(model.RequestId.Value);
+    .GetByMeetingAndUserAsync(
+        meeting.Id,
+        currentUserId);
 
                     if (request == null)
                     {
-                        return NotFound(new
+                        return BadRequest(new
                         {
                             success = false,
                             message = "Join request not found."
@@ -195,11 +186,10 @@ namespace ahello_backend.Controllers
                         });
                     }
                 }
-
                 var authToken = _hundredMsService.GenerateAuthToken(
-                    meeting.RoomId,
-                    role,
-                    Guid.NewGuid().ToString());
+meeting.RoomId,
+role,
+userId.ToString());
 
                 return Ok(new
                 {
@@ -227,7 +217,7 @@ namespace ahello_backend.Controllers
         }
         [HttpPost("join-request")]
         public async Task<IActionResult> JoinRequest(
-    [FromBody] InstantMeetingJoinRequestPost model)
+    [FromBody] InstantMeetingJoinRequestPost model, [FromQuery] int userId)
         {
             var meeting = await _instantMeetingService
                 .GetByRoomNameAsync(model.RoomName);
@@ -240,12 +230,32 @@ namespace ahello_backend.Controllers
                     message = "Meeting not found."
                 });
             }
+            var existing = await _instantMeetingService
+    .GetByMeetingAndUserAsync(meeting.Id, userId);
+
+            if (existing != null)
+            {
+                return Ok(new
+                {
+                    success = true,
+                    requestId = existing.Id,
+                    status = existing.Status
+                });
+            }
+            if (meeting.UserId == userId)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Host does not need a join request."
+                });
+            }
 
             var requestId = await _instantMeetingService
                 .CreateJoinRequestAsync(new InstantMeetingJoinRequest
                 {
                     InstantMeetingId = meeting.Id,
-                    UserName = model.UserName,
+                    UserId = userId,
                     Status = "Waiting"
                 });
 
@@ -259,7 +269,7 @@ namespace ahello_backend.Controllers
 
         [HttpGet("waiting-users/{roomName}")]
         public async Task<IActionResult> GetWaitingUsers(
-    string roomName)
+    string roomName, [FromQuery] int userId)
         {
             var meeting = await _instantMeetingService
                 .GetByRoomNameAsync(roomName);
@@ -267,6 +277,14 @@ namespace ahello_backend.Controllers
             if (meeting == null)
             {
                 return NotFound();
+            }
+            if (meeting.UserId != userId)
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "Only the host can view waiting users."
+                });
             }
 
             var users = await _instantMeetingService

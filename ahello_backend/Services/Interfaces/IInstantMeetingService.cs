@@ -17,5 +17,6 @@ namespace ahello_backend.Services.Interfaces
         Task<int> UpdateJoinRequestStatusAsync(int requestId, string status);
 
         Task<int> UpdateAllJoinRequestStatusAsync(int instantMeetingId, string status);
+        Task<InstantMeetingJoinRequest?> GetByMeetingAndUserAsync(int instantMeetingId, int userId);
     }
 }
