@@ -93,7 +93,8 @@ namespace ahello_backend.Controllers
                 roomId = meeting.RoomId,
 
                 roomName = meeting.RoomName,
-                meetingLink
+                meetingLink,
+                hostUserId = meeting.UserId,
             });
         }
 
