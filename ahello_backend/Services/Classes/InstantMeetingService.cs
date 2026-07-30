@@ -58,5 +58,13 @@ namespace ahello_backend.Services.Classes
                 instantMeetingId,
                 status);
         }
+        public async Task<InstantMeetingJoinRequest?> GetByMeetingAndUserAsync(
+    int instantMeetingId,
+    int userId)
+        {
+            return await _repository.GetByMeetingAndUserAsync(
+                instantMeetingId,
+                userId);
+        }
     }
 }
