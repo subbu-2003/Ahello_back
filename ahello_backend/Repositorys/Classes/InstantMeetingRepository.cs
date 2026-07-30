@@ -17,22 +17,26 @@ namespace ahello_backend.Repositorys.Classes
         public async Task<int> CreateAsync(InstantMeeting model)
         {
             var query = @"
-                INSERT INTO InstantMeetings
-                (
-                    RoomId,
-                    RoomName,
-                    HostKey,
-                    CreatedAt
-                )
-                VALUES
-                (
-                    @RoomId,
-                    @RoomName,
-                    @HostKey,
-                    DATE_ADD(UTC_TIMESTAMP(), INTERVAL 330 MINUTE)
-                );
+        INSERT INTO InstantMeetings
+        (
+            RoomId,
+            RoomName,
+            MeetingLink,
+            UserId,
+            HostKey,
+            CreatedAt
+        )
+        VALUES
+        (
+            @RoomId,
+            @RoomName,
+            @MeetingLink,
+            @UserId,
+            @HostKey,
+            DATE_ADD(UTC_TIMESTAMP(), INTERVAL 330 MINUTE)
+        );
 
-                SELECT LAST_INSERT_ID();";
+        SELECT LAST_INSERT_ID();";
 
             using var connection = _db.GetConnection();
 
@@ -64,14 +68,14 @@ namespace ahello_backend.Repositorys.Classes
         INSERT INTO InstantMeetingJoinRequests
         (
             InstantMeetingId,
-            UserName,
+            UserId,
             Status,
             CreatedAt
         )
         VALUES
         (
             @InstantMeetingId,
-            @UserName,
+            @UserId,
             @Status,
             DATE_ADD(UTC_TIMESTAMP(), INTERVAL 330 MINUTE)
         );
@@ -86,11 +90,21 @@ namespace ahello_backend.Repositorys.Classes
     int instantMeetingId)
         {
             var query = @"
-        SELECT *
-        FROM InstantMeetingJoinRequests
-        WHERE InstantMeetingId = @InstantMeetingId
-        AND Status = 'Waiting'
-        ORDER BY CreatedAt;";
+        SELECT
+            jr.Id,
+            jr.InstantMeetingId,
+            jr.UserId,
+            u.FullName AS UserName,
+            u.Email,
+            jr.Status,
+            jr.CreatedAt,
+            jr.UpdatedAt
+        FROM InstantMeetingJoinRequests jr
+        INNER JOIN Users u
+            ON jr.UserId = u.UserId
+        WHERE jr.InstantMeetingId = @InstantMeetingId
+        AND jr.Status = 'Waiting'
+        ORDER BY jr.CreatedAt;";
 
             using var connection = _db.GetConnection();
 
@@ -159,6 +173,28 @@ namespace ahello_backend.Repositorys.Classes
                 {
                     InstantMeetingId = instantMeetingId,
                     Status = status
+                });
+        }
+        public async Task<InstantMeetingJoinRequest?> GetByMeetingAndUserAsync(
+    int instantMeetingId,
+    int userId)
+        {
+            var query = @"
+        SELECT *
+        FROM InstantMeetingJoinRequests
+        WHERE InstantMeetingId = @InstantMeetingId
+        AND UserId = @UserId
+        ORDER BY Id DESC
+        LIMIT 1;";
+
+            using var connection = _db.GetConnection();
+
+            return await connection.QueryFirstOrDefaultAsync<InstantMeetingJoinRequest>(
+                query,
+                new
+                {
+                    InstantMeetingId = instantMeetingId,
+                    UserId = userId
                 });
         }
     }
