@@ -40,5 +40,18 @@ namespace Ahllo.Controllers
             var invoices = await _invoiceService.GetInvoicesByUserIdAsync(userId);
             return Ok(invoices);
         }
+        [HttpGet("{bookingId}/download")]
+        public async Task<IActionResult> DownloadInvoice(int bookingId)
+        {
+            var pdf = await _invoiceService.DownloadInvoicePdfAsync(bookingId);
+
+            if (pdf == null)
+                return NotFound();
+
+            return File(
+                pdf,
+                "application/pdf",
+                $"Invoice_{bookingId}.pdf");
+        }
     }
 }

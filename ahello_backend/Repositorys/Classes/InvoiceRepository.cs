@@ -96,5 +96,51 @@ namespace ahello_backend.Repositorys.Classes
             using var connection = _db.GetConnection();
             return await connection.QueryAsync<InvoiceResponseDto>(sql, new { UserId = userId });
         }
+        public async Task<InvoicePdfDto?> GetInvoicePdfAsync(int bookingId)
+        {
+            const string sql = @"
+                SELECT
+                    i.InvoiceNumber,
+                    i.IssuedAt,
+
+                    b.ScheduleDate,
+                    b.StartTime,
+
+                    eu.FullName AS ExpertName,
+                    eu.Email AS ExpertEmail,
+                    eu.MobileNumber AS ExpertMobile,
+
+                    cu.FullName AS ClientName,
+                    cu.Email AS ClientEmail,
+                    cu.MobileNumber AS ClientMobile,
+
+                    s.ServiceTitle,
+
+                    i.TotalAmount,
+                    i.PlatformFee,
+                    i.ExpertAmount
+
+                FROM invoices i
+                INNER JOIN bookings b
+                    ON b.BookingId = i.BookingId
+
+                INNER JOIN users eu
+                    ON eu.UserId = i.UserId
+
+                INNER JOIN users cu
+                    ON cu.UserId = i.ClientId
+
+                INNER JOIN services s
+                    ON s.ServiceId = i.ServiceId
+
+                WHERE i.BookingId = @BookingId;
+                ";
+
+            using var connection = _db.GetConnection();
+
+            return await connection.QuerySingleOrDefaultAsync<InvoicePdfDto>(
+                sql,
+                new { BookingId = bookingId });
+        }
     }
 }

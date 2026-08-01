@@ -161,6 +161,35 @@ namespace ahello_backend.Repositorys.Classes
             };
         }
 
+        public async Task<(bool Exists, string Token, LoginResponseDto User)> CheckUserAsync(string email)
+        {
+            using var connection = _db.GetConnection();
+
+            var user = await connection.QueryFirstOrDefaultAsync<LoginResponseDto>(
+                @"
+        SELECT
+            UserId,
+            Email,
+            FullName AS UserName,
+            ProfileUrl
+        FROM users
+        WHERE Email = @Email
+        LIMIT 1",
+                new
+                {
+                    Email = email.Trim()
+                });
+
+            if (user == null)
+            {
+                return (false, null, null);
+            }
+
+            var token = GenerateJwtToken(user);
+
+            return (true, token, user);
+        }
+
         public async Task<bool> SendOtpAsync(string email)
         {
             using var connection = _db.GetConnection();
