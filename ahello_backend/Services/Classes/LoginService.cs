@@ -44,6 +44,11 @@ namespace ahello_backend.Services.Classes
 
             return (user, token);
         }
+
+        public async Task<(bool Exists, string Token, LoginResponseDto User)> CheckUserAsync(string email)
+        {
+            return await _loginRepository.CheckUserAsync(email);
+        }
         public async Task<bool> SendOtpAsync(
     LoginOtpRequestDto model)
         {
