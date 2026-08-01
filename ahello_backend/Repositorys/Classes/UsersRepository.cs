@@ -208,7 +208,9 @@ namespace ahello_backend.Repositorys.Classes
                     s.ThumbnailImage,
 
                     IFNULL(AVG(CAST(r.Rating AS DECIMAL(10,2))),0)
-                        AS AverageRating
+                        AS AverageRating,
+                    COUNT(r.ReviewId)
+                        AS TotalRatingCount
 
                 FROM services s
 
@@ -358,7 +360,8 @@ namespace ahello_backend.Repositorys.Classes
                         Duration = s.Duration,
                         IntroVideo = s.IntroVideo,
                         ThumbnailImage = s.ThumbnailImage,
-                        AverageRating = s.AverageRating
+                        AverageRating = Math.Floor(s.AverageRating * 10) / 10,
+                        TotalRatingCount = s.TotalRatingCount
                     })
                     .ToList()
                 })
