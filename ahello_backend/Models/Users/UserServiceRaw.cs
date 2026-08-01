@@ -29,5 +29,6 @@
         public string ThumbnailImage { get; set; }
 
         public decimal AverageRating { get; set; }
+        public int TotalRatingCount { get; set; }
     }
 }

@@ -15,5 +15,6 @@ namespace ahello_backend.Repositorys.Interfaces
         Task<InvoiceResponseDto> GetInvoiceByBookingIdAsync(int bookingId);
 
         Task<IEnumerable<InvoiceResponseDto>> GetInvoicesByUserIdAsync(int userId);
+        Task<InvoicePdfDto?> GetInvoicePdfAsync(int bookingId);
     }
 }

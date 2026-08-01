@@ -9,10 +9,14 @@ namespace ahello_backend.Services.Classes
     public class InvoiceService : IInvoiceService
     {
         private readonly IInvoiceRepository _invoiceRepository;
+        private readonly IPdfService _pdfService;
 
-        public InvoiceService(IInvoiceRepository invoiceRepository)
+
+        public InvoiceService(IInvoiceRepository invoiceRepository, IPdfService pdfService)
         {
             _invoiceRepository = invoiceRepository;
+            _pdfService = pdfService;
+
         }
 
         public async Task<int> CreateInvoiceFromVerifiedPaymentAsync(
@@ -62,5 +66,14 @@ namespace ahello_backend.Services.Classes
 
         public Task<IEnumerable<InvoiceResponseDto>> GetInvoicesByUserIdAsync(int userId)
             => _invoiceRepository.GetInvoicesByUserIdAsync(userId);
+        public async Task<byte[]?> DownloadInvoicePdfAsync(int bookingId)
+        {
+            var invoice = await _invoiceRepository.GetInvoicePdfAsync(bookingId);
+
+            if (invoice == null)
+                return null;
+
+            return _pdfService.GenerateInvoicePdf(invoice);
+        }
     }
 }
