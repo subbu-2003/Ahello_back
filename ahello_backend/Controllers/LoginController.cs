@@ -107,6 +107,20 @@ namespace ahello_backend.Controllers
             }
         }
 
+        [HttpPost("check-user")]
+        public async Task<IActionResult> CheckUser([FromBody] CheckUserRequest request)
+        {
+            var result = await _loginService.CheckUserAsync(request.Email);
+
+            return Ok(new
+            {
+                success = true,
+                exists = result.Exists,
+                token = result.Token,
+                user = result.User
+            });
+        }
+
         [HttpPost("send-otp")]
         public async Task<IActionResult> SendOtp(
             [FromBody] LoginOtpRequestDto model)
