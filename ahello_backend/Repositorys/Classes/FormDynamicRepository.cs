@@ -225,7 +225,113 @@ namespace ahello_backend.Repositorys.Classes
                 Details = forms
             };
         }
+        public async Task<PagedResult<FormDynamicGetResponse>> GetActiveFormsByUserIdAsync(FormSearchRequest model)
+        {
+            using var connection = _db.GetConnection();
 
+            // Active forms only
+            var forms = (await connection.QueryAsync<FormDynamicGetResponse>(
+                @"
+        SELECT f.*
+        FROM forms f
+        WHERE f.UserId = @UserId
+          AND f.IsActive = 1
+          AND (@Date IS NULL
+               OR (f.CreatedAt >= @Date
+               AND f.CreatedAt < DATE_ADD(@Date, INTERVAL 1 DAY)))
+          AND (
+                @SearchText IS NULL
+                OR @SearchText = ''
+                OR f.Title LIKE CONCAT('%', @SearchText, '%')
+                OR f.Description LIKE CONCAT('%', @SearchText, '%')
+          )
+        ORDER BY f.FormId DESC
+        LIMIT @PageSize OFFSET @Offset;",
+                new
+                {
+                    model.UserId,
+                    model.SearchText,
+                    model.Date,
+                    model.PageSize,
+                    Offset = (model.PageNumber - 1) * model.PageSize
+                })).ToList();
+
+            if (!forms.Any())
+            {
+                return new PagedResult<FormDynamicGetResponse>
+                {
+                    TotalCount = 0,
+                    PageNumber = model.PageNumber,
+                    PageSize = model.PageSize,
+                    Details = new List<FormDynamicGetResponse>()
+                };
+            }
+
+            var formIds = forms.Select(x => x.FormId).ToList();
+
+            // Active Fields
+            var allFields = (await connection.QueryAsync<FormDynamicFieldResponse>(
+                @"
+        SELECT
+            ff.FormFieldId,
+            ff.FormId,
+            ff.FieldName,
+            ff.FieldCode,
+            ff.Placeholder,
+            ff.Description,
+            ff.IsRequired,
+            ff.DataTypeId,
+            ff.IsActive,
+            dt.DataTypeName
+        FROM formfields ff
+        LEFT JOIN datatypes dt
+               ON ff.DataTypeId = dt.DataTypeId
+        WHERE ff.FormId IN @FormIds
+          AND ff.IsActive = 1;",
+                new { FormIds = formIds })).ToList();
+
+            // Active Dropdowns
+            var allDropdowns = (await connection.QueryAsync<FormDropdownOptionResponse>(
+                @"
+        SELECT
+            FormDropDownId,
+            FormFieldId,
+            FormId,
+            OptionValue,
+            OptionLabel,
+            IsActive
+        FROM formdropdownoptions
+        WHERE FormId IN @FormIds
+          AND IsActive = 1;",
+                new { FormIds = formIds })).ToList();
+
+            var fieldDict = allFields
+                .GroupBy(x => x.FormId)
+                .ToDictionary(x => x.Key, x => x.ToList());
+
+            var dropdownDict = allDropdowns
+                .GroupBy(x => x.FormId)
+                .ToDictionary(x => x.Key, x => x.ToList());
+
+            foreach (var form in forms)
+            {
+                form.Fields = fieldDict.ContainsKey(form.FormId)
+                    ? fieldDict[form.FormId]
+                    : new List<FormDynamicFieldResponse>();
+
+                form.DropdownOptions = dropdownDict.ContainsKey(form.FormId)
+                    ? dropdownDict[form.FormId]
+                    : new List<FormDropdownOptionResponse>();
+            }
+
+            return new PagedResult<FormDynamicGetResponse>
+            {
+                TotalCount = forms.Count,
+                PageNumber = model.PageNumber,
+                PageSize = model.PageSize,
+                Details = forms
+            };
+        }
         public async Task<int> CreateAsync(FormDynamicPost model)
         {
             using var connection = _db.GetConnection();

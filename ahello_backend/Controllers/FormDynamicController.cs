@@ -63,7 +63,27 @@ namespace ahello_backend.Controllers
 
             return Ok(data);
         }
+        [HttpGet("user/search/active")]
+        public async Task<IActionResult> GetActiveFormsByUserId(
+        [FromQuery] int userId,
+        [FromQuery] string? searchText,
+        [FromQuery] DateTime? date,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
+        {
+            var model = new FormSearchRequest
+            {
+                UserId = userId,
+                SearchText = searchText,
+                Date = date,
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
 
+            var data = await _service.GetActiveFormsByUserIdAsync(model);
+
+            return Ok(data);
+        }
         [HttpPost]
         public async Task<IActionResult> Create([FromForm] FormDynamicPost model)
         {
