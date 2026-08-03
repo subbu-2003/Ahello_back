@@ -16,18 +16,37 @@ namespace ahello_backend.Repositorys.Classes
         }
 
         // PRIVATE HELPER — truly async with MailKit
-        private async Task SendEmailAsync(string toEmail, string subject, string body)
+        private async Task SendEmailAsync(
+    string toEmail,
+    string subject,
+    string body,
+    byte[]? attachment = null,
+    string? attachmentName = null)
         {
             var message = new MimeMessage();
+
             message.From.Add(new MailboxAddress(_smtp.DisplayName, _smtp.FromEmail));
             message.To.Add(MailboxAddress.Parse(toEmail));
             message.Subject = subject;
 
-            message.Body = new TextPart("html") { Text = body };
+            var builder = new BodyBuilder
+            {
+                HtmlBody = body
+            };
+
+            // Attach PDF
+            if (attachment != null)
+            {
+                builder.Attachments.Add(
+                    attachmentName ?? "Invoice.pdf",
+                    attachment,
+                    ContentType.Parse("application/pdf"));
+            }
+
+            message.Body = builder.ToMessageBody();
 
             using var client = new SmtpClient();
 
-            // Use StartTls if port 587, Ssl if port 465, None if port 25
             var secureOption = _smtp.Port switch
             {
                 465 => SecureSocketOptions.SslOnConnect,
@@ -118,11 +137,12 @@ namespace ahello_backend.Repositorys.Classes
                         }
 
         public async Task SendBookingConfirmationEmailAsync(
-        string toEmail,
-        string clientName,
-        string serviceName,
-        string date,
-        string time)
+     string toEmail,
+     string clientName,
+     string serviceName,
+     string date,
+     string time,
+     byte[]? invoicePdf = null)
         {
             await SendEmailAsync(
                 toEmail,
@@ -207,7 +227,8 @@ namespace ahello_backend.Repositorys.Classes
                 </table>
                 </body>
                 </html>
-                ");
+                ", invoicePdf,
+    "Invoice.pdf");
         }
         public async Task SendMeetingReminderEmailAsync(string toEmail, string clientName, DateTime startTime, string meetingLink, int minutesLeft)
         {

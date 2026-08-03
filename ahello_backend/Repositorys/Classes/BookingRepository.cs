@@ -4,6 +4,7 @@ using ahello_backend.Models.Meeting;
 using ahello_backend.Models.Pagination;
 using ahello_backend.Repositorys.Interfaces;
 using ahello_backend.Services.Classes;
+using ahello_backend.Services.Interfaces;
 using Dapper;
 using System.Globalization;
 
@@ -17,6 +18,8 @@ namespace ahello_backend.Repositorys.Classes
         private readonly IUserSlotRepository _userSlotRepo;
         private readonly IServiceRepository _serviceRepository;
         private readonly HundredMsService _hundredMsService;
+        private readonly IPdfService _pdfService;
+        private readonly IInvoiceRepository _invoiceRepository;
 
         public BookingRepository(
          DbContext db,
@@ -24,7 +27,7 @@ namespace ahello_backend.Repositorys.Classes
          IUserSlotRepository userSlotRepo,
          IServiceRepository serviceRepository,
          IEmailRepository emailRepository,
-         HundredMsService hundredMsService)
+         HundredMsService hundredMsService, IPdfService pdfService, IInvoiceRepository invoiceRepository)
         {
             _db = db;
             _dbConn = dbConn;
@@ -32,6 +35,8 @@ namespace ahello_backend.Repositorys.Classes
             _serviceRepository = serviceRepository;
             _emailRepository = emailRepository;
             _hundredMsService = hundredMsService;
+            _pdfService = pdfService;
+            _invoiceRepository = invoiceRepository;
         }
 
         public async Task<int> CreateAsync(BookingPost model)
@@ -167,11 +172,31 @@ namespace ahello_backend.Repositorys.Classes
             {
                 try
                 {
-                    await _emailRepository.SendBookingConfirmationEmailAsync(
-                        clientEmail, clientFullName, serviceName, formattedDate, formattedTime);
+                    byte[]? invoicePdf = null;
 
+                    // Get invoice details
+                    var invoice = await _invoiceRepository.GetInvoicePdfAsync(bookingId);
+
+                    // Generate PDF
+                    if (invoice != null)
+                    {
+                        invoicePdf = _pdfService.GenerateInvoicePdf(invoice);
+                    }
+
+                    // Send booking confirmation with PDF attachment
+                    await _emailRepository.SendBookingConfirmationEmailAsync(
+                        clientEmail,
+                        clientFullName,
+                        serviceName,
+                        formattedDate,
+                        formattedTime,
+                        invoicePdf);
+
+                    // Send meeting invitation
                     await _emailRepository.SendMeetingInviteEmailAsync(
-                        clientEmail, clientFullName, capturedMeetingLink);
+                        clientEmail,
+                        clientFullName,
+                        capturedMeetingLink);
                 }
                 catch (Exception ex)
                 {
