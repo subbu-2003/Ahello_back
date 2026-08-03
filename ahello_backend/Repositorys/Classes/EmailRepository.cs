@@ -17,11 +17,11 @@ namespace ahello_backend.Repositorys.Classes
 
         // PRIVATE HELPER — truly async with MailKit
         private async Task SendEmailAsync(
-    string toEmail,
-    string subject,
-    string body,
-    byte[]? attachment = null,
-    string? attachmentName = null)
+     string toEmail,
+     string subject,
+     string body,
+     byte[]? attachment = null,
+     string? attachmentName = null)
         {
             var message = new MimeMessage();
 
@@ -34,7 +34,6 @@ namespace ahello_backend.Repositorys.Classes
                 HtmlBody = body
             };
 
-            // Attach PDF
             if (attachment != null)
             {
                 builder.Attachments.Add(
@@ -76,7 +75,7 @@ namespace ahello_backend.Repositorys.Classes
                 </div>
             </body>
             </html>");
-                    }
+        }
 
         public async Task SendMeetingInviteEmailAsync(string toEmail, string userName, string meetingLink)
         {
@@ -134,20 +133,17 @@ namespace ahello_backend.Repositorys.Classes
                     </div>
                 </body>
                 </html>");
-                        }
+        }
 
         public async Task SendBookingConfirmationEmailAsync(
-     string toEmail,
-     string clientName,
-     string serviceName,
-     string date,
-     string time,
-     byte[]? invoicePdf = null)
+        string toEmail,
+        string clientName,
+        string serviceName,
+        string date,
+        string time, byte[]? invoicePdf)
         {
-            await SendEmailAsync(
-                toEmail,
-                "Booking Confirmed - " + serviceName,
-            $@"
+           
+            var body=$@"
                 <!DOCTYPE html>
                 <html>
                 <head>
@@ -227,8 +223,13 @@ namespace ahello_backend.Repositorys.Classes
                 </table>
                 </body>
                 </html>
-                ", invoicePdf,
-    "Invoice.pdf");
+                ";
+            await SendEmailAsync(
+        toEmail,
+        "Booking Confirmed - " + serviceName,
+        body,
+        invoicePdf,
+        $"Invoice-{serviceName}.pdf");
         }
         public async Task SendMeetingReminderEmailAsync(string toEmail, string clientName, DateTime startTime, string meetingLink, int minutesLeft)
         {
@@ -288,7 +289,7 @@ namespace ahello_backend.Repositorys.Classes
                 </div>
             </body>
             </html>");
-                    }
+        }
         public async Task SendRescheduleConfirmationEmailAsync(
         string toEmail, string clientName, string serviceName, string date, string time)
         {
@@ -319,6 +320,6 @@ namespace ahello_backend.Repositorys.Classes
                 </div>
             </body>
             </html>");
-                    }
+        }
     }
 }
