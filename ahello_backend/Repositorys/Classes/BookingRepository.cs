@@ -152,6 +152,7 @@ namespace ahello_backend.Repositorys.Classes
                 }, tx);
 
                 await tx.CommitAsync();
+
             }
             catch
             {
