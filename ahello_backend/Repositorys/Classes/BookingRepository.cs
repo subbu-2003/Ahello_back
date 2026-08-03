@@ -1,6 +1,5 @@
 ﻿using ahello_backend.DbContexts;
 using ahello_backend.Models.Bookings;
-using ahello_backend.Models.Invoices;
 using ahello_backend.Models.Meeting;
 using ahello_backend.Models.Pagination;
 using ahello_backend.Repositorys.Interfaces;
@@ -153,30 +152,6 @@ namespace ahello_backend.Repositorys.Classes
                 }, tx);
 
                 await tx.CommitAsync();
-                decimal totalAmount = service?.Price ?? 0m;
-                decimal platformFeePct = 0.10m; // pull from platformsettings if available
-                decimal platformFee = Math.Round(totalAmount * platformFeePct, 2);
-                decimal expertAmount = totalAmount - platformFee;
-
-                var invoice = new Invoice
-                {
-                    InvoiceNumber = $"INV-{bookingId}-{DateTime.UtcNow:yyyyMMddHHmmss}",
-                    BookingId = bookingId,
-                    EscrowPaymentId = null, // or the actual EscrowPaymentId once payment/escrow is created
-                    UserId = model.UserId,
-                    ClientId = model.ClientId,
-                    ServiceId = model.ServiceId,
-                    TotalAmount = totalAmount,
-                    PlatformFee = platformFee,
-                    ExpertAmount = expertAmount,
-                    Currency = "INR",
-                    Status = "Issued",
-                    IssuedAt = DateTime.UtcNow,
-                    CreatedAt = DateTime.UtcNow,
-                    CreatedBy = model.CreatedBy
-                };
-
-                await _invoiceRepository.InsertInvoiceAsync(invoice);
             }
             catch
             {
