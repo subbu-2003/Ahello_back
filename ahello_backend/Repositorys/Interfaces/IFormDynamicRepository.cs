@@ -12,7 +12,7 @@ namespace ahello_backend.Repositorys.Interfaces
         Task<FormDynamicGetResponse> GetByIdAsync(int formId);
 
         Task<PagedResult<FormDynamicGetResponse>> GetByUserIdAsync(FormSearchRequest model);
-
+        Task<PagedResult<FormDynamicGetResponse>> GetActiveFormsByUserIdAsync(FormSearchRequest model);
         Task<int> CreateAsync(FormDynamicPost model);
 
         Task<bool> UpdateAsync(int formId,FormDynamicPut model);
