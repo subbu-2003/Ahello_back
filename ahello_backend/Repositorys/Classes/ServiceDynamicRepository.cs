@@ -286,40 +286,76 @@ namespace ahello_backend.Repositorys.Classes
 
             // DYNAMIC FIELDS
             // DYNAMIC FIELDS
+            // Get all user ids from current page
+            var userIds = services
+                .Select(x => x.UserId)
+                .Distinct()
+                .ToList();
+
+
+            // Get all fields in ONE query
+            var allFields = (await connection.QueryAsync<ServiceDynamicFieldResponse>(
+                @"
+    SELECT
+        sfv.UserId,
+        sf.ServiceFieldId,
+        sf.FieldName,
+        sf.FieldCode,
+        sfv.FieldValue
+    FROM servicefieldvalues sfv
+    INNER JOIN servicefields sf
+        ON sf.ServiceFieldId = sfv.ServiceFieldId
+    WHERE sfv.UserId IN @UserIds",
+                new
+                {
+                    UserIds = userIds
+                })).ToList();
+
+
+            // Get all dropdowns in ONE query
+            var allDropdowns = (await connection.QueryAsync<ServiceDropDownOptionResponse>(
+                @"
+    SELECT
+        ServiceDropDownId,
+        ServiceFieldId,
+        UserId,
+        OptionValue,
+        OptionLabel,
+        IsActive
+    FROM servicedropdownoptions
+    WHERE UserId IN @UserIds",
+                new
+                {
+                    UserIds = userIds
+                })).ToList();
+
+
+            // Dictionary for fields
+            var fieldDictionary = allFields
+                .GroupBy(x => x.UserId)
+                .ToDictionary(x => x.Key, x => x.ToList());
+
+
+            // Dictionary for dropdowns
+            var dropdownDictionary = allDropdowns
+                .GroupBy(x => x.UserId)
+                .ToDictionary(x => x.Key, x => x.ToList());
+
+
+            // Mapping
             foreach (var service in services)
             {
-                var fields = (await connection.QueryAsync<ServiceDynamicFieldResponse>(
-                    @"SELECT
-                        sf.ServiceFieldId,
-                        sf.FieldName,
-                        sf.FieldCode,
-                        sfv.FieldValue
-
-                      FROM servicefieldvalues sfv
-
-                      INNER JOIN servicefields sf
-                        ON sfv.ServiceFieldId = sf.ServiceFieldId
-
-                      WHERE sfv.UserId = @UserId",
-                    new
-                    {
-                        UserId = service.UserId
-                    })).ToList();
+                var fields = fieldDictionary.ContainsKey(service.UserId)
+                    ? fieldDictionary[service.UserId]
+                    : new List<ServiceDynamicFieldResponse>();
 
                 foreach (var field in fields)
                 {
-                    var dropdownOptions = await connection.QueryAsync<ServiceDropDownOptionResponse>(
-                        @"SELECT
-                        ServiceDropDownId,
-                        OptionValue,
-                        OptionLabel,
-                        IsActive
-                        FROM servicedropdownoptions
-                        WHERE ServiceFieldId = @ServiceFieldId
-                        AND UserId = @UserId",
-                        new { field.ServiceFieldId, UserId = service.UserId });
-
-                    field.DropDownOptions = dropdownOptions.ToList();
+                    field.DropDownOptions = dropdownDictionary.ContainsKey(service.UserId)
+                        ? dropdownDictionary[service.UserId]
+                            .Where(x => x.ServiceFieldId == field.ServiceFieldId)
+                            .ToList()
+                        : new List<ServiceDropDownOptionResponse>();
                 }
 
                 service.Fields = fields;
