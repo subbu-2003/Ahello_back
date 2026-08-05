@@ -129,24 +129,24 @@ SELECT LAST_INSERT_ID();";
         }
 
         public async Task UpdateAfterPaymentAsync(
-        int escrowPaymentId,
-        string paymentId,
-        string signature,
-        string transferId,
-        string transferJson)
+    int escrowPaymentId,
+    string paymentId,
+    string signature,
+    string transferId,
+    string transferJson)
         {
             var query = @"
-        UPDATE EscrowPayments
-        SET
-            RazorpayPaymentId = @PaymentId,
-            RazorpaySignature = @Signature,
-            RazorpayTransferId = @TransferId,
-            TransferResponseJson = @TransferJson,
-            Status = 'HELD',
-            PaidAt = NOW(),
-            HeldAt = NOW(),
-            ModifiedAt = NOW()
-        WHERE EscrowPaymentId = @EscrowPaymentId";
+    UPDATE EscrowPayments
+    SET
+        RazorpayPaymentId = @PaymentId,
+        RazorpaySignature = @Signature,
+        RazorpayTransferId = @TransferId,
+        TransferResponseJson = @TransferJson,
+        Status = 'HELD',
+        PaidAt = NOW(),
+        HeldAt = NOW(),
+        ModifiedAt = NOW()
+    WHERE EscrowPaymentId = @EscrowPaymentId";
 
             using var connection = _db.GetConnection();
 
@@ -158,70 +158,6 @@ SELECT LAST_INSERT_ID();";
                 TransferId = transferId,
                 TransferJson = transferJson
             });
-
-            Console.WriteLine($"[InvoiceDebug] UpdateAfterPaymentAsync reached invoice block for EscrowPaymentId={escrowPaymentId}");
-
-            try
-            {
-                var alreadyExists = await connection.ExecuteScalarAsync<int>(
-                    "SELECT COUNT(1) FROM invoices WHERE EscrowPaymentId = @EscrowPaymentId",
-                    new { EscrowPaymentId = escrowPaymentId }) > 0;
-
-                Console.WriteLine($"[InvoiceDebug] alreadyExists = {alreadyExists}");
-
-                if (!alreadyExists)
-                {
-                    var data = await connection.QuerySingleOrDefaultAsync<dynamic>(@"
-                SELECT
-                    ep.EscrowPaymentId, ep.BookingId, ep.UserId, ep.ClientId,
-                    ep.TotalAmount, ep.PlatformFee, ep.TaxAmount, ep.TaxRate,
-                    ep.ExpertAmount, ep.Currency,
-                    b.ServiceId
-                FROM EscrowPayments ep
-                INNER JOIN bookings b ON b.BookingId = ep.BookingId
-                WHERE ep.EscrowPaymentId = @EscrowPaymentId",
-                        new { EscrowPaymentId = escrowPaymentId });
-
-                    Console.WriteLine($"[InvoiceDebug] data fetched: {(data == null ? "NULL" : "OK")}");
-
-                    if (data != null)
-                    {
-                        var invoiceNumber = $"INV-{(int)data.BookingId:D6}";
-
-                        var rows = await connection.ExecuteAsync(@"
-                    INSERT INTO invoices
-                        (InvoiceNumber, BookingId, EscrowPaymentId, UserId, ClientId, ServiceId,
-                         TotalAmount, PlatformFee, TaxAmount, TaxRate, ExpertAmount, Currency, Status,
-                         IssuedAt, CreatedAt, CreatedBy)
-                    VALUES
-                        (@InvoiceNumber, @BookingId, @EscrowPaymentId, @UserId, @ClientId, @ServiceId,
-                         @TotalAmount, @PlatformFee, @TaxAmount, @TaxRate, @ExpertAmount, @Currency, 'Issued',
-                         NOW(), NOW(), 'System')",
-                            new
-                            {
-                                InvoiceNumber = invoiceNumber,
-                                BookingId = (int)data.BookingId,
-                                EscrowPaymentId = escrowPaymentId,
-                                UserId = (int)data.UserId,
-                                ClientId = (int)data.ClientId,
-                                ServiceId = (int)data.ServiceId,
-                                TotalAmount = (decimal)data.TotalAmount,
-                                PlatformFee = (decimal)data.PlatformFee,
-                                TaxAmount = (decimal)data.TaxAmount,
-                                TaxRate = (decimal)data.TaxRate,
-                                ExpertAmount = (decimal)data.ExpertAmount,
-                                Currency = (string)data.Currency
-                            });
-
-                        Console.WriteLine($"[InvoiceDebug] Insert rows affected: {rows}");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[InvoiceDebug] ERROR: {ex.GetType().Name} - {ex.Message}");
-                Console.WriteLine(ex.StackTrace);
-            }
         }
 
         public async Task UpdateReleaseAsync(

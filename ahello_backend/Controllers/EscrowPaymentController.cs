@@ -20,6 +20,7 @@ namespace ahello_backend.Controllers
         private readonly IEscrowPaymentService _escrowPaymentService;
         private readonly IPlatformSettingsRepository _platformSettingsRepo;
         private readonly IInvoiceService _invoiceService;
+        private readonly IEmailRepository _emailRepository;
 
         public EscrowPaymentController(
             IEscrowPaymentRepository escrowRepo,
@@ -29,7 +30,8 @@ namespace ahello_backend.Controllers
             IExpertPayoutRepository expertPayoutRepo,
             IEscrowPaymentService escrowPaymentService,
             IPlatformSettingsRepository platformSettingsRepo,
-            IInvoiceService invoiceService)
+            IInvoiceService invoiceService,
+            IEmailRepository emailRepository)
         {
             _escrowRepo = escrowRepo;
             _logRepo = logRepo;
@@ -39,6 +41,7 @@ namespace ahello_backend.Controllers
             _escrowPaymentService = escrowPaymentService;
             _platformSettingsRepo = platformSettingsRepo;
             _invoiceService = invoiceService;
+            _emailRepository = emailRepository;
         }
 
         private IActionResult Error(string message, int statusCode = 400, object? details = null)
@@ -345,6 +348,17 @@ namespace ahello_backend.Controllers
                 {
                     var bookingRead = await _bookingRepo.GetByIdAsync(bookingId);
                     await _invoiceService.CreateInvoiceFromVerifiedPaymentAsync(payment, bookingRead, bp.CreatedBy);
+                    var invoicePdf = await _invoiceService.DownloadInvoicePdfAsync(bookingId);
+                    var invoice = await _invoiceService.GetInvoiceByBookingIdAsync(bookingId);
+
+                    // Send Booking Confirmation Email with Invoice PDF
+                    await _emailRepository.SendBookingConfirmationEmailAsync(
+                        bookingRead.ClientEmail,
+                        bookingRead.ClientName,
+                        bookingRead.ServiceTitle,
+                        bookingRead.ScheduleDate.ToString("dddd, MMMM dd yyyy"),
+                        bookingRead.StartTime.ToString(@"hh\:mm"),
+                        invoicePdf);
                 }
                 catch (Exception ex)
                 {
