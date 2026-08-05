@@ -21,7 +21,7 @@
 
         // Only populated for the Yearwise report: one aggregated row per year.
         public List<YearlySummaryModel>? YearlySummary { get; set; }
-
+        public decimal TotalRevenue { get; set; }
         public List<ServiceReportItemModel> Data { get; set; }
         public PaginationModel Pagination { get; set; }
     }
