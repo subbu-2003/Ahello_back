@@ -41,7 +41,7 @@ namespace ahello_backend.Repositorys.Classes
         //   Yearly  -> YearlySummary = one aggregated row per year
         // ---------------------------------------------------------------
         private async Task<ServiceReportResponseModel> BuildReportAsync(
-            ServiceReportRequestModel request, string dateFormat, ReportGrain grain)
+        ServiceReportRequestModel request, string dateFormat, ReportGrain grain, bool paginate = true)
         {
             using IDbConnection conn = _db.GetConnection();
 
@@ -107,13 +107,20 @@ namespace ahello_backend.Repositorys.Classes
             {
                 item.DynamicFields = await GetDynamicFieldsAsync(conn, request.UserId);
             }
-
+            var totalRevenue = grouped.Sum(x => x.Revenue);
             var totalRecords = grouped.Count;
-            var pagedData = grouped
-                .Skip((request.PageNumber - 1) * request.PageSize)
-                .Take(request.PageSize)
-                .ToList();
-
+            var pagedData = paginate
+            ? grouped.Skip((request.PageNumber - 1) * request.PageSize)
+                 .Take(request.PageSize)
+                 .ToList()
+            : grouped;
+            var pagination = new PaginationModel
+            {
+                PageNumber = paginate ? request.PageNumber : 1,
+                PageSize = paginate ? request.PageSize : totalRecords,
+                TotalRecords = totalRecords,
+                TotalPages = paginate ? (int)Math.Ceiling(totalRecords / (double)request.PageSize) : 1
+            };
             ServiceReportSummaryModel? summary = null;
             List<YearlySummaryModel>? yearlySummary = null;
 
@@ -135,14 +142,9 @@ namespace ahello_backend.Repositorys.Classes
             {
                 Summary = summary,
                 YearlySummary = yearlySummary,
+                TotalRevenue = totalRevenue,
                 Data = pagedData,
-                Pagination = new PaginationModel
-                {
-                    PageNumber = request.PageNumber,
-                    PageSize = request.PageSize,
-                    TotalRecords = totalRecords,
-                    TotalPages = (int)Math.Ceiling(totalRecords / (double)request.PageSize)
-                }
+                Pagination = pagination
             };
         }
 
@@ -335,19 +337,19 @@ namespace ahello_backend.Repositorys.Classes
         }
         public async Task<byte[]> ExportDatewiseExcelAsync(ServiceReportRequestModel request)
         {
-            var report = await GetServiceReportDatewiseAsync(request);
+            var report = await BuildReportAsync(request, "%Y-%m-%d", ReportGrain.Daily, paginate: false);
             return GenerateExcel(report, "Datewise Report");
         }
 
         public async Task<byte[]> ExportMonthwiseExcelAsync(ServiceReportRequestModel request)
         {
-            var report = await GetServiceReportMonthwiseAsync(request);
+            var report = await BuildReportAsync(request, "%Y-%m", ReportGrain.Monthly, paginate: false);
             return GenerateExcel(report, "Monthwise Report");
         }
 
         public async Task<byte[]> ExportYearwiseExcelAsync(ServiceReportRequestModel request)
         {
-            var report = await GetServiceReportYearwiseAsync(request);
+            var report = await BuildReportAsync(request, "%Y", ReportGrain.Yearly, paginate: false);
             return GenerateExcel(report, "Yearwise Report");
         }
         private byte[] GenerateExcel(ServiceReportResponseModel report, string sheetName)
@@ -372,6 +374,8 @@ namespace ahello_backend.Repositorys.Classes
             ws.Cell(row, 12).Value = "No Show";
             ws.Cell(row, 13).Value = "Revenue";
 
+            var headerRow = ws.Row(row);
+            headerRow.Style.Font.Bold = true;
             row++;
 
             foreach (var item in report.Data)
@@ -392,6 +396,14 @@ namespace ahello_backend.Repositorys.Classes
 
                 row++;
             }
+            row++; // blank spacer
+            ws.Range(row, 1, row, 12).Merge();
+            ws.Cell(row, 1).Value = "Total Revenue (Filtered Date Range)";
+            ws.Cell(row, 1).Style.Font.Bold = true;
+            ws.Cell(row, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+
+            ws.Cell(row, 13).Value = report.TotalRevenue;
+            ws.Cell(row, 13).Style.Font.Bold = true;
 
             ws.Columns().AdjustToContents();
 
