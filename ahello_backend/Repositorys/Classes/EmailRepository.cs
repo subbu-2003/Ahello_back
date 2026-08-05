@@ -231,7 +231,8 @@ namespace ahello_backend.Repositorys.Classes
         invoicePdf,
         $"Invoice-{serviceName}.pdf");
         }
-        public async Task SendMeetingReminderEmailAsync(string toEmail, string clientName, DateTime startTime, string meetingLink, int minutesLeft)
+        public async Task SendMeetingReminderEmailAsync(string toEmail, string clientName, string otherPersonName,
+             string serviceName, DateTime startTime, string meetingLink, int minutesLeft)
         {
             await SendEmailAsync(toEmail, "Meeting Reminder - Ahllo", $@"
             <html>
@@ -261,18 +262,45 @@ namespace ahello_backend.Repositorys.Classes
 
                         <!-- MEETING CARD -->
                         <div style='border:1px solid #e0e7ef;border-radius:12px;padding:24px;margin-bottom:28px;'>
-                            <p style='margin:0 0 6px;font-size:12px;text-transform:uppercase;
-                                      letter-spacing:1px;color:#999999;'>Meeting Time</p>
-                            <p style='margin:0 0 20px;font-size:16px;font-weight:bold;color:#1a1a1a;'>
-                                {startTime:dd MMM yyyy} &nbsp;·&nbsp; {startTime:hh:mm tt}
-                            </p>
-                            <a href='{meetingLink}'
-                               style='display:inline-block;background:#005B71;color:#ffffff;
-                                      padding:13px 28px;border-radius:8px;font-size:15px;
-                                      font-weight:bold;text-decoration:none;'>
-                                Join Meeting →
-                            </a>
-                        </div>
+
+    <p style='margin:0 0 10px;font-size:12px;
+              text-transform:uppercase;
+              letter-spacing:1px;
+              color:#999999;'>
+        Meeting Details
+    </p>
+
+    <table width=""100%"" cellpadding=""6"" cellspacing=""0"">
+        <tr>
+            <td style=""font-weight:bold;color:#005B71;"">Client</td>
+            <td>{otherPersonName}</td>
+        </tr>
+
+        <tr>
+            <td style=""font-weight:bold;color:#005B71;"">Service</td>
+            <td>{serviceName}</td>
+        </tr>
+
+        <tr>
+            <td style=""font-weight:bold;color:#005B71;"">Meeting Time</td>
+            <td>{startTime:dd MMM yyyy hh:mm tt}</td>
+        </tr>
+    </table>
+
+    <br/>
+
+    <a href='{meetingLink}'
+       style='display:inline-block;
+              background:#005B71;
+              color:#ffffff;
+              padding:13px 28px;
+              border-radius:8px;
+              text-decoration:none;
+              font-weight:bold;'>
+        Join Meeting →
+    </a>
+
+</div>
 
                         <p style='margin:0;font-size:13px;color:#aaaaaa;line-height:1.6;'>
                             If you did not book this meeting, please ignore this email.

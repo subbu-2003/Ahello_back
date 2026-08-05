@@ -67,7 +67,6 @@
         public string Language { get; set; }
         public string Status { get; set; }
         public bool IsActive { get; set; }
-
         public int BookingCount { get; set; }
         public int ConfirmedBookings { get; set; }
         public int PendingBookings { get; set; }
@@ -76,7 +75,6 @@
         public int RescheduledBookings { get; set; }
         public int NoShowBookings { get; set; }
         public decimal Revenue { get; set; }
-
         public List<ClientBookingModel> Clients { get; set; } = new List<ClientBookingModel>();
         public List<DynamicFieldModel> DynamicFields { get; set; } = new List<DynamicFieldModel>();
     }
@@ -92,7 +90,6 @@
         public TimeSpan StartTime { get; set; }
         public TimeSpan EndTime { get; set; }
         public string BookingStatus { get; set; } // Final settled amount from escrowpayments.ExpertAmount for this booking (0 if no escrow record yet)
-
         public decimal ExpertAmount { get; set; }
 
     }
