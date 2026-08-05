@@ -35,6 +35,10 @@ namespace ahello_backend.Models.Service
         public IFormFile? BannerImage { get; set; }         // form file
         public string? BannerImageUrl { get; set; }
 
+        public bool RemoveThumbnail { get; set; }
+        public bool RemoveBanner { get; set; }
+        public bool RemoveIntroVideo { get; set; }
+
         public IFormFile? IntroVideoFile { get; set; }   // ← new upload field
         public string? IntroVideo { get; set; }           // ← keeps existing URL string
 
