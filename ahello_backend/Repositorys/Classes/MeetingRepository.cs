@@ -430,6 +430,8 @@ namespace ahello_backend.Repositorys.Classes
                 await _emailRepository.SendMeetingReminderEmailAsync(
                     meeting.ClientEmail,
                     meeting.ClientName,
+                    meeting.UserName,
+                    meeting.ServiceTitle,
                     meeting.StartTime,
                     clientMeetingLink,
                     minutesLeft);
@@ -448,6 +450,8 @@ namespace ahello_backend.Repositorys.Classes
                 await _emailRepository.SendMeetingReminderEmailAsync(
                     meeting.Email,
                     meeting.UserName,
+                    meeting.ClientName,
+                    meeting.ServiceTitle,
                     meeting.StartTime,
                     userMeetingLink,
                     minutesLeft);
@@ -481,6 +485,7 @@ namespace ahello_backend.Repositorys.Classes
             m.UserId,
             b.ClientId,
             m.BookingId,
+            s.ServiceTitle,
             m.StartTime,
             m.EndTime,
             m.MeetingLink,
@@ -492,6 +497,7 @@ namespace ahello_backend.Repositorys.Classes
             cu.Email    AS ClientEmail
         FROM meetings m
         INNER JOIN bookings b  ON m.BookingId = b.BookingId
+        INNER JOIN services s ON b.ServiceId = s.ServiceId
         INNER JOIN users u     ON m.UserId    = u.UserId
         INNER JOIN users cu    ON b.ClientId  = cu.UserId
         WHERE m.ReminderSent = 0
