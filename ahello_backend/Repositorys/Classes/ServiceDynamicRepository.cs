@@ -514,27 +514,26 @@ namespace ahello_backend.Repositorys.Classes
             try
             {
                 var sql = @"
-                UPDATE services
-                SET
-                    UserId = @UserId,
-                    ServiceTypeId = @ServiceTypeId,
-                    ServiceCategoryId = @ServiceCategoryId,
-                    ServiceTitle = @ServiceTitle,
-                    Price = @Price,
-                    Duration = @Duration,
-                    ShortDescription = @ShortDescription,
-                    FullDescription = @FullDescription,
-                    Tags = @Tags,
-                    Language = @Language,
-                    ThumbnailImage = COALESCE(@ThumbnailImage, ThumbnailImage),
-                    BannerImage = COALESCE(@BannerImage, BannerImage),
-                    IntroVideo = @IntroVideo,
-                    Status = @Status,
-                    IsActive = @IsActive,
-                    ModifiedAt = NOW(),
-                    ModifiedBy = @ModifiedBy
-                WHERE ServiceId = @ServiceId";
-
+UPDATE services
+SET
+    UserId = @UserId,
+    ServiceTypeId = @ServiceTypeId,
+    ServiceCategoryId = @ServiceCategoryId,
+    ServiceTitle = @ServiceTitle,
+    Price = @Price,
+    Duration = @Duration,
+    ShortDescription = @ShortDescription,
+    FullDescription = @FullDescription,
+    Tags = @Tags,
+    Language = @Language,
+    ThumbnailImage = @ThumbnailImage,
+    BannerImage = @BannerImage,
+    IntroVideo = @IntroVideo,
+    Status = @Status,
+    IsActive = @IsActive,
+    ModifiedAt = NOW(),
+    ModifiedBy = @ModifiedBy
+WHERE ServiceId = @ServiceId";
                 var exists = await connection.ExecuteScalarAsync<bool>(
                     "SELECT EXISTS(SELECT 1 FROM services WHERE ServiceId = @ServiceId)",
                     new { ServiceId = serviceId }, tx);
