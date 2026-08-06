@@ -131,11 +131,13 @@ namespace ahello_backend.Repositorys.Classes
             COALESCE(ROUND(AVG(r.Rating), 1), 0) AS AverageRating,
             COUNT(DISTINCT r.ReviewId) AS TotalReviews,
 
-            COALESCE(SUM(CASE WHEN b.Status = 'Completed' THEN s.Price ELSE 0 END), 0) AS Revenue
+            -- FIXED: revenue now comes from actual captured payments, not booking status
+            COALESCE(SUM(CASE WHEN ep.Status IN ('HELD','RELEASED') THEN ep.ExpertAmount ELSE 0 END), 0) AS Revenue
 
         FROM services s
         LEFT JOIN bookings b ON b.ServiceId = s.ServiceId
         LEFT JOIN reviews r ON r.BookingId = b.BookingId
+        LEFT JOIN escrowpayments ep ON ep.BookingId = b.BookingId
 
         WHERE s.UserId = @UserId
 
