@@ -102,7 +102,12 @@ namespace ahello_backend.Controllers
             if (platformFee > servicePrice.Value)
                 return Error("Platform fee cannot be greater than the service price.", 400);
 
-            var taxAmount = Math.Round(platformFee * platformSetting.GstRate, 2);
+            // GST is stored as a percentage, e.g. 18 = 18%
+            var taxAmount = Math.Round(
+                platformFee * platformSetting.GstRate / 100m,
+                2
+            );
+
             var grandTotal = servicePrice.Value + taxAmount;
 
             string receipt = $"slot_{dto.SlotId}_{DateTime.UtcNow:yyyyMMddHHmmss}";
@@ -273,7 +278,12 @@ namespace ahello_backend.Controllers
                         400);
                 }
 
-                var taxAmount = Math.Round(platformFee * platformSetting.GstRate, 2);
+                // GST is stored as a percentage, e.g. 18 = 18%
+                var taxAmount = Math.Round(
+                    platformFee * platformSetting.GstRate / 100m,
+                    2
+                );
+
                 var grandTotal = servicePrice.Value + taxAmount;
 
                 decimal expertAmount = servicePrice.Value - platformFee;
