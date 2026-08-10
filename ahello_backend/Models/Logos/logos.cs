@@ -59,4 +59,9 @@
         // Set by controller
         public string? LogoUrl { get; set; }
     }
+    public class LogoIsActivePut
+    {
+        public bool IsActive { get; set; }
+        public int? ModifiedBy { get; set; }
+    }
 }

@@ -45,7 +45,28 @@ namespace ahello_backend.Controllers
                 });
             }
         }
+        [HttpGet("isactive")]
+        public async Task<IActionResult> GetByIsActive()
+        {
+            try
+            {
+                var data = await _service.GetByIsActiveAsync();
 
+                return Ok(new
+                {
+                    Success = true,
+                    Data = data
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+        }
         // =========================================================
         // POST
         // =========================================================
@@ -309,6 +330,54 @@ namespace ahello_backend.Controllers
             }
             catch (Exception ex)
             {
+                return StatusCode(500, new
+                {
+                    Success = false,
+                    Message = ex.Message
+                });
+            }
+        }
+        [HttpPut("{id}/isactive")]
+        public async Task<IActionResult> UpdateLogoIsActive(
+    int id,
+    [FromBody] LogoIsActivePut model)
+        {
+            try
+            {
+                var result =
+                    await _service.UpdateLogoIsActiveAsync(
+                        id,
+                        model);
+
+                if (!result)
+                {
+                    return NotFound(new
+                    {
+                        Success = false,
+                        Message = "Logo not found."
+                    });
+                }
+
+                return Ok(new
+                {
+                    Success = true,
+                    Message = model.IsActive
+                        ? "Logo activated successfully."
+                        : "Logo deactivated successfully."
+                });
+            }
+            catch (Exception ex)
+            {
+                if (ex.Message.Contains(
+                    "An active logo already exists"))
+                {
+                    return BadRequest(new
+                    {
+                        Success = false,
+                        Message = ex.Message
+                    });
+                }
+
                 return StatusCode(500, new
                 {
                     Success = false,

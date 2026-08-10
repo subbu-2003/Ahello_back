@@ -5,9 +5,10 @@ namespace ahello_backend.Repositorys.Interfaces
     public interface ILogoRepository
     {
         Task<IEnumerable<LogoGetResponse>> GetAllAsync();
-
+        Task<IEnumerable<LogoGetResponse>> GetByIsActiveAsync();
         Task<int> CreateAsync(LogoPost model);
 
         Task<bool> UpdateAsync(int id, LogoPut model);
+        Task<bool> UpdateLogoIsActiveAsync(int id, LogoIsActivePut model);
     }
 }
