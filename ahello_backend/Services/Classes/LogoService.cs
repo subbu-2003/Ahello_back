@@ -17,6 +17,10 @@ namespace ahello_backend.Services.Classes
         {
             return await _repository.GetAllAsync();
         }
+        public async Task<IEnumerable<LogoGetResponse>> GetByIsActiveAsync()
+        {
+            return await _repository.GetByIsActiveAsync();
+        }
 
         public async Task<int> CreateAsync(LogoPost model)
         {
@@ -28,6 +32,12 @@ namespace ahello_backend.Services.Classes
             LogoPut model)
         {
             return await _repository.UpdateAsync(id, model);
+        }
+        public async Task<bool> UpdateLogoIsActiveAsync( int id, LogoIsActivePut model)
+        {
+            return await _repository.UpdateLogoIsActiveAsync(
+                id,
+                model);
         }
     }
 }
