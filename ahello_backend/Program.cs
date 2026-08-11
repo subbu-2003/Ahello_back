@@ -69,15 +69,17 @@ builder.Services.AddScoped<FileUploadService>();
 // =====================================================
 // UPLOAD SIZE LIMITS  ← ADD THIS BLOCK
 // =====================================================
-
+// Maximum multipart request size: 6 MB
+// This allows a 5 MB logo image + multipart/form-data overhead.
 builder.Services.Configure<FormOptions>(options =>
 {
-    options.MultipartBodyLengthLimit = 52_428_800; // 50 MB (covers 10MB video + other form fields)
+    options.MultipartBodyLengthLimit = 6 * 1024 * 1024;
 });
 
+// Maximum HTTP request body size: 6 MB
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.Limits.MaxRequestBodySize = 52_428_800; // 50 MB — must match above
+    options.Limits.MaxRequestBodySize = 6 * 1024 * 1024;
 });
 
 // =====================================================
