@@ -1,5 +1,6 @@
 ﻿using ahello_backend.Models.Bookings;
 using ahello_backend.Models.Pagination;
+using ahello_backend.Models.Reschedulerequest;
 
 namespace ahello_backend.Repositorys.Interfaces
 {
@@ -14,7 +15,21 @@ namespace ahello_backend.Repositorys.Interfaces
          int slotId,
          string rescheduledBy,
          string reason);
+        Task<int> CreateRescheduleRequestAsync(
+        RescheduleRequestPost model);
 
+        Task<IEnumerable<RescheduleRequestRead>>
+            GetRescheduleRequestsByUserIdAsync(int userId);
+
+        Task<RescheduleRequestRead?>
+            GetRescheduleRequestByIdAsync(int requestId);
+
+        Task<bool> UpdateRescheduleRequestStatusAsync(
+            int requestId,
+            string status,
+            string modifiedBy);
+
+        Task<BookingModalGet> GetBookingModal(int serviceId);
         Task<IEnumerable<BookingRead>> GetAllAsync();
 
         Task<BookingRead> GetByIdAsync(int bookingId);
@@ -35,15 +50,13 @@ namespace ahello_backend.Repositorys.Interfaces
             string? search, string? status,
             DateTime? scheduleDate);
 
-        Task<BookingModalGet> GetBookingModal(int serviceId);
-
         Task<List<ServiceWiseClientGet>> GetClientsServiceWiseAsync(
-    int userId,
-    int pageNumber,
-    int pageSize,
-    string? search,
-    string? bookingStatus,
-    DateTime? lastBookingDate);
-    }
+        int userId,
+        int pageNumber,
+        int pageSize,
+        string? search,
+        string? bookingStatus,
+        DateTime? lastBookingDate);
+        }
 
 }

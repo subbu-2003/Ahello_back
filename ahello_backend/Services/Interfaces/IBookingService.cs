@@ -1,5 +1,6 @@
 ﻿using ahello_backend.Models.Bookings;
 using ahello_backend.Models.Pagination;
+using ahello_backend.Models.Reschedulerequest;
 
 namespace ahello_backend.Services.Interfaces
 {
@@ -7,13 +8,13 @@ namespace ahello_backend.Services.Interfaces
     {
         Task<int> CreateAsync(BookingPost model);
         Task<int> RescheduleAsync(
-    int oldBookingId,
-    DateTime newDate,
-    TimeSpan newStart,
-    TimeSpan newEnd,
-    int slotId,
-    string rescheduledBy,
-    string reason);
+        int oldBookingId,
+        DateTime newDate,
+        TimeSpan newStart,
+        TimeSpan newEnd,
+        int slotId,
+        string rescheduledBy,
+        string reason);
 
         Task<IEnumerable<BookingRead>> GetAllAsync();
 
@@ -37,11 +38,24 @@ namespace ahello_backend.Services.Interfaces
 
         Task<BookingModalGet>GetBookingModal( int serviceId);
         Task<List<ServiceWiseClientGet>> GetClientsServiceWiseAsync(
-    int userId,
-    int pageNumber,
-    int pageSize,
-    string? search,
-    string? bookingStatus,
-    DateTime? lastBookingDate);
+        int userId,
+        int pageNumber,
+        int pageSize,
+        string? search,
+        string? bookingStatus,
+        DateTime? lastBookingDate);
+        Task<int> CreateRescheduleRequestAsync(
+        RescheduleRequestPost model);
+
+        Task<IEnumerable<RescheduleRequestRead>>
+            GetRescheduleRequestsByUserIdAsync(int userId);
+
+        Task<RescheduleRequestRead?>
+            GetRescheduleRequestByIdAsync(int requestId);
+
+        Task<bool> UpdateRescheduleRequestStatusAsync(
+            int requestId,
+            string status,
+            string modifiedBy);
     }
 }
