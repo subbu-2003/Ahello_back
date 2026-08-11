@@ -2,6 +2,7 @@
 using ahello_backend.Models.Bookings;
 using ahello_backend.Models.Meeting;
 using ahello_backend.Models.Pagination;
+using ahello_backend.Models.Reschedulerequest;
 using ahello_backend.Repositorys.Interfaces;
 using ahello_backend.Services.Classes;
 using Dapper;
@@ -247,7 +248,91 @@ namespace ahello_backend.Repositorys.Classes
 
                 if (old.Status == "Cancelled" || old.Status == "Rejected")
                     throw new Exception("Cancelled or rejected booking cannot be rescheduled.");
+                if (old.Status == "Rescheduled")
+                    throw new Exception(
+                        "This booking has already been rescheduled.");
 
+                var slot = await connection.QueryFirstOrDefaultAsync<dynamic>(@"
+    SELECT
+        SlotId,
+        UserId,
+        ServiceId,
+        SlotDate,
+        StartTime,
+        EndTime,
+        IsBooked,
+        RecurrenceType,
+        DayOfWeek,
+        DayOfMonth
+    FROM userslots
+    WHERE SlotId = @SlotId
+      AND UserId = @UserId
+      AND ServiceId = @ServiceId
+      AND IsBooked = 0
+      AND
+      (
+          -- Specific date
+          (
+              RecurrenceType = 'SpecificDate'
+              AND SlotDate = @SlotDate
+          )
+
+          OR
+
+          -- Daily
+          (
+              RecurrenceType = 'Daily'
+          )
+
+          OR
+
+          -- Weekly
+          (
+              RecurrenceType = 'Weekly'
+              AND DayOfWeek = DAYOFWEEK(@SlotDate)
+          )
+
+          OR
+
+          -- Monthly
+          (
+              RecurrenceType = 'Monthly'
+              AND DayOfMonth = DAY(@SlotDate)
+          )
+
+          OR
+
+          -- Custom
+          (
+              RecurrenceType = 'Custom'
+              AND SlotDate = @SlotDate
+          )
+      )
+      AND @StartTime >= StartTime
+      AND @EndTime <= EndTime
+        ",
+        new
+        {
+            SlotId = slotId,
+            UserId = old.UserId,
+            ServiceId = old.ServiceId,
+            SlotDate = newDate.Date,
+            StartTime = newStart,
+            EndTime = newEnd
+        },
+        tx);
+
+                if (slot == null)
+                {
+                    throw new Exception(
+                        "Selected slot is not available for this host/service/date/time.");
+                }
+
+                if (slot == null)
+                {
+                    throw new Exception(
+                        "Selected slot is not available for this host.");
+                }
                 // ======================================================
                 // 2. Check selected slot is still free
                 // This protects other users from double booking
@@ -256,21 +341,24 @@ namespace ahello_backend.Repositorys.Classes
                 SELECT COUNT(1)
                 FROM bookedslots
                 WHERE SlotId = @SlotId
-                AND SlotDate = @SlotDate
-                AND StartTime = @StartTime
-                AND EndTime = @EndTime",
+                  AND SlotDate = @SlotDate
+                  AND @StartTime < EndTime
+                  AND @EndTime > StartTime
+                    ",
                     new
                     {
-                        SlotId = slotId,
-                        SlotDate = newDate.Date,
-                        StartTime = newStart,
-                        EndTime = newEnd
+                SlotId = slotId,
+                SlotDate = newDate.Date,
+                StartTime = newStart,
+                EndTime = newEnd
                     },
                     tx);
 
                 if (alreadyBooked > 0)
-                    throw new Exception("Selected slot is already booked by someone else.");
-
+                {
+                    throw new Exception(
+                        "Selected time is already booked by someone else.");
+                }
                 // ======================================================
                 // 3. Mark old meeting as Rescheduled
                 // ======================================================
@@ -1122,6 +1210,455 @@ namespace ahello_backend.Repositorys.Classes
 
             return result;
         }
+        public async Task<int> CreateRescheduleRequestAsync(
+    RescheduleRequestPost model)
+        {
+            using var connection = _dbConn.GetMyConnection();
+            await connection.OpenAsync();
 
+            using var tx = await connection.BeginTransactionAsync();
+
+            try
+            {
+                // ============================================================
+                // 1. Get current booking
+                // ============================================================
+
+                var booking = await connection.QueryFirstOrDefaultAsync<dynamic>(@"
+            SELECT
+                BookingId,
+                UserId,
+                ClientId,
+                ServiceId,
+                ScheduleDate,
+                StartTime,
+                EndTime,
+                Status
+            FROM bookings
+            WHERE BookingId = @BookingId
+        ",
+                new
+                {
+                    model.BookingId
+                },
+                tx);
+
+                if (booking == null)
+                    throw new Exception("Booking not found.");
+
+                // ============================================================
+                // 2. Make sure logged-in client belongs to this booking
+                // ============================================================
+
+                // If you have ClientId from authentication,
+                // it is better to pass it into this method.
+                // For now, the booking itself is validated.
+
+                if (booking.Status == "Cancelled")
+                    throw new Exception(
+                        "Cancelled booking cannot be rescheduled.");
+
+                if (booking.Status == "Rejected")
+                    throw new Exception(
+                        "Rejected booking cannot be rescheduled.");
+
+                if (booking.Status == "Rescheduled")
+                    throw new Exception(
+                        "This booking has already been rescheduled.");
+
+                // ============================================================
+                // 3. Validate requested slot belongs to host
+                // ============================================================
+
+                var slot = await connection.QueryFirstOrDefaultAsync<dynamic>(@"
+                        SELECT
+                            SlotId,
+                            UserId,
+                            ServiceId,
+                            SlotDate,
+                            StartTime,
+                            EndTime,
+                            IsBooked,
+                            RecurrenceType,
+                            DayOfWeek,
+                            DayOfMonth
+                        FROM userslots
+                        WHERE SlotId = @SlotId
+                          AND UserId = @UserId
+                          AND ServiceId = @ServiceId
+                          AND IsBooked = 0
+                          AND
+                          (
+                              -- Specific date slot
+                              (
+                                  RecurrenceType = 'SpecificDate'
+                                  AND SlotDate = @RequestedDate
+                              )
+
+                              OR
+
+                              -- Daily slot
+                              (
+                                  RecurrenceType = 'Daily'
+                              )
+
+                              OR
+
+                              -- Weekly slot
+                              (
+                                  RecurrenceType = 'Weekly'
+                                  AND DayOfWeek = DAYOFWEEK(@RequestedDate)
+                              )
+
+                              OR
+
+                              -- Monthly slot
+                              (
+                                  RecurrenceType = 'Monthly'
+                                  AND DayOfMonth = DAY(@RequestedDate)
+                              )
+
+                              OR
+
+                              -- Custom / fallback
+                              (
+                                  RecurrenceType = 'Custom'
+                                  AND SlotDate = @RequestedDate
+                              )
+                          )
+                          AND @RequestedStartTime >= StartTime
+                          AND @RequestedEndTime <= EndTime
+                    ",
+                    new
+                    {
+                        model.SlotId,
+                        UserId = booking.UserId,
+                        ServiceId = booking.ServiceId,
+                        RequestedDate = model.RequestedDate.Date,
+                        model.RequestedStartTime,
+                        model.RequestedEndTime
+                    },
+                    tx);
+
+                if (slot == null)
+                {
+                    throw new Exception(
+                        "Selected slot is not available for this host/service/date/time.");
+                }
+                // ============================================================
+                // 4. Check slot is already booked
+                // ============================================================
+
+                var alreadyBooked = await connection.ExecuteScalarAsync<int>(@"
+            SELECT COUNT(1)
+            FROM bookedslots
+            WHERE SlotId = @SlotId
+            AND SlotDate = @RequestedDate
+            AND StartTime = @RequestedStartTime
+            AND EndTime = @RequestedEndTime
+        ",
+                new
+                {
+                    model.SlotId,
+                    RequestedDate = model.RequestedDate.Date,
+                    model.RequestedStartTime,
+                    model.RequestedEndTime
+                },
+                tx);
+
+                if (alreadyBooked > 0)
+                    throw new Exception(
+                        "Selected slot is already booked.");
+
+                // ============================================================
+                // 5. Check existing pending request
+                // ============================================================
+
+                var pendingRequest = await connection.ExecuteScalarAsync<int>(@"
+            SELECT COUNT(1)
+            FROM reschedulerequests
+            WHERE BookingId = @BookingId
+            AND Status = 'Pending'
+        ",
+                new
+                {
+                    model.BookingId
+                },
+                tx);
+
+                if (pendingRequest > 0)
+                    throw new Exception(
+                        "A reschedule request is already pending for this booking.");
+
+                // ============================================================
+                // 6. Insert request
+                // ============================================================
+
+                var requestId = await connection.ExecuteScalarAsync<int>(@"
+            INSERT INTO reschedulerequests
+            (
+                BookingId,
+                UserId,
+                ClientId,
+                ServiceId,
+                SlotId,
+                RequestedDate,
+                RequestedStartTime,
+                RequestedEndTime,
+                Reason,
+                Status,
+                CreatedAt,
+                CreatedBy
+            )
+            VALUES
+            (
+                @BookingId,
+                @UserId,
+                @ClientId,
+                @ServiceId,
+                @SlotId,
+                @RequestedDate,
+                @RequestedStartTime,
+                @RequestedEndTime,
+                @Reason,
+                'Pending',
+                NOW(),
+                @CreatedBy
+            );
+
+            SELECT LAST_INSERT_ID();
+        ",
+                new
+                {
+                    model.BookingId,
+                    UserId = booking.UserId,
+                    ClientId = booking.ClientId,
+                    ServiceId = booking.ServiceId,
+                    model.SlotId,
+                    RequestedDate = model.RequestedDate.Date,
+                    model.RequestedStartTime,
+                    model.RequestedEndTime,
+                    model.Reason,
+                    model.CreatedBy
+                },
+                tx);
+
+                await tx.CommitAsync();
+
+                return requestId;
+            }
+            catch
+            {
+                await tx.RollbackAsync();
+                throw;
+            }
+        }
+        public async Task<IEnumerable<RescheduleRequestRead>>
+    GetRescheduleRequestsByUserIdAsync(int userId)
+        {
+            using var connection = _db.GetConnection();
+
+            var sql = @"
+        SELECT
+            r.RequestId,
+
+            r.BookingId,
+
+            r.UserId,
+            u.FullName AS UserName,
+            u.Email AS UserEmail,
+
+            r.ClientId,
+            c.FullName AS ClientName,
+            c.Email AS ClientEmail,
+
+            r.ServiceId,
+            s.ServiceTitle,
+
+            r.SlotId,
+
+            r.RequestedDate,
+            r.RequestedStartTime,
+            r.RequestedEndTime,
+
+            r.Reason,
+            r.Status,
+
+            r.CreatedAt,
+            r.CreatedBy,
+
+            r.ModifiedAt,
+            r.ModifiedBy
+
+        FROM reschedulerequests r
+
+        INNER JOIN users u
+            ON r.UserId = u.UserId
+
+        INNER JOIN users c
+            ON r.ClientId = c.UserId
+
+        INNER JOIN services s
+            ON r.ServiceId = s.ServiceId
+
+        WHERE r.UserId = @UserId
+
+        ORDER BY
+            CASE
+                WHEN r.Status = 'Pending' THEN 1
+                WHEN r.Status = 'Accepted' THEN 2
+                ELSE 3
+            END,
+            r.CreatedAt DESC;
+    ";
+
+            return await connection.QueryAsync<RescheduleRequestRead>(
+                sql,
+                new { UserId = userId });
+        }
+        public async Task<RescheduleRequestRead?>
+    GetRescheduleRequestByIdAsync(int requestId)
+        {
+            using var connection = _db.GetConnection();
+
+            var sql = @"
+        SELECT
+            r.RequestId,
+
+            r.BookingId,
+
+            r.UserId,
+            u.FullName AS UserName,
+            u.Email AS UserEmail,
+
+            r.ClientId,
+            c.FullName AS ClientName,
+            c.Email AS ClientEmail,
+
+            r.ServiceId,
+            s.ServiceTitle,
+
+            r.SlotId,
+
+            r.RequestedDate,
+            r.RequestedStartTime,
+            r.RequestedEndTime,
+
+            r.Reason,
+            r.Status,
+
+            r.CreatedAt,
+            r.CreatedBy,
+
+            r.ModifiedAt,
+            r.ModifiedBy
+
+        FROM reschedulerequests r
+
+        INNER JOIN users u
+            ON r.UserId = u.UserId
+
+        INNER JOIN users c
+            ON r.ClientId = c.UserId
+
+        INNER JOIN services s
+            ON r.ServiceId = s.ServiceId
+
+        WHERE r.RequestId = @RequestId;
+    ";
+
+            return await connection.QueryFirstOrDefaultAsync<RescheduleRequestRead>(
+                sql,
+                new { RequestId = requestId });
+        }
+        public async Task<bool> UpdateRescheduleRequestStatusAsync(
+    int requestId,
+    string status,
+    string modifiedBy)
+        {
+            if (string.IsNullOrWhiteSpace(status))
+                throw new Exception("Status is required.");
+
+            status = status.Trim();
+
+            if (status != "Accepted" && status != "Rejected")
+                throw new Exception(
+                    "Status must be either Accepted or Rejected.");
+
+            // ============================================================
+            // Get request first
+            // ============================================================
+
+            var request = await GetRescheduleRequestByIdAsync(requestId);
+
+            if (request == null)
+                throw new Exception("Reschedule request not found.");
+
+            if (request.Status != "Pending")
+                throw new Exception(
+                    "Only pending reschedule requests can be accepted or rejected.");
+
+            // ============================================================
+            // REJECT
+            // ============================================================
+
+            if (status == "Rejected")
+            {
+                using var connection = _db.GetConnection();
+
+                var rows = await connection.ExecuteAsync(@"
+            UPDATE reschedulerequests
+            SET
+                Status = 'Rejected',
+                ModifiedAt = NOW(),
+                ModifiedBy = @ModifiedBy
+            WHERE RequestId = @RequestId
+            AND Status = 'Pending'
+        ",
+                new
+                {
+                    RequestId = requestId,
+                    ModifiedBy = modifiedBy
+                });
+
+                return rows > 0;
+            }
+
+            // ============================================================
+            // ACCEPT
+            // ============================================================
+
+            var newBookingId = await RescheduleAsync(
+                request.BookingId,
+                request.RequestedDate,
+                request.RequestedStartTime,
+                request.RequestedEndTime,
+                request.SlotId,
+                modifiedBy,
+                request.Reason ?? "Client reschedule request");
+
+            // ============================================================
+            // Update request after successful reschedule
+            // ============================================================
+
+            using var connection2 = _db.GetConnection();
+
+            var updated = await connection2.ExecuteAsync(@"
+        UPDATE reschedulerequests
+        SET
+            Status = 'Accepted',
+            ModifiedAt = NOW(),
+            ModifiedBy = @ModifiedBy
+        WHERE RequestId = @RequestId
+        AND Status = 'Pending'
+    ",
+            new
+            {
+                RequestId = requestId,
+                ModifiedBy = modifiedBy
+            });
+
+            return updated > 0;
+        }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using ahello_backend.Models.Bookings;
 using ahello_backend.Models.Pagination;
+using ahello_backend.Models.Reschedulerequest;
 using ahello_backend.Repositorys.Classes;
 using ahello_backend.Repositorys.Interfaces;
 using ahello_backend.Services.Interfaces;
@@ -96,12 +97,12 @@ namespace ahello_backend.Services.Classes
         }
 
         public async Task<List<ServiceWiseClientGet>> GetClientsServiceWiseAsync(
-    int userId,
-    int pageNumber,
-    int pageSize,
-    string? search,
-    string? bookingStatus,
-    DateTime? lastBookingDate)
+        int userId,
+        int pageNumber,
+        int pageSize,
+        string? search,
+        string? bookingStatus,
+        DateTime? lastBookingDate)
         {
             return await _repository.GetClientsServiceWiseAsync(
                 userId,
@@ -110,6 +111,35 @@ namespace ahello_backend.Services.Classes
                 search,
                 bookingStatus,
                 lastBookingDate);
+        }
+        public async Task<int> CreateRescheduleRequestAsync(
+    RescheduleRequestPost model)
+        {
+            return await _repository .CreateRescheduleRequestAsync(model);
+        }
+
+        public async Task<IEnumerable<RescheduleRequestRead>>
+            GetRescheduleRequestsByUserIdAsync(int userId)
+        {
+            return await _repository.GetRescheduleRequestsByUserIdAsync(userId);
+        }
+
+        public async Task<RescheduleRequestRead?>
+            GetRescheduleRequestByIdAsync(int requestId)
+        {
+            return await _repository.GetRescheduleRequestByIdAsync(requestId);
+        }
+
+        public async Task<bool> UpdateRescheduleRequestStatusAsync(
+            int requestId,
+            string status,
+            string modifiedBy)
+        {
+            return await _repository
+                .UpdateRescheduleRequestStatusAsync(
+                    requestId,
+                    status,
+                    modifiedBy);
         }
     }
 }

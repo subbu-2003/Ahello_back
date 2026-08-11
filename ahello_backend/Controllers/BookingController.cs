@@ -1,4 +1,5 @@
 ﻿using ahello_backend.Models.Bookings;
+using ahello_backend.Models.Reschedulerequest;
 using ahello_backend.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -453,6 +454,225 @@ namespace ahello_backend.Controllers
             catch (Exception ex)
             {
                 return BadRequest(new { Message = ex.Message });
+            }
+        }
+        [HttpPost("reschedule-request")]
+        public async Task<IActionResult> CreateRescheduleRequest(
+    [FromBody] RescheduleRequestPost model)
+        {
+            try
+            {
+                if (model == null)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "Request body is required."
+                    });
+                }
+
+                if (model.BookingId <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "BookingId is required."
+                    });
+                }
+
+                if (model.SlotId <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "SlotId is required."
+                    });
+                }
+
+                if (model.RequestedDate == default)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "RequestedDate is required."
+                    });
+                }
+
+                if (model.RequestedStartTime == default)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "RequestedStartTime is required."
+                    });
+                }
+
+                if (model.RequestedEndTime == default)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "RequestedEndTime is required."
+                    });
+                }
+
+                if (model.RequestedEndTime <= model.RequestedStartTime)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "RequestedEndTime must be greater than RequestedStartTime."
+                    });
+                }
+
+                var requestId =
+                    await _service.CreateRescheduleRequestAsync(model);
+
+                return Ok(new
+                {
+                    Message = "Reschedule request sent to the host successfully.",
+                    RequestId = requestId
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    Message = ex.Message
+                });
+            }
+        }
+        [HttpGet("reschedule-requests/user/{userId}")]
+        public async Task<IActionResult> GetRescheduleRequestsByUserId(
+        int userId)
+        {
+            try
+            {
+                if (userId <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "UserId is required."
+                    });
+                }
+
+                var data =
+                    await _service.GetRescheduleRequestsByUserIdAsync(userId);
+
+                return Ok(new
+                {
+                    Message = "Reschedule requests fetched successfully.",
+                    Data = data
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    Message = ex.Message
+                });
+            }
+        }
+        [HttpGet("reschedule-request/{requestId}")]
+        public async Task<IActionResult> GetRescheduleRequestById(
+        int requestId)
+        {
+            try
+            {
+                if (requestId <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "RequestId is required."
+                    });
+                }
+
+                var data =
+                    await _service.GetRescheduleRequestByIdAsync(requestId);
+
+                if (data == null)
+                {
+                    return NotFound(new
+                    {
+                        Message = "Reschedule request not found."
+                    });
+                }
+
+                return Ok(new
+                {
+                    Message = "Reschedule request fetched successfully.",
+                    Data = data
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    Message = ex.Message
+                });
+            }
+        }
+        [HttpPut("reschedule-request/{requestId}/status")]
+        public async Task<IActionResult> UpdateRescheduleRequestStatus(
+        int requestId,
+        [FromBody] RescheduleRequestStatusPut model)
+            {
+            try
+            {
+                if (requestId <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "RequestId is required."
+                    });
+                }
+
+                if (model == null)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "Request body is required."
+                    });
+                }
+
+                if (string.IsNullOrWhiteSpace(model.Status))
+                {
+                    return BadRequest(new
+                    {
+                        Message = "Status is required."
+                    });
+                }
+
+                if (model.Status != "Accepted" &&
+                    model.Status != "Rejected")
+                {
+                    return BadRequest(new
+                    {
+                        Message = "Status must be Accepted or Rejected."
+                    });
+                }
+
+                var result =
+                    await _service.UpdateRescheduleRequestStatusAsync(
+                        requestId,
+                        model.Status,
+                        model.ModifiedBy);
+
+                if (!result)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "Unable to update reschedule request."
+                    });
+                }
+
+                return Ok(new
+                {
+                    Message = model.Status == "Accepted"
+                        ? "Reschedule request accepted successfully."
+                        : "Reschedule request rejected successfully.",
+                    Success = true
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    Message = ex.Message
+                });
             }
         }
     }
