@@ -46,7 +46,8 @@ namespace ahello_backend.Repositorys.Classes
                 u.WebsiteURL,
                 u.Notes,
                 u.CreatedBy,
-                u.CreatedAt
+                u.CreatedAt,
+                u.Slug
             FROM users u
             LEFT JOIN categories c
                 ON u.CategoryId = c.CategoryId
@@ -70,6 +71,50 @@ namespace ahello_backend.Repositorys.Classes
             }
 
             return users;
+        }
+
+        public async Task<string> GenerateUniqueSlugAsync(string fullName, int? userId = null)
+        {
+            using var connection = _db.GetConnection();
+
+            var baseSlug = System.Text.RegularExpressions.Regex
+                .Replace(fullName.Trim().ToLowerInvariant(), "[^a-z0-9]+", "");
+
+            if (string.IsNullOrWhiteSpace(baseSlug))
+                baseSlug = "user";
+
+            var slug = baseSlug;
+            int suffix = 1;
+
+            while (true)
+            {
+                var sql = "SELECT COUNT(*) FROM users WHERE Slug = @Slug" +
+                           (userId.HasValue ? " AND UserId != @UserId" : "");
+
+                var count = await connection.ExecuteScalarAsync<int>(sql,
+                    new { Slug = slug, UserId = userId });
+
+                if (count == 0) break;
+
+                suffix++;
+                slug = $"{baseSlug}{suffix}";
+            }
+
+            return slug;
+        }
+
+        public async Task<UserProfileResponse> GetUserProfileBySlugAsync(
+            string slug, int pageNumber, int pageSize, string search)
+        {
+            using var con = _db.GetConnection();
+
+            var userId = await con.ExecuteScalarAsync<int?>(
+                "SELECT UserId FROM users WHERE Slug = @Slug", new { Slug = slug });
+
+            if (userId == null)
+                return null;
+
+            return await GetUserProfileAsync(userId.Value, pageNumber, pageSize, search);
         }
 
         public async Task<UserDynamicPaginationResponse>
@@ -129,7 +174,8 @@ namespace ahello_backend.Repositorys.Classes
                     u.WebsiteURL,
                     u.Notes,
                     u.CreatedBy,
-                    u.CreatedAt
+                    u.CreatedAt,
+                    u.Slug
                 FROM users u
                 LEFT JOIN categories c
                     ON u.CategoryId = c.CategoryId
@@ -219,7 +265,8 @@ namespace ahello_backend.Repositorys.Classes
                 u.WebsiteURL,
                 u.Notes,
                 u.CreatedBy,
-                u.CreatedAt
+                u.CreatedAt,
+                u.Slug
             FROM users u
             LEFT JOIN categories c
                 ON u.CategoryId = c.CategoryId
@@ -291,7 +338,8 @@ namespace ahello_backend.Repositorys.Classes
             u.WebsiteURL,
             u.Notes,
             u.CreatedBy,
-            u.CreatedAt
+            u.CreatedAt,
+            u.Slug
           FROM users u
           LEFT JOIN categories c
             ON u.CategoryId = c.CategoryId
@@ -355,6 +403,10 @@ namespace ahello_backend.Repositorys.Classes
                model.WhatsAppNumber,
                null,
                tx);
+
+                // ✅ Generate unique slug before insert
+                var slug = await GenerateUniqueSlugAsync(model.FullName);
+
                 var userSql = @"
                     INSERT INTO users
                     (
@@ -378,6 +430,7 @@ namespace ahello_backend.Repositorys.Classes
                         SocialMediaLinks,
                         WebsiteURL,
                         Notes,
+                        Slug,
                         CreatedAt,
                         CreatedBy
                     )
@@ -403,6 +456,7 @@ namespace ahello_backend.Repositorys.Classes
                         @SocialMediaLinks,
                         @WebsiteURL,
                         @Notes,
+                        @Slug,
                         NOW(),
                         @CreatedBy
                     );
@@ -438,6 +492,7 @@ namespace ahello_backend.Repositorys.Classes
                     model.SocialMediaLinks,
                     model.WebsiteURL,
                     model.Notes,
+                    Slug = slug,
                     model.CreatedBy
                 },
                 tx);
@@ -518,6 +573,16 @@ namespace ahello_backend.Repositorys.Classes
                 model.WhatsAppNumber,
                 userId,
                 tx);
+
+                // ✅ Regenerate slug only if name changed or slug missing
+                var current = await connection.QueryFirstOrDefaultAsync<(string Slug, string FullName)>(
+                    "SELECT Slug, FullName FROM users WHERE UserId = @UserId",
+                    new { UserId = userId }, tx);
+
+                var slug = (string.IsNullOrWhiteSpace(current.Slug) || current.FullName != model.FullName)
+                    ? await GenerateUniqueSlugAsync(model.FullName, userId)
+                    : current.Slug;
+
                 var updateSql = @"
                     UPDATE users
                     SET
@@ -541,6 +606,7 @@ namespace ahello_backend.Repositorys.Classes
                         SocialMediaLinks = @SocialMediaLinks,
                         WebsiteURL = @WebsiteURL,
                         Notes = @Notes,
+                        Slug = @Slug,
                         ModifiedAt = NOW(),
                         ModifiedBy = @ModifiedBy
                     WHERE UserId = @UserId";
@@ -550,7 +616,7 @@ namespace ahello_backend.Repositorys.Classes
                     new
                     {
                         UserId = userId,
-                        CategoryId = model.CategoryId == 0 ? (int?)null: model.CategoryId,
+                        CategoryId = model.CategoryId == 0 ? (int?)null : model.CategoryId,
                         model.FullName,
                         model.Email,
                         model.ProfileUrl,
@@ -570,6 +636,7 @@ namespace ahello_backend.Repositorys.Classes
                         model.SocialMediaLinks,
                         model.WebsiteURL,
                         model.Notes,
+                        Slug = slug,
                         model.ModifiedBy
                     },
                     tx);
@@ -660,8 +727,8 @@ namespace ahello_backend.Repositorys.Classes
                     {
                         if (option.UserDropDownId.HasValue)
                         {
-                           var affected = await connection.ExecuteAsync(
-                            @"UPDATE userdropdownoptions
+                            var affected = await connection.ExecuteAsync(
+                             @"UPDATE userdropdownoptions
                             SET
                                 OptionValue = @OptionValue,
                                 OptionLabel = @OptionLabel,
@@ -669,15 +736,15 @@ namespace ahello_backend.Repositorys.Classes
                                 ModifiedDate = NOW(),
                                 ModifiedBy = @ModifiedBy
                             WHERE UserDropDownId = @UserDropDownId",
-                            new
-                            {
-                                option.OptionValue,
-                                option.OptionLabel,
-                                option.IsActive,
-                                option.UserDropDownId,
-                                model.ModifiedBy
-                            },
-                            tx);
+                             new
+                             {
+                                 option.OptionValue,
+                                 option.OptionLabel,
+                                 option.IsActive,
+                                 option.UserDropDownId,
+                                 model.ModifiedBy
+                             },
+                             tx);
                         }
                         else
                         {
@@ -777,6 +844,7 @@ namespace ahello_backend.Repositorys.Classes
                     u.WhatsAppNumber,
                     u.Notes,
                     u.ProfileUrl,
+                    u.Slug,
 
                      IFNULL(ROUND(AVG(r.Rating), 1), 0) AS AverageRating,
                     COUNT(r.ReviewId) AS TotalRatingCount
@@ -806,7 +874,8 @@ namespace ahello_backend.Repositorys.Classes
                     u.MobileNumber,
                     u.WhatsAppNumber,
                     u.Notes,
-                    u.ProfileUrl;
+                    u.ProfileUrl,
+                    u.Slug;
             ";
 
             var response = await con.QueryFirstOrDefaultAsync<UserProfileResponse>(
@@ -901,9 +970,7 @@ namespace ahello_backend.Repositorys.Classes
 
             return response;
         }
-        // ADD THIS METHOD INSIDE UserDynamicRepository.cs
 
-        // ✅ KEEP ONLY THIS ONE — remove the other copy at the top
         private async Task ValidateDuplicateFieldsAsync(
             IDbConnection connection,
             string email,
@@ -926,7 +993,6 @@ namespace ahello_backend.Repositorys.Classes
             OR WhatsAppNumber = @WhatsAppNumber
         )";
 
-            // Exclude the current user on PUT (userId has value)
             if (userId.HasValue)
             {
                 sql += " AND UserId != @UserId";

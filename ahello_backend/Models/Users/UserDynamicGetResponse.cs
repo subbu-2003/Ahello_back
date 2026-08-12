@@ -12,6 +12,7 @@ namespace ahello_backend.Models.User
 
         public string Email { get; set; }
         public string? ProfileUrl { get; set; }
+        public string? Slug { get; set; }
 
         public string MobileNumber { get; set; }
 
