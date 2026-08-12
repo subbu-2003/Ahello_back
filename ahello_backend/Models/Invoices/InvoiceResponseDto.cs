@@ -37,6 +37,9 @@
         public string RazorpayPaymentId { get; set; }
         public decimal TotalAmount { get; set; }
         public decimal PlatformFee { get; set; }
+        public decimal TaxAmount { get; set; }
+        public decimal TaxRate { get; set; }
+
         public decimal ExpertAmount { get; set; }
         public string Currency { get; set; }
     }
