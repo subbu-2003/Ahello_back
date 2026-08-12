@@ -116,46 +116,49 @@ namespace ahello_backend.Repositorys.Classes
                 return null;
 
             var fields = (await connection.QueryAsync<ServiceDynamicFieldResponse>(
-            @"SELECT
-        sf.ServiceFieldId,
-        sf.FieldName,
-        sf.FieldCode,
-        sf.Placeholder,
-        sf.IsRequired,
-        sf.IsActive,
-        sf.DataTypeId,
-        dt.DataTypeName,
-        sfv.FieldValue
-    FROM servicefields sf
-    LEFT JOIN datatypes dt
-        ON sf.DataTypeId = dt.DataTypeId
-    LEFT JOIN servicefieldvalues sfv
-        ON sf.ServiceFieldId = sfv.ServiceFieldId
-        AND sfv.UserId = @UserId
-    WHERE sf.CreatedBy = @UserId
-      AND sf.IsActive = 1
-    ORDER BY sf.ServiceFieldId ASC",
-            new
-            {
-                UserId = service.UserId
-            })).ToList();
+             @"SELECT
+                sf.ServiceFieldId,
+                sf.FieldName,
+                sf.FieldCode,
+                sf.Placeholder,
+                sf.IsRequired,
+                sf.IsActive,
+                sf.DataTypeId,
+                dt.DataTypeName,
+                sfv.FieldValue
+              FROM servicefields sf
+              LEFT JOIN datatypes dt
+                  ON sf.DataTypeId = dt.DataTypeId
+              LEFT JOIN servicefieldvalues sfv
+                  ON sf.ServiceFieldId = sfv.ServiceFieldId
+                  AND sfv.ServiceId = @ServiceId
+              WHERE sf.CreatedBy = @UserId
+                AND sf.IsActive = 1
+              ORDER BY sf.ServiceFieldId ASC",
+             new
+             {
+                 ServiceId = service.ServiceId,
+                 UserId = service.UserId
+             })).ToList();
 
             foreach (var field in fields)
             {
                 var dropdownOptions =
-                    await connection.QueryAsync<ServiceDropDownOptionResponse>(
-                @"SELECT
-            ServiceDropDownId,
-            OptionValue,
-            OptionLabel,
-            IsActive
-        FROM servicedropdownoptions
-        WHERE ServiceFieldId = @ServiceFieldId
-          AND IsActive = 1",
-                new
-                {
-                    ServiceFieldId = field.ServiceFieldId
-                });
+                await connection.QueryAsync<ServiceDropDownOptionResponse>(
+                    @"SELECT
+                        ServiceDropDownId,
+                        OptionValue,
+                        OptionLabel,
+                        IsActive
+                      FROM servicedropdownoptions
+                      WHERE ServiceFieldId = @ServiceFieldId
+                        AND ServiceId = @ServiceId
+                        AND IsActive = 1",
+                    new
+                    {
+                        ServiceFieldId = field.ServiceFieldId,
+                        ServiceId = service.ServiceId
+                    });
 
                 field.DropDownOptions = dropdownOptions.ToList();
             }
@@ -462,6 +465,7 @@ namespace ahello_backend.Repositorys.Classes
                     var fieldSql = @"
                         INSERT INTO servicefieldvalues
                         (
+                            ServiceId,
                             UserId,
                             FieldCode,
                             ServiceFieldId,
@@ -471,6 +475,7 @@ namespace ahello_backend.Repositorys.Classes
                             CreatedAt
                         )
                         SELECT
+                            @ServiceId,
                             @UserId,
                             sf.FieldCode,
                             @ServiceFieldId,
@@ -487,6 +492,7 @@ namespace ahello_backend.Repositorys.Classes
                             fieldSql,
                             new
                             {
+                                ServiceId = serviceId,
                                 UserId = model.UserId,
                                 ServiceFieldId = field.ServiceFieldId,
                                 FieldValue = field.FieldValue,
@@ -514,26 +520,26 @@ namespace ahello_backend.Repositorys.Classes
             try
             {
                 var sql = @"
-UPDATE services
-SET
-    UserId = @UserId,
-    ServiceTypeId = @ServiceTypeId,
-    ServiceCategoryId = @ServiceCategoryId,
-    ServiceTitle = @ServiceTitle,
-    Price = @Price,
-    Duration = @Duration,
-    ShortDescription = @ShortDescription,
-    FullDescription = @FullDescription,
-    Tags = @Tags,
-    Language = @Language,
-    ThumbnailImage = @ThumbnailImage,
-    BannerImage = @BannerImage,
-    IntroVideo = @IntroVideo,
-    Status = @Status,
-    IsActive = @IsActive,
-    ModifiedAt = NOW(),
-    ModifiedBy = @ModifiedBy
-WHERE ServiceId = @ServiceId";
+                UPDATE services
+                SET
+                    UserId = @UserId,
+                    ServiceTypeId = @ServiceTypeId,
+                    ServiceCategoryId = @ServiceCategoryId,
+                    ServiceTitle = @ServiceTitle,
+                    Price = @Price,
+                    Duration = @Duration,
+                    ShortDescription = @ShortDescription,
+                    FullDescription = @FullDescription,
+                    Tags = @Tags,
+                    Language = @Language,
+                    ThumbnailImage = @ThumbnailImage,
+                    BannerImage = @BannerImage,
+                    IntroVideo = @IntroVideo,
+                    Status = @Status,
+                    IsActive = @IsActive,
+                    ModifiedAt = NOW(),
+                    ModifiedBy = @ModifiedBy
+                WHERE ServiceId = @ServiceId";
                 var exists = await connection.ExecuteScalarAsync<bool>(
                     "SELECT EXISTS(SELECT 1 FROM services WHERE ServiceId = @ServiceId)",
                     new { ServiceId = serviceId }, tx);
@@ -613,6 +619,7 @@ WHERE ServiceId = @ServiceId";
                     var fieldSql = @"
                     INSERT INTO servicefieldvalues
                     (
+                        ServiceId,
                         UserId,
                         FieldCode,
                         ServiceFieldId,
@@ -622,6 +629,7 @@ WHERE ServiceId = @ServiceId";
                         CreatedAt
                     )
                     SELECT
+                        @ServiceId,
                         @UserId,
                         sf.FieldCode,
                         sf.ServiceFieldId,
@@ -635,6 +643,7 @@ WHERE ServiceId = @ServiceId";
                     var insertDropdownSql = @"
                     INSERT INTO servicedropdownoptions
                     (
+                        ServiceId,
                         ServiceFieldId,
                         UserId,
                         OptionValue,
@@ -645,6 +654,7 @@ WHERE ServiceId = @ServiceId";
                     )
                     VALUES
                     (
+                         @ServiceId,
                         @ServiceFieldId,
                         @UserId,
                         @OptionValue,
@@ -658,6 +668,7 @@ WHERE ServiceId = @ServiceId";
                     {
                         var insertedFieldRows = await connection.ExecuteAsync(fieldSql, new
                         {
+                            ServiceId = serviceId,
                             UserId = model.UserId,
                             ServiceFieldId = field.ServiceFieldId,
                             FieldValue = field.FieldValue,
@@ -675,6 +686,7 @@ WHERE ServiceId = @ServiceId";
                             {
                                 await connection.ExecuteAsync(insertDropdownSql, new
                                 {
+                                    ServiceId = serviceId,
                                     ServiceFieldId = field.ServiceFieldId,
                                     UserId = model.UserId,
                                     option.OptionValue,
@@ -795,30 +807,40 @@ WHERE ServiceId = @ServiceId";
             foreach (var service in services)
             {
                 var fields = (await connection.QueryAsync<ServiceDynamicFieldResponse>(
-                    @"SELECT
-                    sf.ServiceFieldId,
-                    sf.FieldName,
-                    sf.FieldCode,
-                    sfv.FieldValue
-                  FROM servicefieldvalues sfv
-                  INNER JOIN servicefields sf
-                    ON sfv.ServiceFieldId = sf.ServiceFieldId
-                  WHERE UserId = @UserId",
-                    new { UserId = service.UserId })).ToList();
+                      @"SELECT
+                        sf.ServiceFieldId,
+                        sf.FieldName,
+                        sf.FieldCode,
+                        sfv.FieldValue
+                      FROM servicefieldvalues sfv
+                      INNER JOIN servicefields sf
+                          ON sfv.ServiceFieldId = sf.ServiceFieldId
+                      WHERE sfv.UserId = @UserId
+                      WHERE sfv.ServiceId = @ServiceId
+                      ORDER BY sf.ServiceFieldId ASC",
+                    new
+                    {
+                        UserId = service.UserId,
+                        ServiceId = service.ServiceId
+                    })).ToList();
 
                 foreach (var field in fields)
                 {
                     var dropdownOptions = await connection.QueryAsync<ServiceDropDownOptionResponse>(
-                        @"SELECT
-                ServiceDropDownId,
-                OptionValue,
-                OptionLabel,
-                IsActive
-              FROM servicedropdownoptions
-              WHERE ServiceFieldId = @ServiceFieldId
-                AND UserId = @UserId",
-                        new { field.ServiceFieldId, UserId = service.UserId });
-
+                       @"SELECT
+                        ServiceDropDownId,
+                        OptionValue,
+                        OptionLabel,
+                        IsActive
+                      FROM servicedropdownoptions
+                      WHERE ServiceFieldId = @ServiceFieldId
+                        AND ServiceId = @ServiceId
+                        AND IsActive = 1",
+                    new
+                    {
+                        ServiceFieldId = field.ServiceFieldId,
+                        ServiceId = service.ServiceId
+                    });
                     field.DropDownOptions = dropdownOptions.ToList();
                 }
 
