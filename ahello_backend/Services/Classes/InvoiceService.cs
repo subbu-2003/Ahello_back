@@ -41,6 +41,8 @@ namespace ahello_backend.Services.Classes
                 ServiceId = booking.ServiceId,
                 TotalAmount = escrowPayment.TotalAmount,
                 PlatformFee = escrowPayment.PlatformFee,
+                TaxAmount = escrowPayment.TaxAmount,
+                TaxRate = escrowPayment.TaxRate,
                 ExpertAmount = escrowPayment.ExpertAmount,
                 Currency = escrowPayment.Currency,
                 Status = "Issued",
