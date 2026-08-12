@@ -2,6 +2,7 @@
 using ahello_backend.Models.Reviews;
 using ahello_backend.Repositorys.Interfaces;
 using Dapper;
+using System.Data.Common;
 
 namespace ahello_backend.Repositorys.Implementations
 {

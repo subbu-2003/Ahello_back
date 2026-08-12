@@ -28,11 +28,13 @@ namespace ahello_backend.Repositorys.Classes
             const string sql = @"
                 INSERT INTO invoices
                     (InvoiceNumber, BookingId, EscrowPaymentId, UserId, ClientId, ServiceId,
-                     TotalAmount, PlatformFee, ExpertAmount, Currency, Status,
+                     TotalAmount, PlatformFee, TaxAmount,
+                TaxRate,ExpertAmount, Currency, Status,
                      IssuedAt, CreatedAt, CreatedBy)
                 VALUES
                     (@InvoiceNumber, @BookingId, @EscrowPaymentId, @UserId, @ClientId, @ServiceId,
-                     @TotalAmount, @PlatformFee, @ExpertAmount, @Currency, @Status,
+                     @TotalAmount, @PlatformFee,@TaxAmount,
+                    @TaxRate, @ExpertAmount, @Currency, @Status,
                      @IssuedAt, @CreatedAt, @CreatedBy);
                 SELECT LAST_INSERT_ID();";
 
@@ -45,6 +47,8 @@ namespace ahello_backend.Repositorys.Classes
             parameters.Add("ServiceId", invoice.ServiceId, DbType.Int32);
             parameters.Add("TotalAmount", invoice.TotalAmount, DbType.Decimal);
             parameters.Add("PlatformFee", invoice.PlatformFee, DbType.Decimal);
+            parameters.Add("TaxAmount", invoice.TaxAmount, DbType.Decimal);
+            parameters.Add("TaxRate", invoice.TaxRate, DbType.Decimal);
             parameters.Add("ExpertAmount", invoice.ExpertAmount, DbType.Decimal);
             parameters.Add("Currency", invoice.Currency, DbType.String);
             parameters.Add("Status", invoice.Status ?? "Issued", DbType.String);
@@ -66,7 +70,8 @@ namespace ahello_backend.Repositorys.Classes
                 cu.UserId AS ClientId, cu.FullName AS ClientName, cu.Email AS ClientEmail, cu.MobileNumber AS ClientMobile,
                 s.ServiceId, s.ServiceTitle, s.Duration,
                 ep.EscrowPaymentId, ep.RazorpayOrderId, ep.RazorpayPaymentId,
-                i.TotalAmount, i.PlatformFee, i.ExpertAmount, i.Currency
+                i.TotalAmount, i.PlatformFee,i.TaxAmount,
+                i.TaxRate, i.ExpertAmount, i.Currency
             FROM invoices i
             INNER JOIN bookings b        ON b.BookingId = i.BookingId
             INNER JOIN users eu          ON eu.UserId = i.UserId
@@ -118,6 +123,8 @@ namespace ahello_backend.Repositorys.Classes
 
                     i.TotalAmount,
                     i.PlatformFee,
+                    i.TaxAmount,
+                    i.TaxRate,
                     i.ExpertAmount
 
                 FROM invoices i

@@ -2,6 +2,7 @@
 using ahello_backend.Models.Service;
 using ahello_backend.Repositorys.Interfaces;
 using Dapper;
+using System.Data.Common;
 
 namespace ahello_backend.Repositorys.Classes
 {
@@ -61,16 +62,27 @@ namespace ahello_backend.Repositorys.Classes
 
                 foreach (var field in fields)
                 {
-                    var dropdownOptions = await connection.QueryAsync<ServiceDropDownOptionResponse>(
-                        @"SELECT
-                ServiceDropDownId,
-                OptionValue,
-                OptionLabel,
-                IsActive
-                FROM servicedropdownoptions
-                WHERE ServiceFieldId = @ServiceFieldId
-                AND ServiceId = @ServiceId",
-                        new { field.ServiceFieldId, ServiceId = service.ServiceId });
+                    var dropdownOptions =
+     await connection.QueryAsync<ServiceDropDownOptionResponse>(
+         @"
+        SELECT
+            ServiceDropDownId,
+            ServiceFieldId,
+            UserId,
+            OptionValue,
+            OptionLabel,
+            IsActive
+        FROM servicedropdownoptions
+        WHERE ServiceFieldId = @ServiceFieldId
+          AND UserId = @UserId
+          AND IsActive = 1
+        ORDER BY ServiceDropDownId ASC
+        ",
+         new
+         {
+             ServiceFieldId = field.ServiceFieldId,
+             UserId = service.UserId
+         });
 
                     field.DropDownOptions = dropdownOptions.ToList();
                 }
@@ -81,81 +93,106 @@ namespace ahello_backend.Repositorys.Classes
             return services;
         }
 
-        public async Task<ServiceDynamicGetResponse> GetByIdAsync(int serviceId)
+        public async Task<ServiceDynamicGetResponse?> GetByIdAsync(int serviceId)
         {
             using var connection = _db.GetConnection();
 
+            // ---------------------------------------------------------
+            // 1. Get service
+            // ---------------------------------------------------------
             var service = await connection.QueryFirstOrDefaultAsync<ServiceDynamicGetResponse>(
-            @"SELECT
-        s.ServiceId,
-        s.UserId,
-        s.ServiceTypeId,
-        s.ServiceCategoryId,
-        sc.ServiceCategoryName,
-        s.ServiceTitle,
-        s.Price,
-        s.Duration,
-        s.ShortDescription,
-        s.FullDescription,
-        s.Tags,
-        s.Language,
-        s.ThumbnailImage,
-        s.BannerImage,
-        s.IntroVideo,
-        s.Status,
-        s.IsActive,
-        s.CreatedBy,
-        s.CreatedAt
-    FROM services s
-    LEFT JOIN ServiceCategoryDynamic sc
-        ON s.ServiceCategoryId = sc.ServiceCategoryId
-    WHERE s.ServiceId = @ServiceId",
-            new { ServiceId = serviceId });
+                @"
+        SELECT
+            s.ServiceId,
+            s.UserId,
+            s.ServiceTypeId,
+            st.ServiceTypeName,
+            s.ServiceCategoryId,
+            sc.ServiceCategoryName,
+            s.ServiceTitle,
+            s.Price,
+            s.Duration,
+            s.ShortDescription,
+            s.FullDescription,
+            s.Tags,
+            s.Language,
+            s.ThumbnailImage,
+            s.BannerImage,
+            s.IntroVideo,
+            s.Status,
+            s.IsActive,
+            s.CreatedBy,
+            s.CreatedAt
+        FROM services s
+        LEFT JOIN servicecategorydynamic sc
+            ON s.ServiceCategoryId = sc.ServiceCategoryId
+        LEFT JOIN servicetypes st
+            ON s.ServiceTypeId = st.ServiceTypeId
+        WHERE s.ServiceId = @ServiceId
+        ",
+                new
+                {
+                    ServiceId = serviceId
+                });
 
             if (service == null)
                 return null;
 
+            // ---------------------------------------------------------
+            // 2. Get fields for THIS service
+            // ---------------------------------------------------------
             var fields = (await connection.QueryAsync<ServiceDynamicFieldResponse>(
-            @"SELECT
-        sf.ServiceFieldId,
-        sf.FieldName,
-        sf.FieldCode,
-        sf.Placeholder,
-        sf.IsRequired,
-        sf.IsActive,
-        sf.DataTypeId,
-        dt.DataTypeName,
-        sfv.FieldValue
-    FROM servicefields sf
-    LEFT JOIN datatypes dt
-        ON sf.DataTypeId = dt.DataTypeId
-    LEFT JOIN servicefieldvalues sfv
-        ON sf.ServiceFieldId = sfv.ServiceFieldId
-        AND sfv.UserId = @UserId
-    WHERE sf.CreatedBy = @UserId
-      AND sf.IsActive = 1
-    ORDER BY sf.ServiceFieldId ASC",
-            new
-            {
-                UserId = service.UserId
-            })).ToList();
+                @"
+        SELECT
+            sf.ServiceFieldId,
+            sf.FieldName,
+            sf.FieldCode,
+            sf.Placeholder,
+            sf.IsRequired,
+            sf.IsActive,
+            sf.DataTypeId,
+            dt.DataTypeName,
+            sfv.FieldValue
+        FROM servicefieldvalues sfv
+        INNER JOIN servicefields sf
+            ON sf.ServiceFieldId = sfv.ServiceFieldId
+        LEFT JOIN datatypes dt
+            ON sf.DataTypeId = dt.DataTypeId
+        WHERE sfv.ServiceId = @ServiceId
+          AND sf.IsActive = 1
+        ORDER BY sf.ServiceFieldId ASC
+        ",
+                new
+                {
+                    ServiceId = serviceId
+                })).ToList();
 
+            // ---------------------------------------------------------
+            // 3. Get dropdown options for each field
+            // ---------------------------------------------------------
             foreach (var field in fields)
             {
                 var dropdownOptions =
                     await connection.QueryAsync<ServiceDropDownOptionResponse>(
-                @"SELECT
-            ServiceDropDownId,
-            OptionValue,
-            OptionLabel,
-            IsActive
-        FROM servicedropdownoptions
-        WHERE ServiceFieldId = @ServiceFieldId
-          AND IsActive = 1",
-                new
-                {
-                    ServiceFieldId = field.ServiceFieldId
-                });
+                        @"
+                SELECT
+                    ServiceDropDownId,
+                    ServiceFieldId,
+                    UserId,
+                    OptionValue,
+                    OptionLabel,
+                    IsActive
+                FROM servicedropdownoptions
+                WHERE ServiceFieldId = @ServiceFieldId
+                  AND UserId = @UserId
+                  AND IsActive = 1
+                ORDER BY ServiceDropDownId ASC
+                ",
+                        new
+                        {
+                            ServiceFieldId = field.ServiceFieldId,
+                            UserId = service.UserId
+                        });
 
                 field.DropDownOptions = dropdownOptions.ToList();
             }
@@ -287,80 +324,139 @@ namespace ahello_backend.Repositorys.Classes
             // DYNAMIC FIELDS
             // DYNAMIC FIELDS
             // Get all user ids from current page
-            var userIds = services
-                .Select(x => x.UserId)
+            // ---------------------------------------------------------
+            // GET DYNAMIC FIELDS BASED ON SERVICE ID
+            // ---------------------------------------------------------
+
+            var serviceIds = services
+                .Select(x => x.ServiceId)
                 .Distinct()
                 .ToList();
 
-
-            // Get all fields in ONE query
-            var allFields = (await connection.QueryAsync<ServiceDynamicFieldResponse>(
-                @"
-    SELECT
-        sfv.UserId,
-        sf.ServiceFieldId,
-        sf.FieldName,
-        sf.FieldCode,
-        sfv.FieldValue
-    FROM servicefieldvalues sfv
-    INNER JOIN servicefields sf
-        ON sf.ServiceFieldId = sfv.ServiceFieldId
-    WHERE sfv.UserId IN @UserIds",
-                new
-                {
-                    UserIds = userIds
-                })).ToList();
-
-
-            // Get all dropdowns in ONE query
-            var allDropdowns = (await connection.QueryAsync<ServiceDropDownOptionResponse>(
-                @"
-    SELECT
-        ServiceDropDownId,
-        ServiceFieldId,
-        UserId,
-        OptionValue,
-        OptionLabel,
-        IsActive
-    FROM servicedropdownoptions
-    WHERE UserId IN @UserIds",
-                new
-                {
-                    UserIds = userIds
-                })).ToList();
-
-
-            // Dictionary for fields
-            var fieldDictionary = allFields
-                .GroupBy(x => x.UserId)
-                .ToDictionary(x => x.Key, x => x.ToList());
-
-
-            // Dictionary for dropdowns
-            var dropdownDictionary = allDropdowns
-                .GroupBy(x => x.UserId)
-                .ToDictionary(x => x.Key, x => x.ToList());
-
-
-            // Mapping
-            foreach (var service in services)
+            if (serviceIds.Any())
             {
-                var fields = fieldDictionary.ContainsKey(service.UserId)
-                    ? fieldDictionary[service.UserId]
-                    : new List<ServiceDynamicFieldResponse>();
+                // -----------------------------------------------------
+                // Get all fields for current page services
+                // -----------------------------------------------------
+                var allFields = (
+                    await connection.QueryAsync<ServiceDynamicFieldResponse>(
+                        @"
+            SELECT
+                sfv.ServiceId,
+                sf.ServiceFieldId,
+                sf.FieldName,
+                sf.FieldCode,
+                sf.Placeholder,
+                sf.IsRequired,
+                sf.IsActive,
+                sf.DataTypeId,
+                dt.DataTypeName,
+                sfv.FieldValue
 
-                foreach (var field in fields)
+            FROM servicefieldvalues sfv
+
+            INNER JOIN servicefields sf
+                ON sf.ServiceFieldId = sfv.ServiceFieldId
+
+            LEFT JOIN datatypes dt
+                ON sf.DataTypeId = dt.DataTypeId
+
+            WHERE sfv.ServiceId IN @ServiceIds
+              AND sf.IsActive = 1
+
+            ORDER BY
+                sfv.ServiceId ASC,
+                sf.ServiceFieldId ASC
+            ",
+                        new
+                        {
+                            ServiceIds = serviceIds
+                        }
+                    )
+                ).ToList();
+
+                // -----------------------------------------------------
+                // Get dropdown options
+                //
+                // IMPORTANT:
+                // servicedropdownoptions does NOT have ServiceId.
+                // So use ServiceFieldId + UserId.
+                // -----------------------------------------------------
+                var userIds = services
+                    .Select(x => x.UserId)
+                    .Distinct()
+                    .ToList();
+
+                var allDropdowns = (
+                    await connection.QueryAsync<ServiceDropDownOptionResponse>(
+                        @"
+            SELECT
+                ServiceDropDownId,
+                ServiceFieldId,
+                UserId,
+                OptionValue,
+                OptionLabel,
+                IsActive
+
+            FROM servicedropdownoptions
+
+            WHERE UserId IN @UserIds
+              AND IsActive = 1
+
+            ORDER BY ServiceDropDownId ASC
+            ",
+                        new
+                        {
+                            UserIds = userIds
+                        }
+                    )
+                ).ToList();
+
+                // -----------------------------------------------------
+                // Group fields by ServiceId
+                // -----------------------------------------------------
+                var fieldDictionary = allFields
+                    .GroupBy(x => x.ServiceId)
+                    .ToDictionary(
+                        x => x.Key,
+                        x => x.ToList()
+                    );
+
+                // -----------------------------------------------------
+                // Map fields to each service
+                // -----------------------------------------------------
+                foreach (var service in services)
                 {
-                    field.DropDownOptions = dropdownDictionary.ContainsKey(service.UserId)
-                        ? dropdownDictionary[service.UserId]
-                            .Where(x => x.ServiceFieldId == field.ServiceFieldId)
-                            .ToList()
-                        : new List<ServiceDropDownOptionResponse>();
+                    var fields = fieldDictionary.TryGetValue(
+                        service.ServiceId,
+                        out var serviceFields)
+                            ? serviceFields
+                            : new List<ServiceDynamicFieldResponse>();
+
+                    // -------------------------------------------------
+                    // Map dropdown options
+                    // -------------------------------------------------
+                    foreach (var field in fields)
+                    {
+                        field.DropDownOptions = allDropdowns
+                            .Where(x =>
+                                x.ServiceFieldId == field.ServiceFieldId &&
+                                x.UserId == service.UserId)
+                            .ToList();
+                    }
+
+                    service.Fields = fields;
                 }
-
-                service.Fields = fields;
             }
-
+            else
+            {
+                // No services on current page
+                foreach (var service in services)
+                {
+                    service.Fields =
+                        new List<ServiceDynamicFieldResponse>();
+                }
+            }
             return new PagedServiceDynamicResponse
             {
                 TotalRecords = totalRecords,
@@ -373,129 +469,245 @@ namespace ahello_backend.Repositorys.Classes
         {
             using var connection = _db.GetConnection();
 
-            connection.Open();
+            if (connection is DbConnection dbConnection)
+            {
+                await dbConnection.OpenAsync();
+            }
+            else
+            {
+                connection.Open();
+            }
 
             using var tx = connection.BeginTransaction();
 
             try
             {
+                // -----------------------------------------------------
+                // Duplicate service title
+                // -----------------------------------------------------
                 var duplicateExists = await connection.ExecuteScalarAsync<int>(
-                   @"SELECT COUNT(*)
-                      FROM services
-                      WHERE LOWER(TRIM(ServiceTitle)) = LOWER(TRIM(@ServiceTitle))",
-                   new { model.ServiceTitle },
-                   tx);
+                    @"
+            SELECT COUNT(*)
+            FROM services
+            WHERE LOWER(TRIM(ServiceTitle))
+                = LOWER(TRIM(@ServiceTitle))
+            ",
+                    new
+                    {
+                        model.ServiceTitle
+                    },
+                    tx);
 
                 if (duplicateExists > 0)
                 {
                     throw new Exception("Service Title already exists.");
                 }
-                var sql = @"
-                    INSERT INTO services
-                    (
-                        UserId,
-                        ServiceTypeId,
-                        ServiceCategoryId,
-                        ServiceTitle,
-                        Price,
-                        Duration,
-                        ShortDescription,
-                        FullDescription,
-                        Tags,
-                        Language,
-                        ThumbnailImage,
-                        BannerImage,
-                        IntroVideo,
-                        Status,
-                        IsActive,
-                        CreatedAt,
-                        CreatedBy
-                    )
-                    VALUES
-                    (
-                        @UserId,
-                        @ServiceTypeId,
-                        @ServiceCategoryId,
-                        @ServiceTitle,
-                        @Price,
-                        @Duration,
-                        @ShortDescription,
-                        @FullDescription,
-                        @Tags,
-                        @Language,
-                        @ThumbnailImage,
-                        @BannerImage,
-                        @IntroVideo,
-                        @Status,
-                        @IsActive,
-                        NOW(),
-                        @CreatedBy
-                    );
 
-                    SELECT LAST_INSERT_ID();";
+                // -----------------------------------------------------
+                // Insert service
+                // -----------------------------------------------------
+                var sql = @"
+            INSERT INTO services
+            (
+                UserId,
+                ServiceTypeId,
+                ServiceCategoryId,
+                ServiceTitle,
+                Price,
+                Duration,
+                ShortDescription,
+                FullDescription,
+                Tags,
+                Language,
+                ThumbnailImage,
+                BannerImage,
+                IntroVideo,
+                Status,
+                IsActive,
+                CreatedAt,
+                CreatedBy
+            )
+            VALUES
+            (
+                @UserId,
+                @ServiceTypeId,
+                @ServiceCategoryId,
+                @ServiceTitle,
+                @Price,
+                @Duration,
+                @ShortDescription,
+                @FullDescription,
+                @Tags,
+                @Language,
+                @ThumbnailImage,
+                @BannerImage,
+                @IntroVideo,
+                @Status,
+                @IsActive,
+                NOW(),
+                @CreatedBy
+            );
+
+            SELECT LAST_INSERT_ID();
+        ";
 
                 var serviceId = await connection.ExecuteScalarAsync<int>(
-                   sql,
-                   new
-                   {
-                       model.UserId,
-                       model.ServiceTypeId,
-                       model.ServiceCategoryId,
-                       model.ServiceTitle,
-                       model.Price,
-                       model.Duration,
-                       model.ShortDescription,
-                       model.FullDescription,
-                       model.Tags,
-                       model.Language,
-                       ThumbnailImage = model.ThumbnailImageUrl,   // ← changed
-                       BannerImage = model.BannerImageUrl,          // ← changed
-                       model.IntroVideo,
-                       model.Status,
-                       IsActive = model.IsActive,
-                       model.CreatedBy
-                   },
-                   tx);
+                    sql,
+                    new
+                    {
+                        model.UserId,
+                        model.ServiceTypeId,
+                        model.ServiceCategoryId,
+                        model.ServiceTitle,
+                        model.Price,
+                        model.Duration,
+                        model.ShortDescription,
+                        model.FullDescription,
+                        model.Tags,
+                        model.Language,
 
+                        ThumbnailImage = model.ThumbnailImageUrl,
+                        BannerImage = model.BannerImageUrl,
+
+                        model.IntroVideo,
+                        model.Status,
+                        model.IsActive,
+                        model.CreatedBy
+                    },
+                    tx);
+
+                // -----------------------------------------------------
+                // Insert dynamic fields
+                // -----------------------------------------------------
+                // -----------------------------------------------------
+                // Insert dynamic fields
+                // -----------------------------------------------------
                 if (model.Fields != null && model.Fields.Any())
                 {
-                    var fieldSql = @"
-                        INSERT INTO servicefieldvalues
-                        (
-                            UserId,
-                            FieldCode,
-                            ServiceFieldId,
-                            FieldValue,
-                            CreatedDate,
-                            CreatedBy,
-                            CreatedAt
-                        )
-                        SELECT
-                            @UserId,
-                            sf.FieldCode,
-                            @ServiceFieldId,
-                            @FieldValue,
-                            NOW(),
-                            @CreatedBy,
-                            CURRENT_TIMESTAMP
-                        FROM servicefields sf
-                        WHERE sf.ServiceFieldId = @ServiceFieldId;";
+                    const string fieldSql = @"
+                    INSERT INTO servicefieldvalues
+                    (
+                        UserId,
+                        ServiceId,
+                        FieldCode,
+                        ServiceFieldId,
+                        FieldValue,
+                        CreatedDate,
+                        CreatedBy,
+                        CreatedAt
+                    )
+                    SELECT
+                        @UserId,
+                        @ServiceId,
+                        sf.FieldCode,
+                        sf.ServiceFieldId,
+                        @FieldValue,
+                        NOW(),
+                        @CreatedBy,
+                        CURRENT_TIMESTAMP
+                    FROM servicefields sf
+                    WHERE sf.ServiceFieldId = @ServiceFieldId
+                      AND sf.UserId = @UserId
+                      AND sf.IsActive = 1;
+                ";
+
+                    const string dropdownSql = @"
+                            INSERT INTO servicedropdownoptions
+                            (
+                                ServiceId,
+                                ServiceFieldId,
+                                OptionValue,
+                                OptionLabel,
+                                IsActive,
+                                CreatedDate,
+                                CreatedBy,
+                                UserId
+                            )
+                            VALUES
+                            (
+                                @ServiceId,
+                                @ServiceFieldId,
+                                @OptionValue,
+                                @OptionLabel,
+                                @IsActive,
+                                NOW(),
+                                @CreatedBy,
+                                @UserId
+                            );
+                        ";
 
                     foreach (var field in model.Fields)
                     {
+                        // Do not allow ServiceFieldId = 0
+                        if (field.ServiceFieldId <= 0)
+                        {
+                            throw new Exception(
+                                $"Invalid ServiceFieldId: {field.ServiceFieldId}."
+                            );
+                        }
+
+                        // Check whether field belongs to this user
+                        var fieldExists = await connection.ExecuteScalarAsync<int>(
+                            @"
+            SELECT COUNT(*)
+            FROM servicefields
+            WHERE ServiceFieldId = @ServiceFieldId
+              AND UserId = @UserId
+              AND IsActive = 1
+            ",
+                            new
+                            {
+                                ServiceFieldId = field.ServiceFieldId,
+                                UserId = model.UserId
+                            },
+                            tx);
+
+                        if (fieldExists == 0)
+                        {
+                            throw new Exception(
+                                $"ServiceFieldId {field.ServiceFieldId} does not exist for UserId {model.UserId}."
+                            );
+                        }
+
+                        // Insert field value
                         await connection.ExecuteAsync(
                             fieldSql,
                             new
                             {
                                 UserId = model.UserId,
+                                ServiceId = serviceId,
                                 ServiceFieldId = field.ServiceFieldId,
                                 FieldValue = field.FieldValue,
-                                model.CreatedBy
+                                CreatedBy = model.CreatedBy
                             },
                             tx);
+
+                        // Insert dropdown options
+                        if (field.DropDownOptions != null &&
+                            field.DropDownOptions.Any())
+                        {
+                            foreach (var option in field.DropDownOptions)
+                            {
+                                await connection.ExecuteAsync(
+                                     dropdownSql,
+                                     new
+                                     {
+                                         ServiceId = serviceId,
+                                         ServiceFieldId = field.ServiceFieldId,
+                                         OptionValue = option.OptionValue,
+                                         OptionLabel = option.OptionLabel,
+                                         IsActive = option.IsActive,
+                                         CreatedBy = model.CreatedBy,
+                                         UserId = model.UserId
+                                     },
+                                     tx);
+                            }
+                        }
                     }
                 }
+
                 tx.Commit();
+
                 return serviceId;
             }
             catch
@@ -514,26 +726,26 @@ namespace ahello_backend.Repositorys.Classes
             try
             {
                 var sql = @"
-UPDATE services
-SET
-    UserId = @UserId,
-    ServiceTypeId = @ServiceTypeId,
-    ServiceCategoryId = @ServiceCategoryId,
-    ServiceTitle = @ServiceTitle,
-    Price = @Price,
-    Duration = @Duration,
-    ShortDescription = @ShortDescription,
-    FullDescription = @FullDescription,
-    Tags = @Tags,
-    Language = @Language,
-    ThumbnailImage = @ThumbnailImage,
-    BannerImage = @BannerImage,
-    IntroVideo = @IntroVideo,
-    Status = @Status,
-    IsActive = @IsActive,
-    ModifiedAt = NOW(),
-    ModifiedBy = @ModifiedBy
-WHERE ServiceId = @ServiceId";
+                UPDATE services
+                SET
+                    UserId = @UserId,
+                    ServiceTypeId = @ServiceTypeId,
+                    ServiceCategoryId = @ServiceCategoryId,
+                    ServiceTitle = @ServiceTitle,
+                    Price = @Price,
+                    Duration = @Duration,
+                    ShortDescription = @ShortDescription,
+                    FullDescription = @FullDescription,
+                    Tags = @Tags,
+                    Language = @Language,
+                    ThumbnailImage = @ThumbnailImage,
+                    BannerImage = @BannerImage,
+                    IntroVideo = @IntroVideo,
+                    Status = @Status,
+                    IsActive = @IsActive,
+                    ModifiedAt = NOW(),
+                    ModifiedBy = @ModifiedBy
+                WHERE ServiceId = @ServiceId";
                 var exists = await connection.ExecuteScalarAsync<bool>(
                     "SELECT EXISTS(SELECT 1 FROM services WHERE ServiceId = @ServiceId)",
                     new { ServiceId = serviceId }, tx);
@@ -613,6 +825,7 @@ WHERE ServiceId = @ServiceId";
                     var fieldSql = @"
                     INSERT INTO servicefieldvalues
                     (
+                        ServiceId,
                         UserId,
                         FieldCode,
                         ServiceFieldId,
@@ -622,6 +835,7 @@ WHERE ServiceId = @ServiceId";
                         CreatedAt
                     )
                     SELECT
+                        @ServiceId,
                         @UserId,
                         sf.FieldCode,
                         sf.ServiceFieldId,
@@ -635,6 +849,7 @@ WHERE ServiceId = @ServiceId";
                     var insertDropdownSql = @"
                     INSERT INTO servicedropdownoptions
                     (
+                        ServiceId,
                         ServiceFieldId,
                         UserId,
                         OptionValue,
@@ -645,6 +860,7 @@ WHERE ServiceId = @ServiceId";
                     )
                     VALUES
                     (
+                         @ServiceId,
                         @ServiceFieldId,
                         @UserId,
                         @OptionValue,
@@ -658,6 +874,7 @@ WHERE ServiceId = @ServiceId";
                     {
                         var insertedFieldRows = await connection.ExecuteAsync(fieldSql, new
                         {
+                            ServiceId = serviceId,
                             UserId = model.UserId,
                             ServiceFieldId = field.ServiceFieldId,
                             FieldValue = field.FieldValue,
@@ -675,6 +892,7 @@ WHERE ServiceId = @ServiceId";
                             {
                                 await connection.ExecuteAsync(insertDropdownSql, new
                                 {
+                                    ServiceId = serviceId,
                                     ServiceFieldId = field.ServiceFieldId,
                                     UserId = model.UserId,
                                     option.OptionValue,
@@ -707,16 +925,40 @@ WHERE ServiceId = @ServiceId";
 
             try
             {
+                // Delete dropdown options first
                 await connection.ExecuteAsync(
-                    @"DELETE FROM servicefieldvalues
-                      WHERE ServiceId = @ServiceId",
-                    new { ServiceId = serviceId },
+                    @"
+            DELETE FROM servicedropdownoptions
+            WHERE ServiceId = @ServiceId
+            ",
+                    new
+                    {
+                        ServiceId = serviceId
+                    },
                     tx);
 
+                // Delete field values
+                await connection.ExecuteAsync(
+                    @"
+            DELETE FROM servicefieldvalues
+            WHERE ServiceId = @ServiceId
+            ",
+                    new
+                    {
+                        ServiceId = serviceId
+                    },
+                    tx);
+
+                // Delete service
                 var rows = await connection.ExecuteAsync(
-                    @"DELETE FROM services
-                      WHERE ServiceId = @ServiceId",
-                    new { ServiceId = serviceId },
+                    @"
+            DELETE FROM services
+            WHERE ServiceId = @ServiceId
+            ",
+                    new
+                    {
+                        ServiceId = serviceId
+                    },
                     tx);
 
                 tx.Commit();
@@ -725,66 +967,110 @@ WHERE ServiceId = @ServiceId";
             }
             catch
             {
-                tx.Rollback();
+                tx.Commit();
                 throw;
             }
         }
 
         public async Task<PagedServiceDynamicResponse> GetAllPagedAsync(
-            int pageNumber,
-            int pageSize,
-            string? search = null)
+    int pageNumber,
+    int pageSize,
+    string? search = null)
         {
             using var connection = _db.GetConnection();
 
+            if (pageNumber <= 0)
+                pageNumber = 1;
+
+            if (pageSize <= 0)
+                pageSize = 10;
+
             var offset = (pageNumber - 1) * pageSize;
 
+            // ---------------------------------------------------------
+            // WHERE
+            // ---------------------------------------------------------
             var whereClause = "";
 
             if (!string.IsNullOrWhiteSpace(search))
             {
                 whereClause = @"
-                    WHERE ServiceTitle LIKE @Search";
+            WHERE
+                s.ServiceTitle LIKE @Search
+                OR sc.ServiceCategoryName LIKE @Search
+                OR st.ServiceTypeName LIKE @Search
+                OR s.ShortDescription LIKE @Search
+                OR s.Tags LIKE @Search
+                OR s.Language LIKE @Search
+                OR s.Status LIKE @Search";
             }
 
-            var totalRecords = await connection.ExecuteScalarAsync<int>(
-            $@"SELECT COUNT(*)
-            FROM services s
-            LEFT JOIN ServiceCategoryDynamic sc
-                ON s.ServiceCategoryId = sc.ServiceCategoryId
-            {whereClause}",
-            new
+            var parameters = new
             {
                 Search = $"%{search}%"
-            });
+            };
 
+            // ---------------------------------------------------------
+            // TOTAL COUNT
+            // ---------------------------------------------------------
+            var totalRecords = await connection.ExecuteScalarAsync<int>(
+                $@"
+        SELECT COUNT(*)
+        FROM services s
+        LEFT JOIN servicecategorydynamic sc
+            ON s.ServiceCategoryId = sc.ServiceCategoryId
+        LEFT JOIN servicetypes st
+            ON s.ServiceTypeId = st.ServiceTypeId
+        {whereClause}
+        ",
+                parameters);
+
+            // ---------------------------------------------------------
+            // GET SERVICES
+            // ---------------------------------------------------------
             var services = (await connection.QueryAsync<ServiceDynamicGetResponse>(
-                $@"SELECT
-                    s.ServiceId,
-                    s.UserId,
-                    s.ServiceTypeId,
-                    s.ServiceCategoryId,
-                    sc.ServiceCategoryName,
-                    s.ServiceTitle,
-                    s.Price,
-                    s.Duration,
-                    s.ShortDescription,
-                    s.FullDescription,
-                    s.Tags,
-                    s.Language,
-                    s.ThumbnailImage,
-                    s.BannerImage,
-                    s.IntroVideo,
-                    s.Status,
-                    s.IsActive,
-                    s.CreatedBy,
-                    s.CreatedAt
-                FROM services s
-                LEFT JOIN ServiceCategoryDynamic sc
-                    ON s.ServiceCategoryId = sc.ServiceCategoryId
-                {whereClause}
-                ORDER BY s.ServiceId DESC
-                LIMIT @PageSize OFFSET @Offset",
+                $@"
+        SELECT
+            s.ServiceId,
+            s.UserId,
+
+            s.ServiceTypeId,
+            st.ServiceTypeName,
+
+            s.ServiceCategoryId,
+            sc.ServiceCategoryName,
+
+            s.ServiceTitle,
+            s.Price,
+            s.Duration,
+            s.ShortDescription,
+            s.FullDescription,
+            s.Tags,
+            s.Language,
+
+            s.ThumbnailImage,
+            s.BannerImage,
+            s.IntroVideo,
+
+            s.Status,
+            s.IsActive,
+            s.CreatedBy,
+            s.CreatedAt
+
+        FROM services s
+
+        LEFT JOIN servicecategorydynamic sc
+            ON s.ServiceCategoryId = sc.ServiceCategoryId
+
+        LEFT JOIN servicetypes st
+            ON s.ServiceTypeId = st.ServiceTypeId
+
+        {whereClause}
+
+        ORDER BY s.ServiceId DESC
+
+        LIMIT @PageSize OFFSET @Offset
+        ",
                 new
                 {
                     Search = $"%{search}%",
@@ -792,32 +1078,71 @@ WHERE ServiceId = @ServiceId";
                     Offset = offset
                 })).ToList();
 
+            // ---------------------------------------------------------
+            // GET DYNAMIC FIELDS
+            // ---------------------------------------------------------
             foreach (var service in services)
             {
                 var fields = (await connection.QueryAsync<ServiceDynamicFieldResponse>(
-                    @"SELECT
-                    sf.ServiceFieldId,
-                    sf.FieldName,
-                    sf.FieldCode,
-                    sfv.FieldValue
-                  FROM servicefieldvalues sfv
-                  INNER JOIN servicefields sf
-                    ON sfv.ServiceFieldId = sf.ServiceFieldId
-                  WHERE UserId = @UserId",
-                    new { UserId = service.UserId })).ToList();
+                    @"
+            SELECT
+                sf.ServiceFieldId,
+                sf.FieldName,
+                sf.FieldCode,
+                sf.Placeholder,
+                sf.IsRequired,
+                sf.IsActive,
+                sf.DataTypeId,
+                dt.DataTypeName,
+                sfv.FieldValue
 
+            FROM servicefieldvalues sfv
+
+            INNER JOIN servicefields sf
+                ON sf.ServiceFieldId = sfv.ServiceFieldId
+
+            LEFT JOIN datatypes dt
+                ON sf.DataTypeId = dt.DataTypeId
+
+            WHERE sfv.ServiceId = @ServiceId
+              AND sf.IsActive = 1
+
+            ORDER BY sf.ServiceFieldId ASC
+            ",
+                    new
+                    {
+                        ServiceId = service.ServiceId
+                    })).ToList();
+
+                // -----------------------------------------------------
+                // DROPDOWN OPTIONS
+                // -----------------------------------------------------
                 foreach (var field in fields)
                 {
-                    var dropdownOptions = await connection.QueryAsync<ServiceDropDownOptionResponse>(
-                        @"SELECT
-                ServiceDropDownId,
-                OptionValue,
-                OptionLabel,
-                IsActive
-              FROM servicedropdownoptions
-              WHERE ServiceFieldId = @ServiceFieldId
-                AND UserId = @UserId",
-                        new { field.ServiceFieldId, UserId = service.UserId });
+                    var dropdownOptions =
+                        await connection.QueryAsync<ServiceDropDownOptionResponse>(
+                            @"
+                    SELECT
+                        ServiceDropDownId,
+                        ServiceFieldId,
+                        UserId,
+                        OptionValue,
+                        OptionLabel,
+                        IsActive
+
+                    FROM servicedropdownoptions
+
+                    WHERE ServiceFieldId = @ServiceFieldId
+                      AND UserId = @UserId
+                      AND IsActive = 1
+
+                    ORDER BY ServiceDropDownId ASC
+                    ",
+                            new
+                            {
+                                ServiceFieldId = field.ServiceFieldId,
+                                UserId = service.UserId
+                            });
 
                     field.DropDownOptions = dropdownOptions.ToList();
                 }

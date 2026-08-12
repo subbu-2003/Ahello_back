@@ -50,6 +50,21 @@ namespace ahello_backend.Controllers
             return Ok(data);
         }
 
+        [HttpGet("profile-slug/{slug}")]
+        public async Task<IActionResult> GetUserProfileBySlug(
+    string slug,
+    int pageNumber = 1,
+    int pageSize = 10,
+    string search = "")
+        {
+            var result = await _service.GetUserProfileBySlugAsync(slug, pageNumber, pageSize, search);
+
+            if (result == null)
+                return NotFound(new { Message = "User not found" });
+
+            return Ok(result);
+        }
+
         [HttpGet("category/{categoryId}")]
         public async Task<IActionResult> GetByCategoryId(int categoryId)
         {

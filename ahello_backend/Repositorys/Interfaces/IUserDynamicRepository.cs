@@ -13,6 +13,9 @@ namespace ahello_backend.Repositorys.Interfaces
 
         Task<UserDynamicGetResponse> GetByIdAsync(int userId);
         Task<IEnumerable<UserDynamicGetResponse>>GetByCategoryIdAsync(int categoryId);
+        Task<string> GenerateUniqueSlugAsync(string fullName, int? userId = null);
+        Task<UserProfileResponse> GetUserProfileBySlugAsync(
+            string slug, int pageNumber, int pageSize, string search);
 
         Task<int> CreateAsync(UserDynamicPost model);
 
