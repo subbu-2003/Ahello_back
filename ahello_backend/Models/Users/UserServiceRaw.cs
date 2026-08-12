@@ -6,6 +6,7 @@
 
         public string FullName { get; set; }
         public string ProfileUrl { get; set; }
+        public string? Slug { get; set; }
         public int? CategoryId { get; set; }
 
         public string CategoryName { get; set; }

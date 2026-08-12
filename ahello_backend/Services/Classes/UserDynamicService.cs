@@ -22,6 +22,10 @@ namespace ahello_backend.Services.Classes
             int pageSize, string? search)
             => _repository.GetAllPaginationAsync(pageNumber, pageSize,search);
 
+        public Task<UserProfileResponse> GetUserProfileBySlugAsync(
+    string slug, int pageNumber, int pageSize, string search)
+    => _repository.GetUserProfileBySlugAsync(slug, pageNumber, pageSize, search);
+
         public Task<UserDynamicGetResponse> GetByIdAsync(int userId)
             => _repository.GetByIdAsync(userId);
         public async Task<IEnumerable<UserDynamicGetResponse>> GetByCategoryIdAsync(int categoryId)

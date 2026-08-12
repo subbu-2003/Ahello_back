@@ -15,10 +15,44 @@ namespace ahello_backend.Repositorys.Classes
             _db = db;
         }
 
+        // ✅ Shared slug generator (same logic as UserDynamicRepository)
+        private async Task<string> GenerateUniqueSlugAsync(string fullName, int? userId = null)
+        {
+            using var connection = _db.GetConnection();
+
+            var baseSlug = System.Text.RegularExpressions.Regex
+                .Replace((fullName ?? "").Trim().ToLowerInvariant(), "[^a-z0-9]+", "");
+
+            if (string.IsNullOrWhiteSpace(baseSlug))
+                baseSlug = "user";
+
+            var slug = baseSlug;
+            int suffix = 1;
+
+            while (true)
+            {
+                var sql = "SELECT COUNT(*) FROM users WHERE Slug = @Slug" +
+                           (userId.HasValue ? " AND UserId != @UserId" : "");
+
+                var count = await connection.ExecuteScalarAsync<int>(sql,
+                    new { Slug = slug, UserId = userId });
+
+                if (count == 0) break;
+
+                suffix++;
+                slug = $"{baseSlug}{suffix}";
+            }
+
+            return slug;
+        }
+
         // POST
         public async Task<int> PostUserAsync(UserPost post)
         {
             using var connection = _db.GetConnection();
+
+            // ✅ Generate unique slug before insert
+            var slug = await GenerateUniqueSlugAsync(post.FullName);
 
             var sql = @"INSERT INTO users
                         (
@@ -42,6 +76,7 @@ namespace ahello_backend.Repositorys.Classes
                             SocialMediaLinks,
                             WebsiteURL,
                             Notes,
+                            Slug,
                             CreatedAt,
                             CreatedBy
                         )
@@ -67,13 +102,17 @@ namespace ahello_backend.Repositorys.Classes
                             @SocialMediaLinks,
                             @WebsiteURL,
                             @Notes,
+                            @Slug,
                             NOW(),
                             @CreatedBy
                         );
 
                         SELECT LAST_INSERT_ID();";
 
-            return await connection.ExecuteScalarAsync<int>(sql, post);
+            var parameters = new DynamicParameters(post);
+            parameters.Add("Slug", slug);
+
+            return await connection.ExecuteScalarAsync<int>(sql, parameters);
         }
 
         // GET ALL
@@ -125,6 +164,17 @@ namespace ahello_backend.Repositorys.Classes
         // UPDATE
         public async Task<bool> PutUserAsync(UserPut put)
         {
+            using var connection = _db.GetConnection();
+
+            // ✅ Regenerate slug only if name changed or slug missing
+            var current = await connection.QueryFirstOrDefaultAsync<(string Slug, string FullName)>(
+                "SELECT Slug, FullName FROM users WHERE UserId = @UserId",
+                new { UserId = put.UserId });
+
+            var slug = (string.IsNullOrWhiteSpace(current.Slug) || current.FullName != put.FullName)
+                ? await GenerateUniqueSlugAsync(put.FullName, put.UserId)
+                : current.Slug;
+
             var sql = @"UPDATE users
                         SET
                             CategoryId = @CategoryId,
@@ -147,11 +197,15 @@ namespace ahello_backend.Repositorys.Classes
                             SocialMediaLinks = @SocialMediaLinks,
                             WebsiteURL = @WebsiteURL,
                             Notes = @Notes,
+                            Slug = @Slug,
                             ModifiedAt = NOW(),
                             ModifiedBy = @ModifiedBy
                         WHERE UserId = @UserId";
 
-            var rows = await _db.GetConnection().ExecuteAsync(sql, put);
+            var parameters = new DynamicParameters(put);
+            parameters.Add("Slug", slug);
+
+            var rows = await connection.ExecuteAsync(sql, parameters);
 
             return rows > 0;
         }
@@ -167,6 +221,7 @@ namespace ahello_backend.Repositorys.Classes
 
             return rows > 0;
         }
+
         public async Task<PagedResult<UserServiceResponse>> GetUserServicesAsync(
         int pageNumber = 1,
         int pageSize = 10,
@@ -192,6 +247,7 @@ namespace ahello_backend.Repositorys.Classes
                     u.UserId,
                     u.FullName,
                     u.ProfileUrl,
+                    u.Slug,
                     c.CategoryId,
                     c.CategoryName,
 
@@ -261,6 +317,7 @@ namespace ahello_backend.Repositorys.Classes
                     u.UserId,
                     u.FullName,
                     u.ProfileUrl,
+                    u.Slug,
                     c.CategoryId,
                     c.CategoryName,
                     s.ServiceId,
@@ -332,6 +389,7 @@ namespace ahello_backend.Repositorys.Classes
                 {
                     x.UserId,
                     x.FullName,
+                    x.Slug,
                     x.ProfileUrl,
                     x.CategoryId,
                     x.CategoryName
@@ -340,6 +398,7 @@ namespace ahello_backend.Repositorys.Classes
                 {
                     UserId = g.Key.UserId,
                     FullName = g.Key.FullName,
+                    Slug = g.Key.Slug,
                     ProfileUrl = g.Key.ProfileUrl,
                     CategoryId = g.Key.CategoryId,
                     CategoryName = g.Key.CategoryName,
@@ -375,6 +434,7 @@ namespace ahello_backend.Repositorys.Classes
                 Details = groupedData
             };
         }
+
         public async Task<SearchResultDto> SearchUserServicesAsync(
           string? keyword,
           int pageNumber,
