@@ -37,7 +37,9 @@
 
         public string? Experience { get; set; }
 
-        public string? SocialMediaLinks { get; set; }
+        public string? InstagramURL { get; set; }
+        public string? FacebookURL { get; set; }
+        public string? YouTubeURL { get; set; }
 
         public string? WebsiteURL { get; set; }
 
