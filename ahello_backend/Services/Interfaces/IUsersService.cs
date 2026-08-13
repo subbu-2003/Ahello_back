@@ -18,6 +18,10 @@ namespace ahello_backend.Services.Interfaces
         int pageNumber = 1,
         int pageSize = 10,
         string? search = null);
+        Task<PagedResult<CategoryWiseServiceResponse>> GetCategoryWiseServicesAsync(
+    int pageNumber = 1,
+    int pageSize = 10,
+    string? search = null);
         Task<SearchResultDto> SearchUserServicesAsync(string? keyword, int pageNumber, int pageSize);
     }
 }
