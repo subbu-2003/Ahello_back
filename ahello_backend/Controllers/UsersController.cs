@@ -158,6 +158,19 @@ namespace backend_AHLLO.Controllers
 
             return Ok(result);
         }
+        [HttpGet("category-wise")]
+        public async Task<IActionResult> GetCategoryWiseServices(
+    int pageNumber = 1,
+    int pageSize = 10,
+    string? search = null)
+        {
+            var result = await _service.GetCategoryWiseServicesAsync(
+                pageNumber,
+                pageSize,
+                search);
+
+            return Ok(result);
+        }
         [HttpGet("search-services")]
         public async Task<IActionResult> SearchUserServices(
         string? keyword,

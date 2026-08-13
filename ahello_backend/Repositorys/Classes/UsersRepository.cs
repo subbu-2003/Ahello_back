@@ -435,6 +435,172 @@ namespace ahello_backend.Repositorys.Classes
             };
         }
 
+        public async Task<PagedResult<CategoryWiseServiceResponse>> GetCategoryWiseServicesAsync(
+     int pageNumber = 1,
+     int pageSize = 10,
+     string? search = null)
+        {
+            if (pageNumber <= 0)
+                pageNumber = 1;
+
+            if (pageSize <= 0)
+                pageSize = 10;
+
+            if (pageSize > 10)
+                pageSize = 10;
+
+            search = string.IsNullOrWhiteSpace(search)
+                ? null
+                : search.Trim();
+
+            using var connection = _db.GetConnection();
+
+            var sql = @"
+        SELECT
+            s.ServiceId,
+
+            u.UserId,
+            u.FullName,
+            u.ProfileUrl,
+            u.Slug,
+
+            c.CategoryId,
+            c.CategoryName,
+
+            st.ServiceTypeId,
+            st.ServiceTypeName,
+
+            s.ServiceCategoryId,
+            sc.ServiceCategoryName,
+
+            s.ServiceTitle,
+            s.ShortDescription,
+            s.Price,
+            s.Duration,
+            s.IntroVideo,
+            s.ThumbnailImage,
+
+            IFNULL(
+                AVG(CAST(r.Rating AS DECIMAL(10,2))),
+                0
+            ) AS AverageRating,
+
+            COUNT(r.ReviewId) AS TotalRatingCount
+
+        FROM services s
+
+        INNER JOIN users u
+            ON u.UserId = s.UserId
+
+        LEFT JOIN categories c
+            ON c.CategoryId = u.CategoryId
+
+        LEFT JOIN servicetypes st
+            ON st.ServiceTypeId = s.ServiceTypeId
+
+        LEFT JOIN servicecategorydynamic sc
+            ON sc.ServiceCategoryId = s.ServiceCategoryId
+
+        LEFT JOIN bookings b
+            ON b.ServiceId = s.ServiceId
+
+        LEFT JOIN reviews r
+            ON r.BookingId = b.BookingId
+
+        WHERE s.IsActive = 1
+
+        AND
+        (
+            @search IS NULL
+
+            OR LOWER(u.FullName)
+                LIKE LOWER(CONCAT('%', @search, '%'))
+
+            OR LOWER(c.CategoryName)
+                LIKE LOWER(CONCAT('%', @search, '%'))
+
+            OR LOWER(sc.ServiceCategoryName)
+                LIKE LOWER(CONCAT('%', @search, '%'))
+
+            OR LOWER(s.ServiceTitle)
+                LIKE LOWER(CONCAT('%', @search, '%'))
+
+            OR LOWER(st.ServiceTypeName)
+                LIKE LOWER(CONCAT('%', @search, '%'))
+
+            OR LOWER(s.ShortDescription)
+                LIKE LOWER(CONCAT('%', @search, '%'))
+        )
+
+        GROUP BY
+            s.ServiceId,
+
+            u.UserId,
+            u.FullName,
+            u.ProfileUrl,
+            u.Slug,
+
+            c.CategoryId,
+            c.CategoryName,
+
+            st.ServiceTypeId,
+            st.ServiceTypeName,
+
+            s.ServiceCategoryId,
+            sc.ServiceCategoryName,
+
+            s.ServiceTitle,
+            s.ShortDescription,
+            s.Price,
+            s.Duration,
+            s.IntroVideo,
+            s.ThumbnailImage
+
+        ORDER BY
+            s.ServiceCategoryId ASC,
+            s.ServiceId DESC;
+    ";
+
+            var rawData = (
+                await connection.QueryAsync<CategoryWiseService>(
+                    sql,
+                    new { search }
+                )
+            ).ToList();
+
+            // Group ALL services by service category
+            var groupedData = rawData
+                .GroupBy(x => new
+                {
+                    x.ServiceCategoryId,
+                    x.ServiceCategoryName
+                })
+                .Select(g => new CategoryWiseServiceResponse
+                {
+                    ServiceCategoryId = g.Key.ServiceCategoryId,
+                    ServiceCategoryName = g.Key.ServiceCategoryName,
+
+                    // ALL services for this category
+                    Services = g.ToList()
+                })
+                .ToList();
+
+            // Total number of categories
+            var totalCount = groupedData.Count;
+
+            // Pagination applies to categories
+            var pagedData = groupedData
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return new PagedResult<CategoryWiseServiceResponse>
+            {
+                TotalCount = totalCount,
+                Details = pagedData
+            };
+        }
+
         public async Task<SearchResultDto> SearchUserServicesAsync(
           string? keyword,
           int pageNumber,

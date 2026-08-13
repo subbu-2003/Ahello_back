@@ -49,6 +49,16 @@ namespace ahello_backend.Services.Classes
                 pageSize,
                 search);
         }
+        public async Task<PagedResult<CategoryWiseServiceResponse>> GetCategoryWiseServicesAsync(
+    int pageNumber = 1,
+    int pageSize = 10,
+    string? search = null)
+        {
+            return await _repository.GetCategoryWiseServicesAsync(
+                pageNumber,
+                pageSize,
+                search);
+        }
         public async Task<SearchResultDto> SearchUserServicesAsync(
      string? keyword,
      int pageNumber,
