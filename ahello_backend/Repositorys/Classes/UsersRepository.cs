@@ -585,18 +585,35 @@ namespace ahello_backend.Repositorys.Classes
                 })
                 .ToList();
 
-            // Total number of categories
-            var totalCount = groupedData.Count;
+            // Total number of services
+            var totalCount = rawData.Count;
 
-            // Pagination applies to categories
-            var pagedData = groupedData
+            // Pagination applies to services
+            var pagedServices = rawData
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
+                .ToList();
+
+            // Group only the paginated services
+            var pagedData = pagedServices
+                .GroupBy(x => new
+                {
+                    x.ServiceCategoryId,
+                    x.ServiceCategoryName
+                })
+                .Select(g => new CategoryWiseServiceResponse
+                {
+                    ServiceCategoryId = g.Key.ServiceCategoryId,
+                    ServiceCategoryName = g.Key.ServiceCategoryName,
+                    Services = g.ToList()
+                })
                 .ToList();
 
             return new PagedResult<CategoryWiseServiceResponse>
             {
                 TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
                 Details = pagedData
             };
         }
