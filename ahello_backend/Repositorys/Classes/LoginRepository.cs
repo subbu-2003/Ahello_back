@@ -8,6 +8,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Net.NetworkInformation;
 using System.Security.Claims;
 using System.Text;
+using System.Text.RegularExpressions;
 using Google.Apis.Auth;
 
 namespace ahello_backend.Repositorys.Classes
@@ -52,18 +53,23 @@ namespace ahello_backend.Repositorys.Classes
 
             if (user == null)
             {
+                var fullName = email.Split('@')[0];
+                var slug = await GenerateUniqueSlugAsync(connection, fullName);
+
                 var newUserId =
                     await connection.ExecuteScalarAsync<int>(
                     @"
             INSERT INTO users
             (
                 Email,
-                FullName
+                FullName,
+                Slug
             )
             VALUES
             (
                 @Email,
-                @FullName
+                @FullName,
+                @Slug
             );
 
             SELECT LAST_INSERT_ID();
@@ -71,15 +77,16 @@ namespace ahello_backend.Repositorys.Classes
                     new
                     {
                         Email = email.Trim(),
-                        FullName = email.Split('@')[0]
+                        FullName = fullName,
+                        Slug = slug
                     });
 
                 user = new LoginResponseDto
                 {
                     UserId = newUserId,
                     Email = email.Trim(),
-                    UserName = email.Split('@')[0],
-                    ProfileUrl=null
+                    UserName = fullName,
+                    ProfileUrl = null
                 };
             }
 
@@ -128,19 +135,23 @@ namespace ahello_backend.Repositorys.Classes
                 ? payload.Name
                 : email.Split('@')[0];
 
+            var slug = await GenerateUniqueSlugAsync(connection, fullName);
+
             var newUserId = await connection.ExecuteScalarAsync<int>(
                 @"
         INSERT INTO users
         (
             Email,
             FullName,
-            ProfileUrl
+            ProfileUrl,
+            Slug
         )
         VALUES
         (
             @Email,
             @FullName,
-            @ProfileUrl
+            @ProfileUrl,
+            @Slug
         );
 
         SELECT LAST_INSERT_ID();
@@ -149,7 +160,8 @@ namespace ahello_backend.Repositorys.Classes
                 {
                     Email = email,
                     FullName = fullName,
-                    ProfileUrl = payload.Picture
+                    ProfileUrl = payload.Picture,
+                    Slug = slug
                 });
 
             return new LoginResponseDto
@@ -275,6 +287,7 @@ namespace ahello_backend.Repositorys.Classes
             if (user == null)
             {
                 var fullName = email.Split('@')[0];
+                var slug = await GenerateUniqueSlugAsync(connection, fullName);
 
                 var newUserId =
                     await connection.ExecuteScalarAsync<int>(
@@ -282,12 +295,14 @@ namespace ahello_backend.Repositorys.Classes
             INSERT INTO users
             (
                 Email,
-                FullName
+                FullName,
+                Slug
             )
             VALUES
             (
                 @Email,
-                @FullName
+                @FullName,
+                @Slug
             );
 
             SELECT LAST_INSERT_ID();
@@ -295,7 +310,8 @@ namespace ahello_backend.Repositorys.Classes
                     new
                     {
                         Email = email.Trim(),
-                        FullName = fullName
+                        FullName = fullName,
+                        Slug = slug
                     });
 
                 user = new LoginResponseDto
@@ -303,11 +319,63 @@ namespace ahello_backend.Repositorys.Classes
                     UserId = newUserId,
                     Email = email.Trim(),
                     UserName = fullName,
-                    ProfileUrl=null
+                    ProfileUrl = null
                 };
             }
 
             return user;
+        }
+
+        // ---------------------------------------------------------
+        // SLUG HELPERS
+        // ---------------------------------------------------------
+
+        /// <summary>
+        /// Builds a URL-safe slug from a name (lowercase, spaces -> hyphens,
+        /// non alphanumeric characters stripped).
+        /// </summary>
+        private string BuildBaseSlug(string fullName)
+        {
+            var slug = fullName.Trim().ToLowerInvariant();
+
+            // Replace any run of non-alphanumeric characters with a single hyphen
+            slug = Regex.Replace(slug, @"[^a-z0-9]+", "-");
+
+            // Trim leading/trailing hyphens
+            slug = slug.Trim('-');
+
+            if (string.IsNullOrWhiteSpace(slug))
+                slug = "user";
+
+            return slug;
+        }
+
+        /// <summary>
+        /// Generates a slug guaranteed to be unique in the users table by
+        /// appending -2, -3, etc. if the base slug is already taken.
+        /// </summary>
+        private async Task<string> GenerateUniqueSlugAsync(
+            System.Data.IDbConnection connection,
+            string fullName)
+        {
+            var baseSlug = BuildBaseSlug(fullName);
+            var slug = baseSlug;
+            var suffix = 1;
+
+            while (true)
+            {
+                var exists = await connection.ExecuteScalarAsync<int>(
+                    @"SELECT COUNT(1) FROM users WHERE Slug = @Slug LIMIT 1",
+                    new { Slug = slug });
+
+                if (exists == 0)
+                    break;
+
+                suffix++;
+                slug = $"{baseSlug}-{suffix}";
+            }
+
+            return slug;
         }
 
         public string GenerateJwtToken(LoginResponseDto user)
