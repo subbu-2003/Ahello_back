@@ -1453,11 +1453,36 @@ namespace ahello_backend.Repositorys.Classes
                 throw;
             }
         }
-        public async Task<IEnumerable<RescheduleRequestRead>>
-    GetRescheduleRequestsByUserIdAsync(int userId)
+        public async Task<PagedResult<RescheduleRequestRead>>
+     GetRescheduleRequestsByUserIdAsync(
+         int userId,
+         int pageNumber,
+         int pageSize,
+         DateTime? requestedDate)
         {
             using var connection = _db.GetConnection();
 
+            var offset = (pageNumber - 1) * pageSize;
+
+            // Total count
+            var countSql = @"
+        SELECT COUNT(*)
+        FROM reschedulerequests r
+        WHERE r.UserId = @UserId
+        AND (
+            @RequestedDate IS NULL
+            OR DATE(r.RequestedDate) = DATE(@RequestedDate)
+        );";
+
+            var totalCount = await connection.ExecuteScalarAsync<int>(
+                countSql,
+                new
+                {
+                    UserId = userId,
+                    RequestedDate = requestedDate
+                });
+
+            // Paginated data
             var sql = @"
         SELECT
             r.RequestId,
@@ -1503,18 +1528,38 @@ namespace ahello_backend.Repositorys.Classes
 
         WHERE r.UserId = @UserId
 
+        AND (
+            @RequestedDate IS NULL
+            OR DATE(r.RequestedDate) = DATE(@RequestedDate)
+        )
+
         ORDER BY
             CASE
                 WHEN r.Status = 'Pending' THEN 1
                 WHEN r.Status = 'Accepted' THEN 2
                 ELSE 3
             END,
-            r.CreatedAt DESC;
-    ";
+            r.CreatedAt DESC
 
-            return await connection.QueryAsync<RescheduleRequestRead>(
+        LIMIT @PageSize OFFSET @Offset;";
+
+            var data = await connection.QueryAsync<RescheduleRequestRead>(
                 sql,
-                new { UserId = userId });
+                new
+                {
+                    UserId = userId,
+                    RequestedDate = requestedDate,
+                    PageSize = pageSize,
+                    Offset = offset
+                });
+
+            return new PagedResult<RescheduleRequestRead>
+            {
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                Details = data.ToList()
+            };
         }
         public async Task<RescheduleRequestRead?>
     GetRescheduleRequestByIdAsync(int requestId)

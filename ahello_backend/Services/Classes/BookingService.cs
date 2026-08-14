@@ -118,10 +118,17 @@ namespace ahello_backend.Services.Classes
             return await _repository .CreateRescheduleRequestAsync(model);
         }
 
-        public async Task<IEnumerable<RescheduleRequestRead>>
-            GetRescheduleRequestsByUserIdAsync(int userId)
+        public async Task<PagedResult<RescheduleRequestRead>>GetRescheduleRequestsByUserIdAsync(
+        int userId,
+        int pageNumber,
+        int pageSize,
+        DateTime? requestedDate)
         {
-            return await _repository.GetRescheduleRequestsByUserIdAsync(userId);
+            return await _repository.GetRescheduleRequestsByUserIdAsync(
+                userId,
+                pageNumber,
+                pageSize,
+                requestedDate);
         }
 
         public async Task<RescheduleRequestRead?>
