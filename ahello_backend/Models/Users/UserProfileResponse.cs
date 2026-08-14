@@ -13,7 +13,9 @@ namespace ahello_backend.Models.Users
         public string FullName { get; set; }
         public string ProfileUrl { get; set; }
         public string? Slug { get; set; }
-
+        public string? InstagramURL { get; set; }
+        public string? FacebookURL { get; set; }
+        public string? YouTubeURL { get; set; }
         public string Email { get; set; }
 
         public string MobileNumber { get; set; }

@@ -537,7 +537,10 @@ namespace ahello_backend.Controllers
         }
         [HttpGet("reschedule-requests/user/{userId}")]
         public async Task<IActionResult> GetRescheduleRequestsByUserId(
-        int userId)
+    int userId,
+    int pageNumber = 1,
+    int pageSize = 10,
+    DateTime? requestedDate = null)
         {
             try
             {
@@ -549,8 +552,28 @@ namespace ahello_backend.Controllers
                     });
                 }
 
+                if (pageNumber <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "PageNumber must be greater than 0."
+                    });
+                }
+
+                if (pageSize <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        Message = "PageSize must be greater than 0."
+                    });
+                }
+
                 var data =
-                    await _service.GetRescheduleRequestsByUserIdAsync(userId);
+                    await _service.GetRescheduleRequestsByUserIdAsync(
+                        userId,
+                        pageNumber,
+                        pageSize,
+                        requestedDate);
 
                 return Ok(new
                 {
