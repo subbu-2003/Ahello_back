@@ -18,8 +18,11 @@ namespace ahello_backend.Repositorys.Interfaces
         Task<int> CreateRescheduleRequestAsync(
         RescheduleRequestPost model);
 
-        Task<IEnumerable<RescheduleRequestRead>>
-            GetRescheduleRequestsByUserIdAsync(int userId);
+        Task<PagedResult<RescheduleRequestRead>> GetRescheduleRequestsByUserIdAsync(
+        int userId,
+        int pageNumber,
+        int pageSize,
+        DateTime? requestedDate);
 
         Task<RescheduleRequestRead?>
             GetRescheduleRequestByIdAsync(int requestId);
