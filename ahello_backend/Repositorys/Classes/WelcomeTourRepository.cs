@@ -143,5 +143,35 @@ namespace ahello_backend.Repositorys.Classes
 
             return rows > 0;
         }
+        // PUT BY USER ID + ITEM KEY - ONLY ISACTIVE
+        public async Task<bool> PutByUserIdAndItemKeyAsync(
+            int userId,
+            string itemKey,
+            bool isActive,
+            int modifiedBy)
+        {
+            var sql = @"
+        UPDATE welcometour
+        SET
+            IsActive = @IsActive,
+            modifiedby = @ModifiedBy,
+            modifiedAt = NOW()
+        WHERE UserId = @UserId
+            AND ItemKey = @ItemKey";
+
+            using var connection = _db.GetConnection();
+
+            var rows = await connection.ExecuteAsync(
+                sql,
+                new
+                {
+                    UserId = userId,
+                    ItemKey = itemKey,
+                    IsActive = isActive,
+                    ModifiedBy = modifiedBy
+                });
+
+            return rows > 0;
+        }
     }
 }
