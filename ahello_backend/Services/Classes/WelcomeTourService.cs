@@ -44,5 +44,18 @@ namespace ahello_backend.Services.Classes
                 modifiedBy
             );
         }
+        public async Task<bool> PutByUserIdAndItemKeyAsync(
+    int userId,
+    string itemKey,
+    bool isActive,
+    int modifiedBy)
+        {
+            return await _repository.PutByUserIdAndItemKeyAsync(
+                userId,
+                itemKey,
+                isActive,
+                modifiedBy
+            );
+        }
     }
 }

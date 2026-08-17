@@ -9,5 +9,6 @@ namespace ahello_backend.Services.Interfaces
         Task<int> PostAsync(WelcomeTour model);
         Task<bool> PutAsync(WelcomeTour model);
         Task<bool> PutByUserIdAsync(int userId, bool isActive, int modifiedBy);
+        Task<bool> PutByUserIdAndItemKeyAsync(int userId, string itemKey, bool isActive, int modifiedBy);
     }
 }
