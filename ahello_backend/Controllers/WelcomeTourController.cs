@@ -125,7 +125,7 @@ namespace ahello_backend.Controllers
     {
         public string ItemKey { get; set; }
         public bool IsActive { get; set; }
-        public int ModifiedBy { get; set; }
+        public int ModifiedBy { get; set; } 
     }
 }
 
