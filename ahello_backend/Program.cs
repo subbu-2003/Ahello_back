@@ -10,6 +10,7 @@ using Microsoft.Extensions.Hosting;
 using MySql.Data.MySqlClient;
 using System.Data;
 using System.Text.Json.Serialization;
+using ahello_backend.Hubs;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,6 +34,7 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters
             .Add(new JsonStringEnumConverter());
     });
+builder.Services.AddSignalR();
 
 builder.Services.AddEndpointsApiExplorer();
 
@@ -182,5 +184,6 @@ app.UseAuthorization();
 
 
 app.MapControllers();
+app.MapHub<MeetingHub>("/meetingHub");
 
 app.Run();
