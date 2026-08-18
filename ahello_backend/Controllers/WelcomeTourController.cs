@@ -115,17 +115,5 @@ namespace ahello_backend.Controllers
             });
         }
     }
-
-    public class UpdateWelcomeTourStatus
-    {
-        public bool IsActive { get; set; }
-        public int ModifiedBy { get; set; }
-    }
-    public class UpdateWelcomeTourItemStatus
-    {
-        public string ItemKey { get; set; }
-        public bool IsActive { get; set; }
-        public int ModifiedBy { get; set; } 
-    }
 }
 
