@@ -3,6 +3,8 @@ using ahello_backend.Services.Classes;
 using ahello_backend.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Cryptography;
+using ahello_backend.Hubs;
+using Microsoft.AspNetCore.SignalR;
 
 namespace ahello_backend.Controllers
 {
@@ -12,13 +14,16 @@ namespace ahello_backend.Controllers
     {
         private readonly HundredMsService _hundredMsService;
         private readonly IInstantMeetingService _instantMeetingService;
+        private readonly IHubContext<MeetingHub> _hubContext;
 
         public InstantMeetingController(
             HundredMsService hundredMsService,
-            IInstantMeetingService instantMeetingService)
+            IInstantMeetingService instantMeetingService, IHubContext<MeetingHub> hubContext)
+
         {
             _hundredMsService = hundredMsService;
             _instantMeetingService = instantMeetingService;
+            _hubContext = hubContext;
         }
 
         // =========================================================
@@ -259,6 +264,16 @@ userId.ToString());
                     UserId = userId,
                     Status = "Waiting"
                 });
+            await _hubContext.Clients
+    .Group($"host_{meeting.RoomName}")
+    .SendAsync(
+        "JoinRequestReceived",
+        new
+        {
+            requestId,
+            userId,
+            status = "Waiting"
+        });
 
             return Ok(new
             {
@@ -299,10 +314,33 @@ userId.ToString());
     int requestId,
     [FromBody] InstantMeetingJoinRequestStatusPut model)
         {
+            var request = await _instantMeetingService
+                .GetJoinRequestByIdAsync(requestId);
+
+            if (request == null)
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = "Join request not found."
+                });
+            }
+
             await _instantMeetingService
                 .UpdateJoinRequestStatusAsync(
                     requestId,
                     model.Status);
+
+            // Notify the specific client
+            await _hubContext.Clients
+                .Group($"user_{request.UserId}")
+                .SendAsync(
+                    "JoinRequestStatusChanged",
+                    new
+                    {
+                        requestId = request.Id,
+                        status = model.Status
+                    });
 
             return Ok(new
             {
