@@ -352,25 +352,74 @@ userId.ToString());
         public async Task<IActionResult> UpdateAllJoinRequestStatus(
     [FromBody] InstantMeetingJoinRequestsStatusPut model)
         {
-            var meeting = await _instantMeetingService.GetByRoomNameAsync(model.RoomName);
-
-            if (meeting == null)
+            try
             {
-                return NotFound(new
+                var meeting =
+                    await _instantMeetingService
+                        .GetByRoomNameAsync(model.RoomName);
+
+                if (meeting == null)
                 {
-                    success = false,
-                    message = "Meeting not found."
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = "Meeting not found."
+                    });
+                }
+
+                // Get all WAITING requests BEFORE updating them
+                var waitingRequests =
+                    await _instantMeetingService
+                        .GetWaitingUsersAsync(meeting.Id);
+
+                if (waitingRequests == null ||
+                    !waitingRequests.Any())
+                {
+                    return Ok(new
+                    {
+                        success = true,
+                        approvedCount = 0,
+                        message = "No waiting participants."
+                    });
+                }
+
+                // Update all waiting requests
+                await _instantMeetingService
+                    .UpdateAllJoinRequestStatusAsync(
+                        meeting.Id,
+                        model.Status
+                    );
+
+                // Notify every waiting user
+                foreach (var request in waitingRequests)
+                {
+                    await _hubContext.Clients
+                        .Group($"user_{request.UserId}")
+                        .SendAsync(
+                            "JoinRequestStatusChanged",
+                            new
+                            {
+                                requestId = request.Id,
+                                userId = request.UserId,
+                                status = model.Status
+                            }
+                        );
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    approvedCount = waitingRequests.Count()
                 });
             }
-
-            await _instantMeetingService.UpdateAllJoinRequestStatusAsync(
-                meeting.Id,
-                model.Status);
-
-            return Ok(new
+            catch (Exception ex)
             {
-                success = true
-            });
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
         }
 
         [HttpGet("request-status/{requestId}")]
