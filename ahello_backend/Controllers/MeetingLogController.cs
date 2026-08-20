@@ -51,7 +51,7 @@ namespace ahello_backend.Controllers
             }
         }
 
-        [HttpPost("leave")]
+        [HttpPut("leave")]
         public async Task<IActionResult> Leave(
             [FromBody] MeetingParticipantLeave model)
         {
