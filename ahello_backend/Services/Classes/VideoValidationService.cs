@@ -1,4 +1,4 @@
-﻿using NReco.VideoInfo; // Install: NReco.VideoInfo NuGet package
+﻿using NReco.VideoInfo; // Install: NReco.VideoInfo.LT NuGet package
 
 public class VideoValidationService
 {
@@ -16,7 +16,7 @@ public class VideoValidationService
         if (!AllowedTypes.Contains(file.ContentType.ToLower()))
             return (false, "Only MP4, WebM, or MOV videos are allowed.");
 
-        // 3. Check duration using NReco.VideoInfo
+        // 3. Check duration using NReco.VideoInfo.LT
         var tempPath = Path.GetTempFileName() + Path.GetExtension(file.FileName);
         try
         {
