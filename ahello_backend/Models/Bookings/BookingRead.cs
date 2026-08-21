@@ -12,7 +12,7 @@
         public int ClientId { get; set; }
         public string ClientName { get; set; }
         public string? ClientEmail { get; set; }
-
+        public string? ClientMobile { get; set; }
         public int ServiceId { get; set; }
 
         public string ServiceTitle { get; set; }

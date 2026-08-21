@@ -5,6 +5,7 @@ using ahello_backend.Models.Pagination;
 using ahello_backend.Models.Reschedulerequest;
 using ahello_backend.Repositorys.Interfaces;
 using ahello_backend.Services.Classes;
+using ahello_backend.Services.Interfaces;
 using Dapper;
 using System.Globalization;
 
@@ -20,6 +21,7 @@ namespace ahello_backend.Repositorys.Classes
         private readonly HundredMsService _hundredMsService;
         //private readonly IPdfService _pdfService;
         //private readonly IInvoiceRepository _invoiceRepository;
+        private readonly IWhatsAppService _whatsAppService;
 
         public BookingRepository(
          DbContext db,
@@ -27,6 +29,7 @@ namespace ahello_backend.Repositorys.Classes
          IUserSlotRepository userSlotRepo,
          IServiceRepository serviceRepository,
          IEmailRepository emailRepository,
+         IWhatsAppService whatsAppService,
          HundredMsService hundredMsService)
         {
             _db = db;
@@ -34,6 +37,7 @@ namespace ahello_backend.Repositorys.Classes
             _userSlotRepo = userSlotRepo;
             _serviceRepository = serviceRepository;
             _emailRepository = emailRepository;
+            _whatsAppService = whatsAppService;
             _hundredMsService = hundredMsService;
             
         }
@@ -49,8 +53,13 @@ namespace ahello_backend.Repositorys.Classes
             await Task.WhenAll(clientConn.OpenAsync(), serviceConn.OpenAsync());
 
             var clientTask = clientConn.QueryFirstOrDefaultAsync<dynamic>(
-                "SELECT FullName, Email FROM users WHERE UserId = @ClientId",
-                new { model.ClientId });
+             @"SELECT 
+                  FullName,
+                  Email,
+                  MobileNumber
+              FROM users
+              WHERE UserId = @ClientId",
+             new { model.ClientId });
 
             var serviceTask = serviceConn.QueryFirstOrDefaultAsync<dynamic>(
                 "SELECT ServiceTitle FROM services WHERE ServiceId = @ServiceId",
@@ -160,6 +169,7 @@ namespace ahello_backend.Repositorys.Classes
 
             string clientEmail = client.Email;
             string clientFullName = client.FullName;
+            string clientMobile = client.MobileNumber;
             string serviceName = service?.ServiceTitle ?? "the service";
             string formattedDate = model.ScheduleDate.ToString("dddd, MMMM dd yyyy");
             string formattedTime = model.StartTime.Hours >= 12
@@ -171,25 +181,79 @@ namespace ahello_backend.Repositorys.Classes
             {
                 try
                 {
-                
-                    // Send booking confirmation WITHOUT invoice
-                    //await _emailRepository.SendBookingConfirmationEmailAsync(
-                    //    clientEmail,
-                    //    clientFullName,
-                    //    serviceName,
-                    //    formattedDate,
-                    //    formattedTime,
-                    //    null);
+                    await _emailRepository.SendBookingConfirmationEmailAsync(
+                        clientEmail,
+                        clientFullName,
+                        serviceName,
+                        formattedDate,
+                        formattedTime,
+                        null);
 
-                    // Send meeting invitation
+                    Console.WriteLine(
+                        $"[Email] Booking confirmation sent - BookingId:{bookingId}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(
+                        $"[EmailError] Booking confirmation - {ex.Message}");
+                }
+                // ==========================================
+                // 2. BOOKING CONFIRMATION WHATSAPP
+                // ==========================================
+                try
+                {
+                    await _whatsAppService.SendBookingConfirmationWhatsAppAsync(
+                        clientMobile,
+                        clientFullName,
+                        serviceName,
+                        formattedDate,
+                        formattedTime,
+                        bookingId);
+
+                    Console.WriteLine(
+                        $"[WhatsApp] Booking confirmation sent - BookingId:{bookingId}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(
+                        $"[WhatsAppError] Booking confirmation - {ex.Message}");
+                }
+                // ==========================================
+                // 3. MEETING INVITE EMAIL
+                // ==========================================
+                try
+                {
                     await _emailRepository.SendMeetingInviteEmailAsync(
                         clientEmail,
                         clientFullName,
                         capturedMeetingLink);
+
+                    Console.WriteLine(
+                        $"[Email] Meeting invite sent - BookingId:{bookingId}");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[EmailError] {ex.GetType().Name}: {ex.Message}");
+                    Console.WriteLine(
+                        $"[EmailError] Meeting invite - {ex.Message}");
+                }
+                // ==============================
+                // WHATSAPP
+                // ==============================
+                try
+                {
+                    await _whatsAppService.SendMeetingInviteWhatsAppAsync(
+                        clientMobile,
+                        clientFullName,
+                        capturedMeetingLink,
+                        bookingId);
+
+                    Console.WriteLine(
+                        $"[WhatsApp] Meeting invite sent successfully to {clientMobile}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(
+                        $"[WhatsAppError] BookingId:{bookingId} - {ex.Message}");
                 }
             });
 
@@ -564,6 +628,20 @@ namespace ahello_backend.Repositorys.Classes
                             capturedLink);
 
                         Console.WriteLine("[RescheduleEmail] Meeting invite email sent");
+
+                        await _whatsAppService.SendRescheduleConfirmationWhatsAppAsync(
+                            old.ClientMobile,
+                            capturedName,
+                            capturedService,
+                            capturedDate,
+                            capturedTime,
+                            newBookingId);
+
+                        await _whatsAppService.SendMeetingInviteWhatsAppAsync(
+                            old.ClientMobile,
+                            capturedName,
+                            capturedLink,
+                            newBookingId);
                     }
                     catch (Exception ex)
                     {
