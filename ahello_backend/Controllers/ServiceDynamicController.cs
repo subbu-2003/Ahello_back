@@ -180,6 +180,7 @@ namespace ahello_backend.Controllers
                 {
                     Success = false,
                     Message = message,
+                    DebugError = ex.ToString()
                 });
             }
         }
@@ -348,27 +349,27 @@ namespace ahello_backend.Controllers
 
                 if (error.Contains("Service Title already exists"))
                 {
-                    return Conflict(new { Success = false, Message = "Service title already exists." });
+                    return Conflict(new { Success = false, Message = "Service title already exists.", DebugError = ex.ToString() });
                 }
 
                 if (error.Contains("FK_service_servicecategorydynamic"))
                 {
-                    return BadRequest(new { Success = false, Message = "Selected service category is invalid." });
+                    return BadRequest(new { Success = false, Message = "Selected service category is invalid.", DebugError = ex.ToString() });
                 }
 
                 if (error.Contains("FK_service_servicetype"))
                 {
-                    return BadRequest(new { Success = false, Message = "Selected service type is invalid." });
+                    return BadRequest(new { Success = false, Message = "Selected service type is invalid.", DebugError = ex.ToString() });
                 }
 
                 if (error.Contains("FK_service_user"))
                 {
-                    return BadRequest(new { Success = false, Message = "Selected user is invalid." });
+                    return BadRequest(new { Success = false, Message = "Selected user is invalid.", DebugError = ex.ToString() });
                 }
 
                 if (error.Contains("foreign key constraint"))
                 {
-                    return BadRequest(new { Success = false, Message = "Invalid service details. Please verify your input and try again." });
+                    return BadRequest(new { Success = false, Message = "Invalid service details. Please verify your input and try again.", DebugError = ex.ToString() });
                 }
 
                 // TEMP: surface real error while debugging — remove/guard behind env check later
@@ -376,6 +377,7 @@ namespace ahello_backend.Controllers
                 {
                     Success = false,
                     Message = ex.Message,
+                    DebugError = ex.ToString()
                 });
             }
         }
@@ -396,7 +398,7 @@ namespace ahello_backend.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { Success = false, Message = ex.Message });
+                return StatusCode(500, new { Success = false, Message = ex.Message, DebugError = ex.ToString() });
             }
         }
 
