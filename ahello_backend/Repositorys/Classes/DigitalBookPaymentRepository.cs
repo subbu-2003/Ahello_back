@@ -1,0 +1,425 @@
+﻿using ahello_backend.DbContexts;
+using ahello_backend.Models.Digitalbookpayments;
+using ahello_backend.Repositorys.Interfaces;
+using Dapper;
+
+namespace ahello_backend.Repositorys.Classes
+{
+    public class DigitalBookPaymentRepository : IDigitalBookPaymentRepository
+    {
+        private readonly DbContext _db;
+
+        public DigitalBookPaymentRepository(DbContext db)
+        {
+            _db = db;
+        }
+
+        public async Task<int> InsertAsync(DigitalBookPayment payment)
+        {
+            var query = @"
+INSERT INTO DigitalBookPayments
+(
+    DigitalBookingId,
+    UserId,
+    ClientId,
+    RazorpayAccountId,
+    RazorpayOrderId,
+    RazorpayPaymentId,
+    RazorpaySignature,
+    RazorpayTransferId,
+    TotalAmount,
+    PlatformFee,
+    TaxAmount,
+    TaxRate,
+    ExpertAmount,
+    Currency,
+    Status,
+    OrderResponseJson,
+    VerifyResponseJson,
+    TransferResponseJson,
+    PaidAt,
+    HeldAt,
+    CreatedAt,
+    CreatedBy
+)
+VALUES
+(
+    @DigitalBookingId,
+    @UserId,
+    @ClientId,
+    @RazorpayAccountId,
+    @RazorpayOrderId,
+    @RazorpayPaymentId,
+    @RazorpaySignature,
+    @RazorpayTransferId,
+    @TotalAmount,
+    @PlatformFee,
+    @TaxAmount,
+    @TaxRate,
+    @ExpertAmount,
+    @Currency,
+    @Status,
+    @OrderResponseJson,
+    @VerifyResponseJson,
+    @TransferResponseJson,
+    @PaidAt,
+    @HeldAt,
+    NOW(),
+    @CreatedBy
+);
+
+SELECT LAST_INSERT_ID();";
+
+            using var connection = _db.GetConnection();
+
+            return await connection.ExecuteScalarAsync<int>(query, payment);
+        }
+
+        public async Task<DigitalBookPayment?> GetByDigitalBookingIdAsync(int digitalBookingId)
+        {
+            var query = @"
+                SELECT *
+                FROM DigitalBookPayments
+                WHERE DigitalBookingId = @DigitalBookingId
+                LIMIT 1";
+
+            using var connection = _db.GetConnection();
+
+            return await connection.QuerySingleOrDefaultAsync<DigitalBookPayment>(
+                query,
+                new { DigitalBookingId = digitalBookingId });
+        }
+
+        public async Task<dynamic?> GetBookingPaymentInfoAsync(int digitalBookingId)
+        {
+            var query = @"
+        SELECT
+            b.DigitalBookingId,
+            b.UserId,
+            b.ClientId,
+            b.ServiceId,
+            s.Price
+        FROM digitalbookings b
+        INNER JOIN services s
+            ON s.ServiceId = b.ServiceId
+        WHERE b.DigitalBookingId = @DigitalBookingId
+        LIMIT 1";
+
+            using var connection = _db.GetConnection();
+
+            return await connection.QuerySingleOrDefaultAsync<dynamic>(
+                query,
+                new { DigitalBookingId = digitalBookingId });
+        }
+
+        public async Task<string?> GetServiceNameAsync(int serviceId)
+        {
+            var query = @"
+        SELECT ServiceTitle
+        FROM services
+        WHERE ServiceId = @ServiceId
+        LIMIT 1";
+
+            using var connection = _db.GetConnection();
+
+            return await connection.QuerySingleOrDefaultAsync<string?>(
+                query,
+                new { ServiceId = serviceId });
+        }
+
+        public async Task UpdateAfterPaymentAsync(
+            int digitalBookPaymentId,
+            string paymentId,
+            string signature,
+            string transferId,
+            string transferJson)
+        {
+            var query = @"
+    UPDATE DigitalBookPayments
+    SET
+        RazorpayPaymentId = @PaymentId,
+        RazorpaySignature = @Signature,
+        RazorpayTransferId = @TransferId,
+        TransferResponseJson = @TransferJson,
+        Status = 'HELD',
+        PaidAt = NOW(),
+        HeldAt = NOW(),
+        ModifiedAt = NOW()
+    WHERE DigitalBookPaymentId = @DigitalBookPaymentId";
+
+            using var connection = _db.GetConnection();
+
+            await connection.ExecuteAsync(query, new
+            {
+                DigitalBookPaymentId = digitalBookPaymentId,
+                PaymentId = paymentId,
+                Signature = signature,
+                TransferId = transferId,
+                TransferJson = transferJson
+            });
+        }
+
+        public async Task UpdateReleaseAsync(
+            int digitalBookPaymentId,
+            string releaseJson)
+        {
+            var query = @"
+                UPDATE DigitalBookPayments
+                SET
+                    Status = 'RELEASED',
+                    ReleaseResponseJson = @ReleaseJson,
+                    ReleasedAt = NOW(),
+                    ModifiedAt = NOW()
+                WHERE DigitalBookPaymentId = @DigitalBookPaymentId";
+
+            using var connection = _db.GetConnection();
+
+            await connection.ExecuteAsync(query, new
+            {
+                DigitalBookPaymentId = digitalBookPaymentId,
+                ReleaseJson = releaseJson
+            });
+        }
+
+        public async Task UpdateRefundAsync(
+            int digitalBookPaymentId,
+            string refundJson)
+        {
+            var query = @"
+                UPDATE DigitalBookPayments
+                SET
+                    Status = 'REFUNDED',
+                    RefundResponseJson = @RefundJson,
+                    RefundedAt = NOW(),
+                    ModifiedAt = NOW()
+                WHERE DigitalBookPaymentId = @DigitalBookPaymentId";
+
+            using var connection = _db.GetConnection();
+
+            await connection.ExecuteAsync(query, new
+            {
+                DigitalBookPaymentId = digitalBookPaymentId,
+                RefundJson = refundJson
+            });
+        }
+
+        public async Task UpdateStatusAsync(
+            int digitalBookPaymentId,
+            string status,
+            string? failureReason = null)
+        {
+            var query = @"
+                UPDATE DigitalBookPayments
+                SET
+                    Status = @Status,
+                    FailureReason = @FailureReason,
+                    ModifiedAt = NOW()
+                WHERE DigitalBookPaymentId = @DigitalBookPaymentId";
+
+            using var connection = _db.GetConnection();
+
+            await connection.ExecuteAsync(query, new
+            {
+                DigitalBookPaymentId = digitalBookPaymentId,
+                Status = status,
+                FailureReason = failureReason
+            });
+        }
+
+        public async Task UpdatePaymentVerifiedAsync(
+            int digitalBookPaymentId,
+            string paymentId,
+            string signature,
+            string verifyResponseJson)
+        {
+            var query = @"
+        UPDATE DigitalBookPayments
+        SET
+            RazorpayPaymentId = @PaymentId,
+            RazorpaySignature = @Signature,
+            VerifyResponseJson = @VerifyResponseJson,
+            Status = 'PAYMENT_VERIFIED',
+            PaidAt = NOW(),
+            ModifiedAt = NOW()
+        WHERE DigitalBookPaymentId = @DigitalBookPaymentId";
+
+            using var connection = _db.GetConnection();
+
+            await connection.ExecuteAsync(query, new
+            {
+                DigitalBookPaymentId = digitalBookPaymentId,
+                PaymentId = paymentId,
+                Signature = signature,
+                VerifyResponseJson = verifyResponseJson
+            });
+        }
+
+        public async Task<decimal?> GetServicePriceAsync(int serviceId)
+        {
+            var query = @"
+        SELECT Price
+        FROM services
+        WHERE ServiceId = @ServiceId
+        LIMIT 1";
+
+            using var connection = _db.GetConnection();
+
+            return await connection.QuerySingleOrDefaultAsync<decimal?>(
+                query,
+                new { ServiceId = serviceId });
+        }
+
+        public async Task<(IEnumerable<DigitalBookPaymentDetails> Data, int TotalRecords)>
+     GetDigitalBookPaymentDetailsByUserIdAsync(
+         int userId,
+         string? search,
+         string? key,
+         int pageNumber,
+         int pageSize)
+        {
+            var whereConditions = new List<string>
+    {
+        "ep.UserId = @UserId"
+    };
+
+            var parameters = new DynamicParameters();
+            parameters.Add("UserId", userId);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                if (string.IsNullOrWhiteSpace(key))
+                {
+                    whereConditions.Add(@"
+        (
+            b.Title LIKE @Search
+            OR ep.RazorpayOrderId LIKE @Search
+            OR ep.RazorpayPaymentId LIKE @Search
+            OR ep.RazorpayTransferId LIKE @Search
+            OR ep.Status LIKE @Search
+            OR CAST(ep.DigitalBookingId AS CHAR) LIKE @Search
+            OR CAST(ep.DigitalBookPaymentId AS CHAR) LIKE @Search
+        )");
+
+                    parameters.Add("Search", $"%{search}%");
+                }
+                else
+                {
+                    switch (key.ToLower())
+                    {
+                        case "servicetitle":
+                        case "servicename":
+                        case "title":
+                            whereConditions.Add("b.Title LIKE @Search");
+                            break;
+
+                        case "status":
+                            whereConditions.Add("ep.Status LIKE @Search");
+                            break;
+
+                        case "razorpayorderid":
+                            whereConditions.Add("ep.RazorpayOrderId LIKE @Search");
+                            break;
+
+                        case "razorpaypaymentid":
+                            whereConditions.Add("ep.RazorpayPaymentId LIKE @Search");
+                            break;
+
+                        case "razorpaytransferid":
+                            whereConditions.Add("ep.RazorpayTransferId LIKE @Search");
+                            break;
+
+                        case "digitalbookingid":
+                            whereConditions.Add("CAST(ep.DigitalBookingId AS CHAR) LIKE @Search");
+                            break;
+
+                        case "digitalbookpaymentid":
+                            whereConditions.Add("CAST(ep.DigitalBookPaymentId AS CHAR) LIKE @Search");
+                            break;
+
+                        default:
+                            throw new ArgumentException(
+                                $"Invalid search key: {key}");
+                    }
+
+                    parameters.Add("Search", $"%{search}%");
+                }
+            }
+
+            var whereClause = string.Join(
+                " AND ",
+                whereConditions);
+
+            var countQuery = $@"
+        SELECT COUNT(*)
+        FROM digitalbookpayments ep
+        INNER JOIN digitalbook b
+            ON b.DigitalBookId = ep.DigitalBookingId
+        WHERE {whereClause}";
+
+            var dataQuery = $@"
+    SELECT
+        ep.DigitalBookPaymentId,
+        ep.DigitalBookingId,
+        ep.UserId,
+        ep.ClientId,
+        b.DigitalBookId AS ServiceId,
+        b.Title AS ServiceTitle,
+        ep.RazorpayOrderId,
+        ep.RazorpayPaymentId,
+        ep.RazorpayTransferId,
+        ep.TotalAmount,
+        ep.PlatformFee,
+        ep.TaxAmount,
+        ep.TaxRate,
+        ep.ExpertAmount,
+        ep.Currency,
+        ep.Status,
+        ep.VerifyResponseJson,
+        ep.TransferResponseJson,
+        ep.ReleaseResponseJson,
+        ep.RefundResponseJson,
+        ep.PaidAt,
+        ep.HeldAt,
+        ep.ReleasedAt,
+        ep.RefundedAt,
+        ep.CreatedAt
+    FROM digitalbookpayments ep
+    INNER JOIN digitalbook b
+        ON b.DigitalBookId = ep.DigitalBookingId
+    WHERE {whereClause}
+    ORDER BY ep.CreatedAt DESC
+    LIMIT @PageSize OFFSET @Offset";
+
+            parameters.Add("PageSize", pageSize);
+            parameters.Add("Offset", (pageNumber - 1) * pageSize);
+
+            using var connection = _db.GetConnection();
+
+            var totalRecords = await connection.ExecuteScalarAsync<int>(countQuery, parameters);
+
+            var data = await connection.QueryAsync<DigitalBookPaymentDetails>(dataQuery, parameters);
+
+            return (data, totalRecords);
+        }
+
+        public async Task UpdateTransferResponseAsync(
+            int digitalBookPaymentId,
+            string transferJson)
+        {
+            var sql = @"
+        UPDATE DigitalBookPayments
+        SET
+            TransferResponseJson = @TransferJson,
+            ModifiedAt = NOW()
+        WHERE DigitalBookPaymentId = @DigitalBookPaymentId";
+
+            using var connection = _db.GetConnection();
+
+            await connection.ExecuteAsync(sql, new
+            {
+                DigitalBookPaymentId = digitalBookPaymentId,
+                TransferJson = transferJson
+            });
+        }
+    }
+}
