@@ -344,5 +344,128 @@ namespace ahello_backend.Controllers
             return $"/{folder}/{fileName}"
                 .Replace("\\", "/");
         }
+        [HttpGet("admin/pending")]
+        public async Task<IActionResult> GetPending()
+        {
+            try
+            {
+                var result = await _service.GetPendingAsync();
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    message = ex.Message
+                });
+            }
+        }
+        [HttpPut("admin/approval/{digitalBookId}")]
+        public async Task<IActionResult> UpdateApprovalStatus(
+    int digitalBookId,
+    [FromBody] DigitalBookApprovalRequest request)
+        {
+            try
+            {
+                if (request.AdminId <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        message = "AdminId is required."
+                    });
+                }
+
+                if (request.ApprovalStatus == DigitalBookApprovalStatus.Rejected &&
+                    string.IsNullOrWhiteSpace(request.RejectionReason))
+                {
+                    return BadRequest(new
+                    {
+                        message = "Rejection reason is required when rejecting a digital book."
+                    });
+                }
+
+                var result = await _service.UpdateApprovalStatusAsync(
+                    digitalBookId,
+                    request.AdminId,
+                    request.ApprovalStatus,
+                    request.RejectionReason);
+
+                if (!result)
+                {
+                    return BadRequest(new
+                    {
+                        message =
+                            "Digital book approval status cannot be changed. " +
+                            "It may already be approved, rejected, published, or inactive."
+                    });
+                }
+
+                if (request.ApprovalStatus == DigitalBookApprovalStatus.Approved)
+                {
+                    return Ok(new
+                    {
+                        message = "Digital book approved successfully.",
+                        digitalBookId = digitalBookId,
+                        status = "Draft",
+                        approvalStatus = "Approved",
+                        approvedBy = request.AdminId
+                    });
+                }
+
+                return Ok(new
+                {
+                    message = "Digital book rejected successfully.",
+                    digitalBookId = digitalBookId,
+                    status = "Draft",
+                    approvalStatus = "Rejected",
+                    rejectionReason = request.RejectionReason
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    message = ex.Message
+                });
+            }
+        }
+        [HttpPut("publish/{digitalBookId}")]
+        public async Task<IActionResult> Publish(
+        int digitalBookId,
+        int userId)
+        {
+            try
+            {
+                var result = await _service.PublishAsync(
+                    digitalBookId,
+                    userId);
+
+                if (!result)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Digital book is currently under admin review. It cannot be published until the admin approves it.",
+                        digitalBookId = digitalBookId,
+                        status = "Draft",
+                        approvalStatus = "Pending"
+                    });
+                }
+
+                return Ok(new
+                {
+                    message = "Digital book published successfully.",
+                    digitalBookId = digitalBookId,
+                    status = "Published"
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    message = ex.Message
+                });
+            }
+        }
     }
 }

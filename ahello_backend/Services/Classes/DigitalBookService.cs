@@ -57,5 +57,31 @@ namespace ahello_backend.Services.Classes
         {
             return await _repository.GetBySlugAsync(slug);
         }
+        public async Task<IEnumerable<DigitalBook>> GetPendingAsync()
+        {
+            return await _repository.GetPendingAsync();
+        }
+
+        public async Task<bool> UpdateApprovalStatusAsync(
+         int digitalBookId,
+         int adminId,
+         DigitalBookApprovalStatus approvalStatus,
+         string? rejectionReason)
+        {
+            return await _repository.UpdateApprovalStatusAsync(
+                digitalBookId,
+                adminId,
+                approvalStatus,
+                rejectionReason);
+        }
+
+        public async Task<bool> PublishAsync(
+            int digitalBookId,
+            int userId)
+        {
+            return await _repository.PublishAsync(
+                digitalBookId,
+                userId);
+        }
     }
 }
