@@ -237,51 +237,41 @@ namespace ahello_backend.Repositorys.Classes
 
             return await connection.QueryAsync<DigitalBook>(sql);
         }
-        public async Task<bool> ApproveAsync(
-    int digitalBookId,
-    int adminId)
-        {
-            var sql = @"
-        UPDATE digitalbook
-        SET
-            ApprovalStatus = 'Approved',
-            ApprovedBy = @AdminId,
-            ApprovedAt = NOW(),
-            RejectionReason = NULL,
-            ModifiedBy = @AdminId,
-            ModifiedAt = NOW()
-        WHERE DigitalBookId = @DigitalBookId
-          AND IsActive = 1
-          AND Status = 'Draft'
-          AND ApprovalStatus = 'Pending';
-    ";
-
-            using var connection = _db.GetConnection();
-
-            var rows = await connection.ExecuteAsync(
-                sql,
-                new
-                {
-                    DigitalBookId = digitalBookId,
-                    AdminId = adminId
-                });
-
-            return rows > 0;
-        }
-        public async Task<bool> RejectAsync(
+        public async Task<bool> UpdateApprovalStatusAsync(
     int digitalBookId,
     int adminId,
-    string reason)
+    DigitalBookApprovalStatus approvalStatus,
+    string? rejectionReason)
         {
             var sql = @"
         UPDATE digitalbook
         SET
-            ApprovalStatus = 'Rejected',
-            ApprovedBy = NULL,
-            ApprovedAt = NULL,
-            RejectionReason = @Reason,
+            ApprovalStatus = @ApprovalStatus,
+
+            ApprovedBy =
+                CASE
+                    WHEN @ApprovalStatus = 'Approved'
+                    THEN @AdminId
+                    ELSE NULL
+                END,
+
+            ApprovedAt =
+                CASE
+                    WHEN @ApprovalStatus = 'Approved'
+                    THEN NOW()
+                    ELSE NULL
+                END,
+
+            RejectionReason =
+                CASE
+                    WHEN @ApprovalStatus = 'Rejected'
+                    THEN @RejectionReason
+                    ELSE NULL
+                END,
+
             ModifiedBy = @AdminId,
             ModifiedAt = NOW()
+
         WHERE DigitalBookId = @DigitalBookId
           AND IsActive = 1
           AND Status = 'Draft'
@@ -296,7 +286,8 @@ namespace ahello_backend.Repositorys.Classes
                 {
                     DigitalBookId = digitalBookId,
                     AdminId = adminId,
-                    Reason = reason
+                    ApprovalStatus = approvalStatus.ToString(),
+                    RejectionReason = rejectionReason
                 });
 
             return rows > 0;

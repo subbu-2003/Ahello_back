@@ -16,10 +16,11 @@ namespace ahello_backend.Repositorys.Interfaces
 
         Task<IEnumerable<DigitalBook>> GetBySlugAsync(string slug);
         // ADMIN
-        Task<bool> ApproveAsync(int digitalBookId, int adminId);
-
-        Task<bool> RejectAsync(int digitalBookId,int adminId,string reason);
-
+        Task<bool> UpdateApprovalStatusAsync(
+        int digitalBookId,
+        int adminId,
+        DigitalBookApprovalStatus approvalStatus,
+        string? rejectionReason);
         Task<IEnumerable<DigitalBook>> GetPendingAsync();
 
         // USER
