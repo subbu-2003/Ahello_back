@@ -72,44 +72,7 @@ namespace ahello_backend.Repositorys.Classes
         }
 
         // CREATE
-        public async Task<int> CreateAsync(DigitalBook digitalBook)
-        {
-            var sql = @"
-                INSERT INTO digitalbook
-                (
-                    UserId,
-                    Title,
-                    Description,
-                    PreviewImage,
-                    PdfFile,
-                    Status,
-                    Price,
-                    IsActive,
-                    CreatedBy,
-                    CreatedAt
-                )
-                VALUES
-                (
-                    @UserId,
-                    @Title,
-                    @Description,
-                    @PreviewImage,
-                    @PdfFile,
-                    @Status,
-                    @Price,
-                    1,
-                    @CreatedBy,
-                    NOW()
-                );
-
-                SELECT LAST_INSERT_ID();";
-
-            using var connection = _db.GetConnection();
-
-            return await connection.ExecuteScalarAsync<int>(
-                sql,
-                digitalBook);
-        }
+        
 
         // UPDATE
         public async Task<bool> UpdateAsync(DigitalBook digitalBook)
@@ -122,7 +85,6 @@ namespace ahello_backend.Repositorys.Classes
                     Description = @Description,
                     PreviewImage = COALESCE(@PreviewImage, PreviewImage),
                     PdfFile = COALESCE(@PdfFile, PdfFile),
-                    Status = @Status,
                     Price = @Price,
                     ModifiedBy = @ModifiedBy,
                     ModifiedAt = NOW()
@@ -202,6 +164,171 @@ namespace ahello_backend.Repositorys.Classes
             return await connection.QueryAsync<DigitalBook>(
                 sql,
                 new { Slug = slug });
+        }
+        public async Task<int> CreateAsync(DigitalBook digitalBook)
+        {
+            var sql = @"
+        INSERT INTO digitalbook
+        (
+            UserId,
+            Title,
+            Description,
+            PreviewImage,
+            PdfFile,
+            Status,
+            ApprovalStatus,
+            Price,
+            IsActive,
+            CreatedBy,
+            CreatedAt
+        )
+        VALUES
+        (
+            @UserId,
+            @Title,
+            @Description,
+            @PreviewImage,
+            @PdfFile,
+            'Draft',
+            'Pending',
+            @Price,
+            1,
+            @CreatedBy,
+            NOW()
+        );
+
+        SELECT LAST_INSERT_ID();
+    ";
+
+            using var connection = _db.GetConnection();
+
+            return await connection.ExecuteScalarAsync<int>(
+                sql,
+                digitalBook);
+        }
+        public async Task<IEnumerable<DigitalBook>> GetPendingAsync()
+        {
+            var sql = @"
+        SELECT
+            db.DigitalBookId,
+            db.UserId,
+            db.Title,
+            db.Description,
+            db.PreviewImage,
+            db.PdfFile,
+            db.Status,
+            db.ApprovalStatus,
+            db.ApprovedBy,
+            db.ApprovedAt,
+            db.RejectionReason,
+            db.Price,
+            db.IsActive,
+            db.CreatedBy,
+            db.CreatedAt,
+            db.ModifiedBy,
+            db.ModifiedAt
+        FROM digitalbook db
+        WHERE db.IsActive = 1
+          AND db.ApprovalStatus = 'Pending'
+        ORDER BY db.DigitalBookId DESC;
+    ";
+
+            using var connection = _db.GetConnection();
+
+            return await connection.QueryAsync<DigitalBook>(sql);
+        }
+        public async Task<bool> ApproveAsync(
+    int digitalBookId,
+    int adminId)
+        {
+            var sql = @"
+        UPDATE digitalbook
+        SET
+            ApprovalStatus = 'Approved',
+            ApprovedBy = @AdminId,
+            ApprovedAt = NOW(),
+            RejectionReason = NULL,
+            ModifiedBy = @AdminId,
+            ModifiedAt = NOW()
+        WHERE DigitalBookId = @DigitalBookId
+          AND IsActive = 1
+          AND Status = 'Draft'
+          AND ApprovalStatus = 'Pending';
+    ";
+
+            using var connection = _db.GetConnection();
+
+            var rows = await connection.ExecuteAsync(
+                sql,
+                new
+                {
+                    DigitalBookId = digitalBookId,
+                    AdminId = adminId
+                });
+
+            return rows > 0;
+        }
+        public async Task<bool> RejectAsync(
+    int digitalBookId,
+    int adminId,
+    string reason)
+        {
+            var sql = @"
+        UPDATE digitalbook
+        SET
+            ApprovalStatus = 'Rejected',
+            ApprovedBy = NULL,
+            ApprovedAt = NULL,
+            RejectionReason = @Reason,
+            ModifiedBy = @AdminId,
+            ModifiedAt = NOW()
+        WHERE DigitalBookId = @DigitalBookId
+          AND IsActive = 1
+          AND Status = 'Draft'
+          AND ApprovalStatus = 'Pending';
+    ";
+
+            using var connection = _db.GetConnection();
+
+            var rows = await connection.ExecuteAsync(
+                sql,
+                new
+                {
+                    DigitalBookId = digitalBookId,
+                    AdminId = adminId,
+                    Reason = reason
+                });
+
+            return rows > 0;
+        }
+        public async Task<bool> PublishAsync(
+    int digitalBookId,
+    int userId)
+        {
+            var sql = @"
+        UPDATE digitalbook
+        SET
+            Status = 'Published',
+            ModifiedBy = @UserId,
+            ModifiedAt = NOW()
+        WHERE DigitalBookId = @DigitalBookId
+          AND UserId = @UserId
+          AND IsActive = 1
+          AND Status = 'Draft'
+          AND ApprovalStatus = 'Approved';
+    ";
+
+            using var connection = _db.GetConnection();
+
+            var rows = await connection.ExecuteAsync(
+                sql,
+                new
+                {
+                    DigitalBookId = digitalBookId,
+                    UserId = userId
+                });
+
+            return rows > 0;
         }
     }
 }
