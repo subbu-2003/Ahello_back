@@ -62,24 +62,17 @@ namespace ahello_backend.Services.Classes
             return await _repository.GetPendingAsync();
         }
 
-        public async Task<bool> ApproveAsync(
-            int digitalBookId,
-            int adminId)
+        public async Task<bool> UpdateApprovalStatusAsync(
+         int digitalBookId,
+         int adminId,
+         DigitalBookApprovalStatus approvalStatus,
+         string? rejectionReason)
         {
-            return await _repository.ApproveAsync(
-                digitalBookId,
-                adminId);
-        }
-
-        public async Task<bool> RejectAsync(
-            int digitalBookId,
-            int adminId,
-            string reason)
-        {
-            return await _repository.RejectAsync(
+            return await _repository.UpdateApprovalStatusAsync(
                 digitalBookId,
                 adminId,
-                reason);
+                approvalStatus,
+                rejectionReason);
         }
 
         public async Task<bool> PublishAsync(

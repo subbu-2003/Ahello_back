@@ -361,71 +361,55 @@ namespace ahello_backend.Controllers
                 });
             }
         }
-        [HttpPut("admin/approve/{digitalBookId}")]
-        public async Task<IActionResult> Approve(
+        [HttpPut("admin/approval/{digitalBookId}")]
+        public async Task<IActionResult> UpdateApprovalStatus(
     int digitalBookId,
-    int adminId)
+    [FromBody] DigitalBookApprovalRequest request)
         {
             try
             {
-                var result = await _service.ApproveAsync(
+                if (request.AdminId <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        message = "AdminId is required."
+                    });
+                }
+
+                if (request.ApprovalStatus == DigitalBookApprovalStatus.Rejected &&
+                    string.IsNullOrWhiteSpace(request.RejectionReason))
+                {
+                    return BadRequest(new
+                    {
+                        message = "Rejection reason is required when rejecting a digital book."
+                    });
+                }
+
+                var result = await _service.UpdateApprovalStatusAsync(
                     digitalBookId,
-                    adminId);
+                    request.AdminId,
+                    request.ApprovalStatus,
+                    request.RejectionReason);
 
                 if (!result)
                 {
                     return BadRequest(new
                     {
                         message =
-                            "Digital book cannot be approved. " +
+                            "Digital book approval status cannot be changed. " +
                             "It may already be approved, rejected, published, or inactive."
                     });
                 }
 
-                return Ok(new
+                if (request.ApprovalStatus == DigitalBookApprovalStatus.Approved)
                 {
-                    message = "Digital book approved successfully.",
-                    digitalBookId = digitalBookId,
-                    status = "Draft",
-                    approvalStatus = "Approved",
-                    approvedBy = adminId
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new
-                {
-                    message = ex.Message
-                });
-            }
-        }
-        [HttpPut("admin/reject/{digitalBookId}")]
-        public async Task<IActionResult> Reject(
-    int digitalBookId,
-    int adminId,
-    [FromBody] RejectDigitalBookRequest request)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(request.Reason))
-                {
-                    return BadRequest(new
+                    return Ok(new
                     {
-                        message = "Rejection reason is required."
-                    });
-                }
-
-                var result = await _service.RejectAsync(
-                    digitalBookId,
-                    adminId,
-                    request.Reason);
-
-                if (!result)
-                {
-                    return BadRequest(new
-                    {
-                        message =
-                            "Digital book cannot be rejected."
+                        message = "Digital book approved successfully.",
+                        digitalBookId = digitalBookId,
+                        status = "Draft",
+                        approvalStatus = "Approved",
+                        approvedBy = request.AdminId
                     });
                 }
 
@@ -433,7 +417,9 @@ namespace ahello_backend.Controllers
                 {
                     message = "Digital book rejected successfully.",
                     digitalBookId = digitalBookId,
-                    approvalStatus = "Rejected"
+                    status = "Draft",
+                    approvalStatus = "Rejected",
+                    rejectionReason = request.RejectionReason
                 });
             }
             catch (Exception ex)
@@ -446,8 +432,8 @@ namespace ahello_backend.Controllers
         }
         [HttpPut("publish/{digitalBookId}")]
         public async Task<IActionResult> Publish(
-    int digitalBookId,
-    int userId)
+        int digitalBookId,
+        int userId)
         {
             try
             {
