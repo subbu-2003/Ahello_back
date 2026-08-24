@@ -344,5 +344,142 @@ namespace ahello_backend.Controllers
             return $"/{folder}/{fileName}"
                 .Replace("\\", "/");
         }
+        [HttpGet("admin/pending")]
+        public async Task<IActionResult> GetPending()
+        {
+            try
+            {
+                var result = await _service.GetPendingAsync();
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    message = ex.Message
+                });
+            }
+        }
+        [HttpPut("admin/approve/{digitalBookId}")]
+        public async Task<IActionResult> Approve(
+    int digitalBookId,
+    int adminId)
+        {
+            try
+            {
+                var result = await _service.ApproveAsync(
+                    digitalBookId,
+                    adminId);
+
+                if (!result)
+                {
+                    return BadRequest(new
+                    {
+                        message =
+                            "Digital book cannot be approved. " +
+                            "It may already be approved, rejected, published, or inactive."
+                    });
+                }
+
+                return Ok(new
+                {
+                    message = "Digital book approved successfully.",
+                    digitalBookId = digitalBookId,
+                    status = "Draft",
+                    approvalStatus = "Approved",
+                    approvedBy = adminId
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    message = ex.Message
+                });
+            }
+        }
+        [HttpPut("admin/reject/{digitalBookId}")]
+        public async Task<IActionResult> Reject(
+    int digitalBookId,
+    int adminId,
+    [FromBody] RejectDigitalBookRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(request.Reason))
+                {
+                    return BadRequest(new
+                    {
+                        message = "Rejection reason is required."
+                    });
+                }
+
+                var result = await _service.RejectAsync(
+                    digitalBookId,
+                    adminId,
+                    request.Reason);
+
+                if (!result)
+                {
+                    return BadRequest(new
+                    {
+                        message =
+                            "Digital book cannot be rejected."
+                    });
+                }
+
+                return Ok(new
+                {
+                    message = "Digital book rejected successfully.",
+                    digitalBookId = digitalBookId,
+                    approvalStatus = "Rejected"
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    message = ex.Message
+                });
+            }
+        }
+        [HttpPut("publish/{digitalBookId}")]
+        public async Task<IActionResult> Publish(
+    int digitalBookId,
+    int userId)
+        {
+            try
+            {
+                var result = await _service.PublishAsync(
+                    digitalBookId,
+                    userId);
+
+                if (!result)
+                {
+                    return BadRequest(new
+                    {
+                        message = "Digital book is currently under admin review. It cannot be published until the admin approves it.",
+                        digitalBookId = digitalBookId,
+                        status = "Draft",
+                        approvalStatus = "Pending"
+                    });
+                }
+
+                return Ok(new
+                {
+                    message = "Digital book published successfully.",
+                    digitalBookId = digitalBookId,
+                    status = "Published"
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    message = ex.Message
+                });
+            }
+        }
     }
 }

@@ -17,5 +17,19 @@ namespace ahello_backend.Services.Interfaces
             int modifiedBy);
 
         Task<IEnumerable<DigitalBook>> GetBySlugAsync(string slug);
+        Task<IEnumerable<DigitalBook>> GetPendingAsync();
+
+        Task<bool> ApproveAsync(
+            int digitalBookId,
+            int adminId);
+
+        Task<bool> RejectAsync(
+            int digitalBookId,
+            int adminId,
+            string reason);
+
+        Task<bool> PublishAsync(
+            int digitalBookId,
+            int userId);
     }
 }
