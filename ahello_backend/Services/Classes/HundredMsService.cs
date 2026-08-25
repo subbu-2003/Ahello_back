@@ -213,5 +213,231 @@ namespace ahello_backend.Services.Classes
                 roomName
             );
         }
+        // =========================================================
+        // START RECORDING
+        // =========================================================
+
+        public async Task<(string RecordingId, string Status)>
+    StartRecordingAsync(
+        string roomId,
+        string roomName)
+        {
+            if (string.IsNullOrWhiteSpace(roomId))
+            {
+                throw new ArgumentException("RoomId is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(roomName))
+            {
+                throw new ArgumentException("RoomName is required.");
+            }
+
+            var managementToken = GenerateManagementToken();
+
+            // Your Ahllo meeting URL
+            var meetingUrl =
+                $"https://ahllo.com/meeting/join/{roomName}";
+
+            var request = new HttpRequestMessage(
+                HttpMethod.Post,
+                $"https://api.100ms.live/v2/recordings/room/{roomId}/start");
+
+            request.Headers.Authorization =
+                new AuthenticationHeaderValue(
+                    "Bearer",
+                    managementToken);
+
+            var body = JsonSerializer.Serialize(new
+            {
+                meeting_url = meetingUrl,
+
+                resolution = new
+                {
+                    width = 1280,
+                    height = 720
+                }
+            });
+
+            request.Content = new StringContent(
+                body,
+                Encoding.UTF8,
+                "application/json");
+
+            var response =
+                await _http.SendAsync(request);
+
+            var responseBody =
+                await response.Content.ReadAsStringAsync();
+
+            Console.WriteLine(
+                $"[100ms Recording Start] Status: {(int)response.StatusCode} {response.StatusCode}");
+
+            Console.WriteLine(
+                $"[100ms Recording Start] Response: {responseBody}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(
+                    $"100ms Recording Start failed. " +
+                    $"Status: {(int)response.StatusCode} {response.StatusCode}. " +
+                    $"Response: {responseBody}");
+            }
+
+            using var doc =
+                JsonDocument.Parse(responseBody);
+
+            var root = doc.RootElement;
+
+            var recordingId =
+                root.GetProperty("id").GetString();
+
+            var status =
+                root.TryGetProperty(
+                    "status",
+                    out var statusProperty)
+                        ? statusProperty.GetString()
+                        : "starting";
+
+            if (string.IsNullOrWhiteSpace(recordingId))
+            {
+                throw new Exception(
+                    "100ms did not return RecordingId.");
+            }
+
+            return (
+                recordingId,
+                status ?? "starting"
+            );
+        }
+        // =========================================================
+        // STOP RECORDING
+        // =========================================================
+
+        public async Task<bool> StopRecordingAsync(string recordingId)
+        {
+            if (string.IsNullOrWhiteSpace(recordingId))
+            {
+                throw new ArgumentException("RecordingId is required.");
+            }
+
+            var managementToken = GenerateManagementToken();
+
+            var request = new HttpRequestMessage(
+                HttpMethod.Post,
+                $"https://api.100ms.live/v2/recordings/{recordingId}/stop");
+
+            request.Headers.Authorization =
+                new AuthenticationHeaderValue(
+                    "Bearer",
+                    managementToken);
+
+            var response = await _http.SendAsync(request);
+
+            var responseBody = await response.Content.ReadAsStringAsync();
+
+            Console.WriteLine(
+                $"[100ms Recording Stop] Status: {(int)response.StatusCode} {response.StatusCode}");
+
+            Console.WriteLine(
+                $"[100ms Recording Stop] Response: {responseBody}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception(
+                    $"100ms Recording Stop failed. " +
+                    $"Status: {(int)response.StatusCode} {response.StatusCode}. " +
+                    $"Response: {responseBody}");
+            }
+
+            return true;
+        }
+        // =========================================================
+        // GET RECORDING
+        // =========================================================
+
+        public async Task<JsonDocument>
+            GetRecordingAsync(
+                string recordingId)
+        {
+            if (string.IsNullOrWhiteSpace(
+                    recordingId))
+            {
+                throw new ArgumentException(
+                    "RecordingId is required.");
+            }
+
+            var managementToken =
+                GenerateManagementToken();
+
+            var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"https://api.100ms.live/v2/recordings/{recordingId}");
+
+            request.Headers.Authorization =
+                new AuthenticationHeaderValue(
+                    "Bearer",
+                    managementToken);
+
+            var response =
+                await _http.SendAsync(request);
+
+            var responseBody =
+                await response.Content.ReadAsStringAsync();
+
+            Console.WriteLine(
+                $"[100ms Get Recording] {response.StatusCode}");
+
+            Console.WriteLine(
+                $"[100ms Get Recording] {responseBody}");
+
+            response.EnsureSuccessStatusCode();
+
+            return JsonDocument.Parse(
+                responseBody);
+        }
+        // =========================================================
+        // GET RECORDING ASSET
+        // =========================================================
+
+        public async Task<JsonDocument>
+            GetRecordingAssetAsync(
+                string assetId)
+        {
+            if (string.IsNullOrWhiteSpace(
+                    assetId))
+            {
+                throw new ArgumentException(
+                    "AssetId is required.");
+            }
+
+            var managementToken =
+                GenerateManagementToken();
+
+            var request = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"https://api.100ms.live/v2/recording-assets/{assetId}");
+
+            request.Headers.Authorization =
+                new AuthenticationHeaderValue(
+                    "Bearer",
+                    managementToken);
+
+            var response =
+                await _http.SendAsync(request);
+
+            var responseBody =
+                await response.Content.ReadAsStringAsync();
+
+            Console.WriteLine(
+                $"[100ms Get Asset] {response.StatusCode}");
+
+            Console.WriteLine(
+                $"[100ms Get Asset] {responseBody}");
+
+            response.EnsureSuccessStatusCode();
+
+            return JsonDocument.Parse(
+                responseBody);
+        }
     }
 }

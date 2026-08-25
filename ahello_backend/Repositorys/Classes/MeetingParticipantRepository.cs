@@ -321,5 +321,44 @@ namespace ahello_backend.Repositorys.Classes
                 Sessions = sessions
             };
         }
+        public async Task<int> GetActiveParticipantCountAsync(int meetingId)
+        {
+            using var connection = _db.GetConnection();
+
+            var sql = @"
+        SELECT COUNT(*)
+        FROM MeetingParticipant
+        WHERE MeetingId = @MeetingId
+          AND LeftAt IS NULL;
+    ";
+
+            return await connection.ExecuteScalarAsync<int>(
+                sql,
+                new { MeetingId = meetingId });
+        }
+
+        public async Task<MeetingParticipant?> GetByIdAsync(
+            int meetingParticipantId)
+        {
+            using var connection = _db.GetConnection();
+
+            var sql = @"
+        SELECT
+            MeetingParticipantId,
+            MeetingId,
+            UserId,
+            JoinedAt,
+            LeftAt,
+            DurationSeconds,
+            CreatedAt
+        FROM MeetingParticipant
+        WHERE MeetingParticipantId = @MeetingParticipantId
+        LIMIT 1;
+    ";
+
+            return await connection.QueryFirstOrDefaultAsync<MeetingParticipant>(
+                sql,
+                new { MeetingParticipantId = meetingParticipantId });
+        }
     }
 }
