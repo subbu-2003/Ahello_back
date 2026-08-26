@@ -220,23 +220,15 @@ namespace ahello_backend.Services.Classes
         public async Task<(string RecordingId, string Status)>
     StartRecordingAsync(
         string roomId,
-        string roomName)
+        string meetingUrl)
         {
             if (string.IsNullOrWhiteSpace(roomId))
-            {
                 throw new ArgumentException("RoomId is required.");
-            }
 
-            if (string.IsNullOrWhiteSpace(roomName))
-            {
-                throw new ArgumentException("RoomName is required.");
-            }
+            if (string.IsNullOrWhiteSpace(meetingUrl))
+                throw new ArgumentException("MeetingUrl is required.");
 
             var managementToken = GenerateManagementToken();
-
-            // Your Ahllo meeting URL
-            var meetingUrl =
-                $"https://ahllo.com/meeting/join/{roomName}";
 
             var request = new HttpRequestMessage(
                 HttpMethod.Post,
@@ -263,11 +255,9 @@ namespace ahello_backend.Services.Classes
                 Encoding.UTF8,
                 "application/json");
 
-            var response =
-                await _http.SendAsync(request);
+            var response = await _http.SendAsync(request);
 
-            var responseBody =
-                await response.Content.ReadAsStringAsync();
+            var responseBody = await response.Content.ReadAsStringAsync();
 
             Console.WriteLine(
                 $"[100ms Recording Start] Status: {(int)response.StatusCode} {response.StatusCode}");
@@ -283,8 +273,7 @@ namespace ahello_backend.Services.Classes
                     $"Response: {responseBody}");
             }
 
-            using var doc =
-                JsonDocument.Parse(responseBody);
+            using var doc = JsonDocument.Parse(responseBody);
 
             var root = doc.RootElement;
 
@@ -292,17 +281,12 @@ namespace ahello_backend.Services.Classes
                 root.GetProperty("id").GetString();
 
             var status =
-                root.TryGetProperty(
-                    "status",
-                    out var statusProperty)
-                        ? statusProperty.GetString()
-                        : "starting";
+                root.TryGetProperty("status", out var statusProperty)
+                    ? statusProperty.GetString()
+                    : "starting";
 
             if (string.IsNullOrWhiteSpace(recordingId))
-            {
-                throw new Exception(
-                    "100ms did not return RecordingId.");
-            }
+                throw new Exception("100ms did not return RecordingId.");
 
             return (
                 recordingId,
