@@ -9,13 +9,16 @@ namespace ahello_backend.Services.Classes
     {
         private readonly IMeetingRecordingRepository _repository;
         private readonly HundredMsService _hundredMsService;
+        private readonly IMeetingRepository _meetingRepository;
 
         public MeetingRecordingService(
-            IMeetingRecordingRepository repository,
-            HundredMsService hundredMsService)
+    IMeetingRecordingRepository repository,
+    HundredMsService hundredMsService,
+    IMeetingRepository meetingRepository)
         {
             _repository = repository;
             _hundredMsService = hundredMsService;
+            _meetingRepository = meetingRepository;
         }
 
 
@@ -26,16 +29,25 @@ namespace ahello_backend.Services.Classes
         public async Task<int> StartAsync(
             MeetingRecording model)
         {
-            if (model.MeetingId <= 0)
+            var meeting =
+    await _meetingRepository.GetByIdAsync(model.MeetingId);
+
+            if (meeting == null)
             {
-                throw new ArgumentException(
-                    "Invalid MeetingId.");
+                throw new InvalidOperationException(
+                    "Meeting not found.");
             }
 
-            if (string.IsNullOrWhiteSpace(model.RoomId))
+            if (string.IsNullOrWhiteSpace(meeting.RoomId))
             {
-                throw new ArgumentException(
-                    "RoomId is required.");
+                throw new InvalidOperationException(
+                    "Meeting RoomId is missing.");
+            }
+
+            if (string.IsNullOrWhiteSpace(meeting.MeetingLink))
+            {
+                throw new InvalidOperationException(
+                    "MeetingLink is missing.");
             }
 
 
@@ -58,10 +70,9 @@ namespace ahello_backend.Services.Classes
             // -----------------------------------------------------
 
             var hmsResult =
-    await _hundredMsService
-        .StartRecordingAsync(
-            model.RoomId,
-            model.RoomName);
+    await _hundredMsService.StartRecordingAsync(
+        meeting.RoomId,
+        meeting.MeetingLink);
 
 
             // -----------------------------------------------------
