@@ -352,6 +352,23 @@ namespace ahello_backend.Controllers
                 }
 
                 // -------------------------------------------------
+                // RECORDING ASSET ID
+                // -------------------------------------------------
+
+                string? recordingAssetId = null;
+
+                if (data.TryGetProperty(
+                        "asset_id",
+                        out var assetIdProperty) &&
+                    assetIdProperty.ValueKind == JsonValueKind.String)
+                {
+                    recordingAssetId = assetIdProperty.GetString();
+                }
+
+                Console.WriteLine(
+                    $"[100ms Webhook] Recording Asset ID: {recordingAssetId}");
+
+                // -------------------------------------------------
                 // RECORDING PATH
                 // -------------------------------------------------
 
@@ -546,7 +563,7 @@ namespace ahello_backend.Controllers
                 var result =
                     await _service.ProcessWebhookAsync(
                         hmsRecordingId,
-                        null,
+                        recordingAssetId,
                         recordingUrl,
                         fileName,
                         endedAt,

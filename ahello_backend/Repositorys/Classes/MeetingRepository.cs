@@ -74,6 +74,7 @@ namespace ahello_backend.Repositorys.Classes
                     m.StartTime,
                     m.EndTime,
                     m.MeetingLink,
+                    m.RoomId,
                     m.Status,
                     m.ReminderSent,
                     m.LastReminderSent,
