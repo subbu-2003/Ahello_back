@@ -45,6 +45,7 @@
         public int? MaxParticipants { get; set; }
 
         public decimal RegistrationFee { get; set; }
+        public string? VideoUrl { get; set; }
 
         public string? ModifiedBy { get; set; }
     }

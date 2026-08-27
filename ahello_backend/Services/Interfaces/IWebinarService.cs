@@ -16,28 +16,6 @@ namespace ahello_backend.Services.Interfaces
 
         Task<bool> DeleteAsync(int webinarId);
 
-        Task<bool> ApproveWebinarAsync(
-            int webinarId,
-            int adminId);
-
-        Task<bool> RejectWebinarAsync(
-            int webinarId,
-            int adminId,
-            string reason);
-
-        Task<bool> UploadVideoAsync(
-            int webinarId,
-            string videoUrl);
-
-        Task<bool> ApproveVideoAsync(
-            int webinarId,
-            int adminId);
-
-        Task<bool> RejectVideoAsync(
-            int webinarId,
-            int adminId,
-            string reason);
-
         Task<bool> PublishAsync(int webinarId);
 
         Task<int> RegisterAsync(

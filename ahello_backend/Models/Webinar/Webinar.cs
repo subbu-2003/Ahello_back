@@ -23,19 +23,19 @@
 
         public string Status { get; set; } = "Draft";
 
-        public string ApprovalStatus { get; set; } = "Pending";
+        //public string ApprovalStatus { get; set; } = "Pending";
 
-        public int? ApprovedBy { get; set; }
-        public DateTime? ApprovedAt { get; set; }
-        public string? RejectionReason { get; set; }
+        //public int? ApprovedBy { get; set; }
+        //public DateTime? ApprovedAt { get; set; }
+        //public string? RejectionReason { get; set; }
 
         public string? VideoUrl { get; set; }
 
-        public string VideoApprovalStatus { get; set; } = "NotRequired";
+        //public string VideoApprovalStatus { get; set; } = "NotRequired";
 
-        public int? VideoApprovedBy { get; set; }
-        public DateTime? VideoApprovedAt { get; set; }
-        public string? VideoRejectionReason { get; set; }
+        //public int? VideoApprovedBy { get; set; }
+        //public DateTime? VideoApprovedAt { get; set; }
+        //public string? VideoRejectionReason { get; set; }
 
         public DateTime CreatedAt { get; set; }
         public string? CreatedBy { get; set; }
