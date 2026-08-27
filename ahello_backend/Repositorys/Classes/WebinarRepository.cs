@@ -19,69 +19,47 @@ namespace ahello_backend.Repositorys.Classes
             using var connection = _context.GetConnection();
 
             const string sql = @"
-                INSERT INTO webinars
-                (
-                    UserId,
-                    Title,
-                    Description,
-                    WebinarType,
-                    ScheduleDate,
-                    StartTime,
-                    EndTime,
-                    DurationMinutes,
-                    MaxParticipants,
-                    RegistrationFee,
-                    Status,
-                    ApprovalStatus,
-                    VideoUrl,
-                    VideoApprovalStatus,
-                    CreatedAt,
-                    CreatedBy
-                )
-                VALUES
-                (
-                    @UserId,
-                    @Title,
-                    @Description,
-                    @WebinarType,
-                    @ScheduleDate,
-                    @StartTime,
-                    @EndTime,
-                    @DurationMinutes,
-                    @MaxParticipants,
-                    @RegistrationFee,
-                    'Draft',
-                    'Pending',
-                    @VideoUrl,
-                    @VideoApprovalStatus,
-                    NOW(),
-                    @CreatedBy
-                );
+        INSERT INTO webinars
+        (
+            UserId,
+            Title,
+            Description,
+            WebinarType,
+            ScheduleDate,
+            StartTime,
+            EndTime,
+            DurationMinutes,
+            MaxParticipants,
+            RegistrationFee,
+            Status,
+            VideoUrl,
+            CreatedAt,
+            CreatedBy
+        )
+        VALUES
+        (
+            @UserId,
+            @Title,
+            @Description,
+            @WebinarType,
+            @ScheduleDate,
+            @StartTime,
+            @EndTime,
+            @DurationMinutes,
+            @MaxParticipants,
+            @RegistrationFee,
+            'Draft',
+            @VideoUrl,
+            NOW(),
+            @CreatedBy
+        );
 
-                SELECT LAST_INSERT_ID();
-            ";
+        SELECT LAST_INSERT_ID();
+    ";
 
             return await connection.ExecuteScalarAsync<int>(
                 sql,
-                new
-                {
-                    webinar.UserId,
-                    webinar.Title,
-                    webinar.Description,
-                    webinar.WebinarType,
-                    webinar.ScheduleDate,
-                    webinar.StartTime,
-                    webinar.EndTime,
-                    webinar.DurationMinutes,
-                    webinar.MaxParticipants,
-                    webinar.RegistrationFee,
-                    webinar.VideoUrl,
-                    VideoApprovalStatus =
-                        webinar.WebinarType == "Recorded"
-                            ? "Pending"
-                            : "NotRequired",
-                    webinar.CreatedBy
-                });
+                webinar);
         }
 
 
@@ -132,9 +110,11 @@ namespace ahello_backend.Repositorys.Classes
                     DurationMinutes = @DurationMinutes,
                     MaxParticipants = @MaxParticipants,
                     RegistrationFee = @RegistrationFee,
+                    VideoUrl = @VideoUrl,
                     ModifiedAt = NOW(),
                     ModifiedBy = @ModifiedBy
-                WHERE WebinarId = @WebinarId;
+                    WHERE WebinarId = @WebinarId
+                     AND Status = 'Draft';
             ";
 
             var affected = await connection.ExecuteAsync(
@@ -150,6 +130,7 @@ namespace ahello_backend.Repositorys.Classes
                     request.DurationMinutes,
                     request.MaxParticipants,
                     request.RegistrationFee,
+                    request.VideoUrl,
                     request.ModifiedBy
                 });
 
@@ -177,163 +158,163 @@ namespace ahello_backend.Repositorys.Classes
         }
 
 
-        public async Task<bool> ApproveWebinarAsync(
-            int webinarId,
-            int adminId)
-        {
-            using var connection = _context.GetConnection();
+        //public async Task<bool> ApproveWebinarAsync(
+        //    int webinarId,
+        //    int adminId)
+        //{
+        //    using var connection = _context.GetConnection();
 
-            const string sql = @"
-                UPDATE webinars
-                SET
-                    ApprovalStatus = 'Approved',
-                    Status = 'Approved',
-                    ApprovedBy = @AdminId,
-                    ApprovedAt = NOW(),
-                    RejectionReason = NULL,
-                    ModifiedAt = NOW(),
-                    ModifiedBy = @AdminId
-                WHERE WebinarId = @WebinarId;
-            ";
+        //    const string sql = @"
+        //        UPDATE webinars
+        //        SET
+        //            ApprovalStatus = 'Approved',
+        //            Status = 'Approved',
+        //            ApprovedBy = @AdminId,
+        //            ApprovedAt = NOW(),
+        //            RejectionReason = NULL,
+        //            ModifiedAt = NOW(),
+        //            ModifiedBy = @AdminId
+        //        WHERE WebinarId = @WebinarId;
+        //    ";
 
-            var affected = await connection.ExecuteAsync(
-                sql,
-                new
-                {
-                    WebinarId = webinarId,
-                    AdminId = adminId
-                });
+        //    var affected = await connection.ExecuteAsync(
+        //        sql,
+        //        new
+        //        {
+        //            WebinarId = webinarId,
+        //            AdminId = adminId
+        //        });
 
-            return affected > 0;
-        }
-
-
-        public async Task<bool> RejectWebinarAsync(
-            int webinarId,
-            int adminId,
-            string reason)
-        {
-            using var connection = _context.GetConnection();
-
-            const string sql = @"
-                UPDATE webinars
-                SET
-                    ApprovalStatus = 'Rejected',
-                    Status = 'Rejected',
-                    ApprovedBy = NULL,
-                    ApprovedAt = NULL,
-                    RejectionReason = @Reason,
-                    ModifiedAt = NOW(),
-                    ModifiedBy = @AdminId
-                WHERE WebinarId = @WebinarId;
-            ";
-
-            var affected = await connection.ExecuteAsync(
-                sql,
-                new
-                {
-                    WebinarId = webinarId,
-                    AdminId = adminId,
-                    Reason = reason
-                });
-
-            return affected > 0;
-        }
+        //    return affected > 0;
+        //}
 
 
-        public async Task<bool> UploadVideoAsync(
-            int webinarId,
-            string videoUrl)
-        {
-            using var connection = _context.GetConnection();
+        //public async Task<bool> RejectWebinarAsync(
+        //    int webinarId,
+        //    int adminId,
+        //    string reason)
+        //{
+        //    using var connection = _context.GetConnection();
 
-            const string sql = @"
-                UPDATE webinars
-                SET
-                    VideoUrl = @VideoUrl,
-                    VideoApprovalStatus = 'Pending',
-                    ModifiedAt = NOW()
-                WHERE
-                    WebinarId = @WebinarId
-                    AND WebinarType = 'Recorded';
-            ";
+        //    const string sql = @"
+        //        UPDATE webinars
+        //        SET
+        //            ApprovalStatus = 'Rejected',
+        //            Status = 'Rejected',
+        //            ApprovedBy = NULL,
+        //            ApprovedAt = NULL,
+        //            RejectionReason = @Reason,
+        //            ModifiedAt = NOW(),
+        //            ModifiedBy = @AdminId
+        //        WHERE WebinarId = @WebinarId;
+        //    ";
 
-            var affected = await connection.ExecuteAsync(
-                sql,
-                new
-                {
-                    WebinarId = webinarId,
-                    VideoUrl = videoUrl
-                });
+        //    var affected = await connection.ExecuteAsync(
+        //        sql,
+        //        new
+        //        {
+        //            WebinarId = webinarId,
+        //            AdminId = adminId,
+        //            Reason = reason
+        //        });
 
-            return affected > 0;
-        }
-
-
-        public async Task<bool> ApproveVideoAsync(
-            int webinarId,
-            int adminId)
-        {
-            using var connection = _context.GetConnection();
-
-            const string sql = @"
-                UPDATE webinars
-                SET
-                    VideoApprovalStatus = 'Approved',
-                    VideoApprovedBy = @AdminId,
-                    VideoApprovedAt = NOW(),
-                    VideoRejectionReason = NULL,
-                    ModifiedAt = NOW(),
-                    ModifiedBy = @AdminId
-                WHERE
-                    WebinarId = @WebinarId
-                    AND WebinarType = 'Recorded'
-                    AND VideoUrl IS NOT NULL;
-            ";
-
-            var affected = await connection.ExecuteAsync(
-                sql,
-                new
-                {
-                    WebinarId = webinarId,
-                    AdminId = adminId
-                });
-
-            return affected > 0;
-        }
+        //    return affected > 0;
+        //}
 
 
-        public async Task<bool> RejectVideoAsync(
-            int webinarId,
-            int adminId,
-            string reason)
-        {
-            using var connection = _context.GetConnection();
+        //public async Task<bool> UploadVideoAsync(
+        //    int webinarId,
+        //    string videoUrl)
+        //{
+        //    using var connection = _context.GetConnection();
 
-            const string sql = @"
-                UPDATE webinars
-                SET
-                    VideoApprovalStatus = 'Rejected',
-                    VideoApprovedBy = NULL,
-                    VideoApprovedAt = NULL,
-                    VideoRejectionReason = @Reason,
-                    ModifiedAt = NOW(),
-                    ModifiedBy = @AdminId
-                WHERE WebinarId = @WebinarId
-                  AND WebinarType = 'Recorded';
-            ";
+        //    const string sql = @"
+        //        UPDATE webinars
+        //        SET
+        //            VideoUrl = @VideoUrl,
+        //            VideoApprovalStatus = 'Pending',
+        //            ModifiedAt = NOW()
+        //        WHERE
+        //            WebinarId = @WebinarId
+        //            AND WebinarType = 'Recorded';
+        //    ";
 
-            var affected = await connection.ExecuteAsync(
-                sql,
-                new
-                {
-                    WebinarId = webinarId,
-                    AdminId = adminId,
-                    Reason = reason
-                });
+        //    var affected = await connection.ExecuteAsync(
+        //        sql,
+        //        new
+        //        {
+        //            WebinarId = webinarId,
+        //            VideoUrl = videoUrl
+        //        });
 
-            return affected > 0;
-        }
+        //    return affected > 0;
+        //}
+
+
+        //public async Task<bool> ApproveVideoAsync(
+        //    int webinarId,
+        //    int adminId)
+        //{
+        //    using var connection = _context.GetConnection();
+
+        //    const string sql = @"
+        //        UPDATE webinars
+        //        SET
+        //            VideoApprovalStatus = 'Approved',
+        //            VideoApprovedBy = @AdminId,
+        //            VideoApprovedAt = NOW(),
+        //            VideoRejectionReason = NULL,
+        //            ModifiedAt = NOW(),
+        //            ModifiedBy = @AdminId
+        //        WHERE
+        //            WebinarId = @WebinarId
+        //            AND WebinarType = 'Recorded'
+        //            AND VideoUrl IS NOT NULL;
+        //    ";
+
+        //    var affected = await connection.ExecuteAsync(
+        //        sql,
+        //        new
+        //        {
+        //            WebinarId = webinarId,
+        //            AdminId = adminId
+        //        });
+
+        //    return affected > 0;
+        //}
+
+
+        //public async Task<bool> RejectVideoAsync(
+        //    int webinarId,
+        //    int adminId,
+        //    string reason)
+        //{
+        //    using var connection = _context.GetConnection();
+
+        //    const string sql = @"
+        //        UPDATE webinars
+        //        SET
+        //            VideoApprovalStatus = 'Rejected',
+        //            VideoApprovedBy = NULL,
+        //            VideoApprovedAt = NULL,
+        //            VideoRejectionReason = @Reason,
+        //            ModifiedAt = NOW(),
+        //            ModifiedBy = @AdminId
+        //        WHERE WebinarId = @WebinarId
+        //          AND WebinarType = 'Recorded';
+        //    ";
+
+        //    var affected = await connection.ExecuteAsync(
+        //        sql,
+        //        new
+        //        {
+        //            WebinarId = webinarId,
+        //            AdminId = adminId,
+        //            Reason = reason
+        //        });
+
+        //    return affected > 0;
+        //}
 
 
         public async Task<bool> PublishAsync(int webinarId)

@@ -139,157 +139,157 @@ namespace ahello_backend.Controllers
 
 
         // ADMIN APPROVE WEBINAR
-        [HttpPut("{webinarId}/approve")]
-        public async Task<IActionResult> ApproveWebinar(
-            int webinarId,
-            [FromQuery] int adminId)
-        {
-            try
-            {
-                var result =
-                    await _service.ApproveWebinarAsync(
-                        webinarId,
-                        adminId);
+        //[HttpPut("{webinarId}/approve")]
+        //public async Task<IActionResult> ApproveWebinar(
+        //    int webinarId,
+        //    [FromQuery] int adminId)
+        //{
+        //    try
+        //    {
+        //        var result =
+        //            await _service.ApproveWebinarAsync(
+        //                webinarId,
+        //                adminId);
 
-                return Ok(new
-                {
-                    success = result,
-                    message = "Webinar approved successfully."
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new
-                {
-                    success = false,
-                    message = ex.Message
-                });
-            }
-        }
+        //        return Ok(new
+        //        {
+        //            success = result,
+        //            message = "Webinar approved successfully."
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequest(new
+        //        {
+        //            success = false,
+        //            message = ex.Message
+        //        });
+        //    }
+        //}
 
 
         // ADMIN REJECT WEBINAR
-        [HttpPut("{webinarId}/reject")]
-        public async Task<IActionResult> RejectWebinar(
-            int webinarId,
-            [FromQuery] int adminId,
-            [FromBody] string reason)
-        {
-            try
-            {
-                var result =
-                    await _service.RejectWebinarAsync(
-                        webinarId,
-                        adminId,
-                        reason);
+        //[HttpPut("{webinarId}/reject")]
+        //public async Task<IActionResult> RejectWebinar(
+        //    int webinarId,
+        //    [FromQuery] int adminId,
+        //    [FromBody] string reason)
+        //{
+        //    try
+        //    {
+        //        var result =
+        //            await _service.RejectWebinarAsync(
+        //                webinarId,
+        //                adminId,
+        //                reason);
 
-                return Ok(new
-                {
-                    success = result,
-                    message = "Webinar rejected successfully."
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new
-                {
-                    success = false,
-                    message = ex.Message
-                });
-            }
-        }
+        //        return Ok(new
+        //        {
+        //            success = result,
+        //            message = "Webinar rejected successfully."
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequest(new
+        //        {
+        //            success = false,
+        //            message = ex.Message
+        //        });
+        //    }
+        //}
 
 
         // UPLOAD RECORDED VIDEO
-        [HttpPut("{webinarId}/video")]
-        public async Task<IActionResult> UploadVideo(
-            int webinarId,
-            [FromBody] string videoUrl)
-        {
-            try
-            {
-                var result =
-                    await _service.UploadVideoAsync(
-                        webinarId,
-                        videoUrl);
+        //[HttpPut("{webinarId}/video")]
+        //public async Task<IActionResult> UploadVideo(
+        //    int webinarId,
+        //    [FromBody] string videoUrl)
+        //{
+        //    try
+        //    {
+        //        var result =
+        //            await _service.UploadVideoAsync(
+        //                webinarId,
+        //                videoUrl);
 
-                return Ok(new
-                {
-                    success = result,
-                    message = "Video uploaded successfully and sent for approval."
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new
-                {
-                    success = false,
-                    message = ex.Message
-                });
-            }
-        }
+        //        return Ok(new
+        //        {
+        //            success = result,
+        //            message = "Video uploaded successfully and sent for approval."
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequest(new
+        //        {
+        //            success = false,
+        //            message = ex.Message
+        //        });
+        //    }
+        //}
 
 
         // ADMIN APPROVE VIDEO
-        [HttpPut("{webinarId}/video/approve")]
-        public async Task<IActionResult> ApproveVideo(
-            int webinarId,
-            [FromQuery] int adminId)
-        {
-            try
-            {
-                var result =
-                    await _service.ApproveVideoAsync(
-                        webinarId,
-                        adminId);
+        //[HttpPut("{webinarId}/video/approve")]
+        //public async Task<IActionResult> ApproveVideo(
+        //    int webinarId,
+        //    [FromQuery] int adminId)
+        //{
+        //    try
+        //    {
+        //        var result =
+        //            await _service.ApproveVideoAsync(
+        //                webinarId,
+        //                adminId);
 
-                return Ok(new
-                {
-                    success = result,
-                    message = "Video approved successfully."
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new
-                {
-                    success = false,
-                    message = ex.Message
-                });
-            }
-        }
+        //        return Ok(new
+        //        {
+        //            success = result,
+        //            message = "Video approved successfully."
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequest(new
+        //        {
+        //            success = false,
+        //            message = ex.Message
+        //        });
+        //    }
+        //}
 
 
         // ADMIN REJECT VIDEO
-        [HttpPut("{webinarId}/video/reject")]
-        public async Task<IActionResult> RejectVideo(
-            int webinarId,
-            [FromQuery] int adminId,
-            [FromBody] string reason)
-        {
-            try
-            {
-                var result =
-                    await _service.RejectVideoAsync(
-                        webinarId,
-                        adminId,
-                        reason);
+        //[HttpPut("{webinarId}/video/reject")]
+        //public async Task<IActionResult> RejectVideo(
+        //    int webinarId,
+        //    [FromQuery] int adminId,
+        //    [FromBody] string reason)
+        //{
+        //    try
+        //    {
+        //        var result =
+        //            await _service.RejectVideoAsync(
+        //                webinarId,
+        //                adminId,
+        //                reason);
 
-                return Ok(new
-                {
-                    success = result,
-                    message = "Video rejected successfully."
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new
-                {
-                    success = false,
-                    message = ex.Message
-                });
-            }
-        }
+        //        return Ok(new
+        //        {
+        //            success = result,
+        //            message = "Video rejected successfully."
+        //        });
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequest(new
+        //        {
+        //            success = false,
+        //            message = ex.Message
+        //        });
+        //    }
+        //}
 
 
         // PUBLISH

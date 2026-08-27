@@ -16,10 +16,11 @@ namespace ahello_backend.Services.Classes
 
 
         public async Task<int> CreateAsync(
-            CreateWebinarRequest request)
+    CreateWebinarRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.Title))
-                throw new ArgumentException("Webinar title is required.");
+                throw new ArgumentException(
+                    "Webinar title is required.");
 
             if (request.WebinarType != "Live" &&
                 request.WebinarType != "Recorded")
@@ -28,12 +29,29 @@ namespace ahello_backend.Services.Classes
                     "WebinarType must be Live or Recorded.");
             }
 
+            if (request.StartTime >= request.EndTime)
+                throw new ArgumentException(
+                    "Start time must be before end time.");
+
+            // Recorded webinar requires video
             if (request.WebinarType == "Recorded" &&
                 string.IsNullOrWhiteSpace(request.VideoUrl))
             {
                 throw new ArgumentException(
                     "Video is required for Recorded webinar.");
             }
+
+            // Live webinar should not have video
+            if (request.WebinarType == "Live" &&
+                !string.IsNullOrWhiteSpace(request.VideoUrl))
+            {
+                throw new ArgumentException(
+                    "VideoUrl should be empty for Live webinar.");
+            }
+
+            if (request.RegistrationFee < 0)
+                throw new ArgumentException(
+                    "Registration fee cannot be negative.");
 
             var webinar = new Webinar
             {
@@ -48,6 +66,7 @@ namespace ahello_backend.Services.Classes
                 MaxParticipants = request.MaxParticipants,
                 RegistrationFee = request.RegistrationFee,
                 VideoUrl = request.VideoUrl,
+                Status = "Draft",
                 CreatedBy = request.CreatedBy
             };
 
@@ -85,103 +104,103 @@ namespace ahello_backend.Services.Classes
         }
 
 
-        public async Task<bool> ApproveWebinarAsync(
-            int webinarId,
-            int adminId)
-        {
-            var webinar =
-                await _repository.GetByIdAsync(webinarId);
+        //public async Task<bool> ApproveWebinarAsync(
+        //    int webinarId,
+        //    int adminId)
+        //{
+        //    var webinar =
+        //        await _repository.GetByIdAsync(webinarId);
 
-            if (webinar == null)
-                throw new KeyNotFoundException(
-                    "Webinar not found.");
+        //    if (webinar == null)
+        //        throw new KeyNotFoundException(
+        //            "Webinar not found.");
 
-            return await _repository.ApproveWebinarAsync(
-                webinarId,
-                adminId);
-        }
-
-
-        public async Task<bool> RejectWebinarAsync(
-            int webinarId,
-            int adminId,
-            string reason)
-        {
-            if (string.IsNullOrWhiteSpace(reason))
-                throw new ArgumentException(
-                    "Rejection reason is required.");
-
-            return await _repository.RejectWebinarAsync(
-                webinarId,
-                adminId,
-                reason);
-        }
+        //    return await _repository.ApproveWebinarAsync(
+        //        webinarId,
+        //        adminId);
+        //}
 
 
-        public async Task<bool> UploadVideoAsync(
-            int webinarId,
-            string videoUrl)
-        {
-            var webinar =
-                await _repository.GetByIdAsync(webinarId);
+        //public async Task<bool> RejectWebinarAsync(
+        //    int webinarId,
+        //    int adminId,
+        //    string reason)
+        //{
+        //    if (string.IsNullOrWhiteSpace(reason))
+        //        throw new ArgumentException(
+        //            "Rejection reason is required.");
 
-            if (webinar == null)
-                throw new KeyNotFoundException(
-                    "Webinar not found.");
-
-            if (webinar.WebinarType != "Recorded")
-                throw new ArgumentException(
-                    "Video can only be uploaded for Recorded webinar.");
-
-            return await _repository.UploadVideoAsync(
-                webinarId,
-                videoUrl);
-        }
+        //    return await _repository.RejectWebinarAsync(
+        //        webinarId,
+        //        adminId,
+        //        reason);
+        //}
 
 
-        public async Task<bool> ApproveVideoAsync(
-            int webinarId,
-            int adminId)
-        {
-            var webinar =
-                await _repository.GetByIdAsync(webinarId);
+        //public async Task<bool> UploadVideoAsync(
+        //    int webinarId,
+        //    string videoUrl)
+        //{
+        //    var webinar =
+        //        await _repository.GetByIdAsync(webinarId);
 
-            if (webinar == null)
-                throw new KeyNotFoundException(
-                    "Webinar not found.");
+        //    if (webinar == null)
+        //        throw new KeyNotFoundException(
+        //            "Webinar not found.");
 
-            if (webinar.WebinarType != "Recorded")
-                throw new ArgumentException(
-                    "Video approval is only applicable for Recorded webinar.");
+        //    if (webinar.WebinarType != "Recorded")
+        //        throw new ArgumentException(
+        //            "Video can only be uploaded for Recorded webinar.");
 
-            if (string.IsNullOrWhiteSpace(webinar.VideoUrl))
-                throw new ArgumentException(
-                    "No video uploaded.");
-
-            return await _repository.ApproveVideoAsync(
-                webinarId,
-                adminId);
-        }
+        //    return await _repository.UploadVideoAsync(
+        //        webinarId,
+        //        videoUrl);
+        //}
 
 
-        public async Task<bool> RejectVideoAsync(
-            int webinarId,
-            int adminId,
-            string reason)
-        {
-            if (string.IsNullOrWhiteSpace(reason))
-                throw new ArgumentException(
-                    "Video rejection reason is required.");
+        //public async Task<bool> ApproveVideoAsync(
+        //    int webinarId,
+        //    int adminId)
+        //{
+        //    var webinar =
+        //        await _repository.GetByIdAsync(webinarId);
 
-            return await _repository.RejectVideoAsync(
-                webinarId,
-                adminId,
-                reason);
-        }
+        //    if (webinar == null)
+        //        throw new KeyNotFoundException(
+        //            "Webinar not found.");
+
+        //    if (webinar.WebinarType != "Recorded")
+        //        throw new ArgumentException(
+        //            "Video approval is only applicable for Recorded webinar.");
+
+        //    if (string.IsNullOrWhiteSpace(webinar.VideoUrl))
+        //        throw new ArgumentException(
+        //            "No video uploaded.");
+
+        //    return await _repository.ApproveVideoAsync(
+        //        webinarId,
+        //        adminId);
+        //}
+
+
+        //public async Task<bool> RejectVideoAsync(
+        //    int webinarId,
+        //    int adminId,
+        //    string reason)
+        //{
+        //    if (string.IsNullOrWhiteSpace(reason))
+        //        throw new ArgumentException(
+        //            "Video rejection reason is required.");
+
+        //    return await _repository.RejectVideoAsync(
+        //        webinarId,
+        //        adminId,
+        //        reason);
+        //}
 
 
         public async Task<bool> PublishAsync(
-            int webinarId)
+      int webinarId)
         {
             var webinar =
                 await _repository.GetByIdAsync(webinarId);
@@ -190,15 +209,15 @@ namespace ahello_backend.Services.Classes
                 throw new KeyNotFoundException(
                     "Webinar not found.");
 
-            if (webinar.ApprovalStatus != "Approved")
+            if (webinar.Status != "Draft")
                 throw new InvalidOperationException(
-                    "Webinar must be approved before publishing.");
+                    "Only Draft webinar can be published.");
 
             if (webinar.WebinarType == "Recorded" &&
-                webinar.VideoApprovalStatus != "Approved")
+                string.IsNullOrWhiteSpace(webinar.VideoUrl))
             {
                 throw new InvalidOperationException(
-                    "Recorded webinar video must be approved before publishing.");
+                    "Recorded webinar must have a video before publishing.");
             }
 
             return await _repository.PublishAsync(
