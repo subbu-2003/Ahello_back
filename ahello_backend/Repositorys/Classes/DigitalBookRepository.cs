@@ -206,6 +206,117 @@ namespace ahello_backend.Repositorys.Classes
                 sql,
                 digitalBook);
         }
+        public async Task<DigitalBookAdminResponse> GetAdminDigitalBooksAsync(
+     string? search,
+     string? approvalStatus,
+     int pageNumber,
+     int pageSize)
+        {
+            pageNumber = pageNumber < 1 ? 1 : pageNumber;
+
+            pageSize = pageSize < 1 ? 10 : pageSize;
+
+            if (pageSize > 100)
+                pageSize = 100;
+
+            var offset = (pageNumber - 1) * pageSize;
+
+            using var connection = _db.GetConnection();
+
+            var whereConditions = new List<string>
+    {
+        "db.IsActive = 1"
+    };
+
+            var parameters = new DynamicParameters();
+
+            // SEARCH FILTER
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                whereConditions.Add(@"
+            (
+                db.Title LIKE @Search
+                OR db.Description LIKE @Search
+            )");
+
+                parameters.Add(
+                    "Search",
+                    $"%{search.Trim()}%");
+            }
+
+            // APPROVAL STATUS FILTER
+            if (!string.IsNullOrWhiteSpace(approvalStatus))
+            {
+                whereConditions.Add(
+                    "db.ApprovalStatus = @ApprovalStatus");
+
+                parameters.Add(
+                    "ApprovalStatus",
+                    approvalStatus.Trim());
+            }
+
+            var whereClause =
+                string.Join(" AND ", whereConditions);
+
+            // TOTAL COUNT
+            var countSql = $@"
+        SELECT COUNT(*)
+        FROM digitalbook db
+        WHERE {whereClause};
+    ";
+
+            var totalRecords =
+                await connection.ExecuteScalarAsync<int>(
+                    countSql,
+                    parameters);
+
+            // DATA
+            var dataSql = $@"
+        SELECT
+            db.DigitalBookId,
+            db.UserId,
+            db.Title,
+            db.Description,
+            db.PreviewImage,
+            db.PdfFile,
+            db.Status,
+            db.ApprovalStatus,
+            db.ApprovedBy,
+            db.ApprovedAt,
+            db.RejectionReason,
+            db.Price,
+            db.IsActive,
+            db.CreatedBy,
+            db.CreatedAt,
+            db.ModifiedBy,
+            db.ModifiedAt
+        FROM digitalbook db
+        WHERE {whereClause}
+        ORDER BY db.DigitalBookId DESC
+        LIMIT @PageSize OFFSET @Offset;
+    ";
+
+            parameters.Add("PageSize", pageSize);
+            parameters.Add("Offset", offset);
+
+            var data =
+                await connection.QueryAsync<DigitalBook>(
+                    dataSql,
+                    parameters);
+
+            var totalPages =
+                (int)Math.Ceiling(
+                    totalRecords / (double)pageSize);
+
+            return new DigitalBookAdminResponse
+            {
+                Data = data,
+                TotalRecords = totalRecords,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalPages = totalPages
+            };
+        }
         public async Task<IEnumerable<DigitalBook>> GetPendingAsync()
         {
             var sql = @"
