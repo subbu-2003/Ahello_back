@@ -344,6 +344,86 @@ namespace ahello_backend.Controllers
             return $"/{folder}/{fileName}"
                 .Replace("\\", "/");
         }
+        // GET: api/DigitalBook/admin/all
+        // GET: api/DigitalBook/admin/all
+        [HttpGet("admin/all")]
+        public async Task<IActionResult> GetAdminDigitalBooks(
+            [FromQuery] string? search,
+            [FromQuery] string? approvalStatus,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                if (pageNumber < 1)
+                {
+                    return BadRequest(new
+                    {
+                        message = "PageNumber must be greater than 0."
+                    });
+                }
+
+                if (pageSize < 1 || pageSize > 100)
+                {
+                    return BadRequest(new
+                    {
+                        message = "PageSize must be between 1 and 100."
+                    });
+                }
+
+                // APPROVAL STATUS VALIDATION
+                if (!string.IsNullOrWhiteSpace(approvalStatus))
+                {
+                    approvalStatus = approvalStatus.Trim();
+
+                    var allowedStatuses = new[]
+                    {
+                "Pending",
+                "Approved",
+                "Rejected"
+            };
+
+                    if (!allowedStatuses.Any(
+                            x => x.Equals(
+                                approvalStatus,
+                                StringComparison.OrdinalIgnoreCase)))
+                    {
+                        return BadRequest(new
+                        {
+                            message =
+                                "ApprovalStatus must be Pending, Approved, or Rejected."
+                        });
+                    }
+
+                    // Normalize value
+                    approvalStatus =
+                        allowedStatuses.First(
+                            x => x.Equals(
+                                approvalStatus,
+                                StringComparison.OrdinalIgnoreCase));
+                }
+                else
+                {
+                    approvalStatus = null;
+                }
+
+                var result =
+                    await _service.GetAdminDigitalBooksAsync(
+                        search,
+                        approvalStatus,
+                        pageNumber,
+                        pageSize);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    message = ex.Message
+                });
+            }
+        }
         [HttpGet("admin/pending")]
         public async Task<IActionResult> GetPending()
         {
@@ -361,6 +441,7 @@ namespace ahello_backend.Controllers
                 });
             }
         }
+
         [HttpPut("admin/approval/{digitalBookId}")]
         public async Task<IActionResult> UpdateApprovalStatus(
     int digitalBookId,

@@ -15,6 +15,11 @@ namespace ahello_backend.Repositorys.Interfaces
         Task<bool> DeactivateAsync(int digitalBookId, int modifiedBy);
 
         Task<IEnumerable<DigitalBook>> GetBySlugAsync(string slug);
+        Task<DigitalBookAdminResponse> GetAdminDigitalBooksAsync(
+         string? search,
+         string? approvalStatus,
+         int pageNumber,
+         int pageSize);
         // ADMIN
         Task<bool> UpdateApprovalStatusAsync(
         int digitalBookId,
