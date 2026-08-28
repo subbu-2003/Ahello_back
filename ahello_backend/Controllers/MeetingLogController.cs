@@ -181,5 +181,68 @@ namespace ahello_backend.Controllers
                 });
             }
         }
+        [HttpGet("all")]
+        public async Task<IActionResult> GetAll()
+        {
+            try
+            {
+                var result =
+                    await _service.GetAllAsync();
+
+                return Ok(new
+                {
+                    success = true,
+                    participants = result
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("all/recordings")]
+        public async Task<IActionResult> GetAllWithRecording()
+        {
+            try
+            {
+                var result =
+                    await _service.GetAllWithRecordingAsync();
+
+                return Ok(new
+                {
+                    success = true,
+                    participants = result
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
     }
 }

@@ -26,5 +26,7 @@ namespace ahello_backend.Repositorys.Interfaces
         Task<int> GetActiveParticipantCountAsync(int meetingId);
 
         Task<MeetingParticipant?> GetByIdAsync(int meetingParticipantId);
+        Task<IEnumerable<MeetingParticipantLog>> GetAllAsync();
+        Task<IEnumerable<MeetingParticipantWithRecordingLog>> GetAllWithRecordingAsync();
     }
 }

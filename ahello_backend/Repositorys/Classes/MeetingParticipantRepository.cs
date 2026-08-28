@@ -360,5 +360,135 @@ namespace ahello_backend.Repositorys.Classes
                 sql,
                 new { MeetingParticipantId = meetingParticipantId });
         }
+        // =========================================================
+        // GET ALL PARTICIPANT LOGS
+        // =========================================================
+
+        public async Task<IEnumerable<MeetingParticipantLog>>
+            GetAllAsync()
+        {
+            using var connection = _db.GetConnection();
+
+            var sql = @"
+                SELECT
+                    mp.MeetingParticipantId,
+                    mp.MeetingId,
+                    mp.UserId,
+
+                    u.FullName AS UserName,
+                    CASE
+                        WHEN mp.UserId = m.UserId THEN 'Host'
+                        ELSE 'Client'
+                    END AS ParticipantType,
+
+                    mp.JoinedAt,
+                    mp.LeftAt,
+                    mp.DurationSeconds,
+                    CASE
+                        WHEN mp.DurationSeconds IS NULL THEN NULL
+
+                        WHEN mp.DurationSeconds >= 3600 THEN
+                            CONCAT(
+                                FLOOR(mp.DurationSeconds / 3600), ' hr ',
+                                FLOOR((mp.DurationSeconds % 3600) / 60), ' min ',
+                                mp.DurationSeconds % 60, ' sec'
+                            )
+
+                        WHEN mp.DurationSeconds >= 60 THEN
+                            CONCAT(
+                                FLOOR(mp.DurationSeconds / 60), ' min ',
+                                mp.DurationSeconds % 60, ' sec'
+                            )
+
+                        ELSE
+                            CONCAT(mp.DurationSeconds, ' sec')
+                    END AS Duration,
+                    mp.CreatedAt
+
+                FROM MeetingParticipant mp
+
+                INNER JOIN meetings m
+                    ON mp.MeetingId = m.MeetingId
+
+                INNER JOIN users u
+                    ON mp.UserId = u.UserId
+
+                ORDER BY mp.MeetingId DESC, mp.JoinedAt ASC;
+            ";
+
+            return await connection.QueryAsync<MeetingParticipantLog>(sql);
+        }
+
+
+        // =========================================================
+        // GET ALL PARTICIPANT LOGS WITH RECORDING VIDEO
+        // =========================================================
+
+        public async Task<IEnumerable<MeetingParticipantWithRecordingLog>>
+            GetAllWithRecordingAsync()
+        {
+            using var connection = _db.GetConnection();
+
+            var sql = @"
+                SELECT
+                    mp.MeetingParticipantId,
+                    mp.MeetingId,
+                    mp.UserId,
+
+                    u.FullName AS UserName,
+                    CASE
+                        WHEN mp.UserId = m.UserId THEN 'Host'
+                        ELSE 'Client'
+                    END AS ParticipantType,
+
+                    mp.JoinedAt,
+                    mp.LeftAt,
+                    mp.DurationSeconds,
+                    CASE
+                        WHEN mp.DurationSeconds IS NULL THEN NULL
+
+                        WHEN mp.DurationSeconds >= 3600 THEN
+                            CONCAT(
+                                FLOOR(mp.DurationSeconds / 3600), ' hr ',
+                                FLOOR((mp.DurationSeconds % 3600) / 60), ' min ',
+                                mp.DurationSeconds % 60, ' sec'
+                            )
+
+                        WHEN mp.DurationSeconds >= 60 THEN
+                            CONCAT(
+                                FLOOR(mp.DurationSeconds / 60), ' min ',
+                                mp.DurationSeconds % 60, ' sec'
+                            )
+
+                        ELSE
+                            CONCAT(mp.DurationSeconds, ' sec')
+                    END AS Duration,
+                    mp.CreatedAt,
+
+                    mr.RecordingId,
+                    mr.RecordingUrl,
+                    mr.FileName,
+                    mr.Status AS RecordingStatus,
+                    mr.StartedAt AS RecordingStartedAt,
+                    mr.EndedAt AS RecordingEndedAt,
+                    mr.DurationSeconds AS RecordingDurationSeconds
+
+                FROM MeetingParticipant mp
+
+                INNER JOIN meetings m
+                    ON mp.MeetingId = m.MeetingId
+
+                INNER JOIN users u
+                    ON mp.UserId = u.UserId
+
+                LEFT JOIN MeetingRecording mr
+                    ON mr.MeetingId = mp.MeetingId
+                   AND mr.IsDeleted = 0
+
+                ORDER BY mp.MeetingId DESC, mp.JoinedAt ASC;
+            ";
+
+            return await connection.QueryAsync<MeetingParticipantWithRecordingLog>(sql);
+        }
     }
 }

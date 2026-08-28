@@ -18,5 +18,7 @@ namespace ahello_backend.Services.Interfaces
             GetParticipantHistoryAsync(
                 int meetingId,
                 int userId);
+        Task<IEnumerable<MeetingWithParticipantsResponse>> GetAllAsync();
+        Task<IEnumerable<MeetingWithParticipantsResponse>> GetAllWithRecordingAsync();
     }
 }
