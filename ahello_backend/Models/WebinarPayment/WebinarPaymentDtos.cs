@@ -3,6 +3,7 @@
     public class CreateWebinarOrderDto
     {
         public int UserId { get; set; }
+        public int ClientId { get; set; }
         public int WebinarId { get; set; }
         public int WebinarRegistrationId { get; set; }
         public string? CreatedBy { get; set; }
