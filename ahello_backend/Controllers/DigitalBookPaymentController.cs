@@ -68,13 +68,20 @@ namespace ahello_backend.Controllers
         [HttpPost("create-order")]
         public async Task<IActionResult> CreateOrder([FromBody] DigitalBookCreateOrderDto dto)
         {
-            if (dto.UserId <= 0 || dto.ServiceId <= 0 || dto.SlotId <= 0)
-                return Error("Valid booking details are required");
+            if (dto.UserId <= 0 || dto.ClientId <= 0 || dto.DigitalBookingId <= 0)
+                return Error("Valid UserId, ClientId and DigitalBookingId are required");
 
-            var servicePrice = await _digitalBookPaymentRepo.GetServicePriceAsync(dto.ServiceId);
-            if (servicePrice == null || servicePrice <= 0)
-                return Error("Invalid service");
-            var serviceName = await _digitalBookPaymentRepo.GetServiceNameAsync(dto.ServiceId);
+            var bookingInfo = await _digitalBookPaymentRepo.GetBookingPaymentInfoAsync(dto.DigitalBookingId);
+            if (bookingInfo == null)
+                return Error("Digital booking not found", 404);
+
+            decimal servicePrice = bookingInfo.Price;
+            int serviceId = bookingInfo.ServiceId;
+
+            if (servicePrice <= 0)
+                return Error("Invalid service price");
+
+            var serviceName = await _digitalBookPaymentRepo.GetServiceNameAsync(serviceId);
 
             var platformSetting = await _platformSettingsRepo.GetActiveSettingAsync();
             if (platformSetting == null)
@@ -86,7 +93,7 @@ namespace ahello_backend.Controllers
                 if (!platformSetting.FeePercentage.HasValue)
                     return Error("Platform fee percentage is not configured.", 500);
 
-                platformFee = Math.Round(servicePrice.Value * platformSetting.FeePercentage.Value / 100m, 2);
+                platformFee = Math.Round(servicePrice * platformSetting.FeePercentage.Value / 100m, 2);
             }
             else if (platformSetting.FeeType.Equals("amount", StringComparison.OrdinalIgnoreCase))
             {
@@ -100,17 +107,13 @@ namespace ahello_backend.Controllers
                 return Error("Invalid platform fee configuration.", 500);
             }
 
-            if (platformFee > servicePrice.Value)
+            if (platformFee > servicePrice)
                 return Error("Platform fee cannot be greater than the service price.", 400);
 
-            var taxAmount = Math.Round(
-                platformFee * platformSetting.GstRate / 100m,
-                2
-            );
+            var taxAmount = Math.Round(platformFee * platformSetting.GstRate / 100m, 2);
+            var grandTotal = servicePrice + taxAmount;
 
-            var grandTotal = servicePrice.Value + taxAmount;
-
-            string receipt = $"slot_{dto.SlotId}_{DateTime.UtcNow:yyyyMMddHHmmss}";
+            string receipt = $"digitalbook_{dto.DigitalBookingId}_{DateTime.UtcNow:yyyyMMddHHmmss}";
 
             try
             {
@@ -118,15 +121,15 @@ namespace ahello_backend.Controllers
                     grandTotal, "INR", receipt, serviceName ?? "");
 
                 await _logRepo.InsertAsync(
-                    null, null, "CREATE_ORDER", "SUCCESS",
+                    null, dto.DigitalBookingId, "CREATE_ORDER", "SUCCESS",
                     requestJson: System.Text.Json.JsonSerializer.Serialize(dto),
                     responseJson: orderResult.responseJson,
-                    createdBy: dto.CreatedBy);
+                    createdBy: dto.CreatedBy.ToString());
 
                 return Success("Order created successfully", new
                 {
                     orderId = orderResult.orderId,
-                    servicePrice = servicePrice.Value,
+                    servicePrice,
                     platformFee,
                     taxAmount,
                     taxLabel = "GST",
@@ -138,9 +141,10 @@ namespace ahello_backend.Controllers
             catch (Exception ex)
             {
                 await _logRepo.InsertAsync(
-                    null, null, "CREATE_ORDER", "ERROR",
+                    null, dto.DigitalBookingId, "CREATE_ORDER", "ERROR",
                     requestJson: System.Text.Json.JsonSerializer.Serialize(dto),
-                    errorMessage: ex.Message);
+                    errorMessage: ex.Message,
+                    createdBy: dto.CreatedBy.ToString());
 
                 return Error("Failed to create Razorpay order", 500, new { razorpayError = ex.Message });
             }
@@ -149,10 +153,8 @@ namespace ahello_backend.Controllers
         [HttpPost("verify-payment")]
         public async Task<IActionResult> VerifyPayment([FromBody] DigitalBookVerifyAndHoldDto dto)
         {
-            var bp = dto.BookingPayload;
-
-            if (bp.UserId <= 0 || bp.ServiceId <= 0 || bp.SlotId <= 0)
-                return Error("Valid booking details are required");
+            if (dto.UserId <= 0 || dto.ClientId <= 0 || dto.DigitalBookingId <= 0)
+                return Error("Valid UserId, ClientId and DigitalBookingId are required");
 
             if (string.IsNullOrWhiteSpace(dto.RazorpayOrderId))
                 return Error("RazorpayOrderId is required");
@@ -169,53 +171,42 @@ namespace ahello_backend.Controllers
             if (!isValid)
             {
                 await _logRepo.InsertAsync(
-                    null, null, "VERIFY_PAYMENT", "FAILED",
+                    null, dto.DigitalBookingId, "VERIFY_PAYMENT", "FAILED",
                     requestJson: System.Text.Json.JsonSerializer.Serialize(dto),
                     errorMessage: "Invalid Razorpay payment signature",
-                    createdBy: bp.CreatedBy);
+                    createdBy: dto.CreatedBy.ToString());
 
                 return Error("Invalid Razorpay payment signature", 400);
             }
 
             try
             {
-                var servicePrice = await _digitalBookPaymentRepo.GetServicePriceAsync(bp.ServiceId);
-                if (servicePrice == null || servicePrice <= 0)
+                var bookingInfo = await _digitalBookPaymentRepo.GetBookingPaymentInfoAsync(dto.DigitalBookingId);
+                if (bookingInfo == null)
                 {
                     await _logRepo.InsertAsync(
-                        null, null, "VERIFY_PAYMENT", "ERROR",
+                        null, dto.DigitalBookingId, "VERIFY_PAYMENT", "ERROR",
                         requestJson: System.Text.Json.JsonSerializer.Serialize(dto),
-                        errorMessage: $"Invalid ServiceId {bp.ServiceId} at verify time",
-                        createdBy: bp.CreatedBy);
+                        errorMessage: $"Digital booking {dto.DigitalBookingId} not found at verify time",
+                        createdBy: dto.CreatedBy.ToString());
 
-                    return Error("Invalid service", 400);
+                    return Error("Invalid digital booking", 400);
                 }
 
-                // 1. Insert digital booking NOW — payment confirmed
-                // TODO: replace with your digital-booking repo/model if separate from BookingRepository
-                var digitalBookingId = await _bookingRepo.CreateAsync(new BookingPost
-                {
-                    UserId = bp.UserId,
-                    ClientId = bp.ClientId,
-                    ServiceId = bp.ServiceId,
-                    SlotId = bp.SlotId,
-                    ScheduleDate = bp.ScheduleDate,
-                    StartTime = bp.StartTime,
-                    EndTime = bp.EndTime,
-                    Status = bp.Status,
-                    CreatedBy = bp.CreatedBy
-                });
+                decimal servicePrice = bookingInfo.Price;
+                if (servicePrice <= 0)
+                    return Error("Invalid service price", 400);
 
-                var expertAccount = await _expertPayoutRepo.GetByUserIdAsync(bp.UserId);
+                var expertAccount = await _expertPayoutRepo.GetByUserIdAsync(dto.UserId);
 
                 if (expertAccount == null || expertAccount.AccountStatus != "ACTIVE" ||
                     string.IsNullOrWhiteSpace(expertAccount.RazorpayAccountId))
                 {
                     await _logRepo.InsertAsync(
-                        null, digitalBookingId, "VERIFY_PAYMENT", "ERROR",
+                        null, dto.DigitalBookingId, "VERIFY_PAYMENT", "ERROR",
                         requestJson: System.Text.Json.JsonSerializer.Serialize(dto),
-                        errorMessage: $"Expert {bp.UserId} payout account not ACTIVE (status: {expertAccount?.AccountStatus ?? "NOT_CREATED"}). Payment captured, escrow blocked pending manual reconciliation.",
-                        createdBy: bp.CreatedBy);
+                        errorMessage: $"Expert {dto.UserId} payout account not ACTIVE (status: {expertAccount?.AccountStatus ?? "NOT_CREATED"}). Payment captured, escrow blocked pending manual reconciliation.",
+                        createdBy: dto.CreatedBy.ToString());
 
                     return Error(
                         $"Payment captured but expert's payout account isn't active yet. Contact support with PaymentId {dto.RazorpayPaymentId}.",
@@ -228,63 +219,41 @@ namespace ahello_backend.Controllers
                 if (platformSetting == null)
                 {
                     await _logRepo.InsertAsync(
-                        null,
-                        digitalBookingId,
-                        "VERIFY_PAYMENT",
-                        "ERROR",
+                        null, dto.DigitalBookingId, "VERIFY_PAYMENT", "ERROR",
                         requestJson: System.Text.Json.JsonSerializer.Serialize(dto),
                         errorMessage: "No active platform fee setting found.",
-                        createdBy: bp.CreatedBy);
+                        createdBy: dto.CreatedBy.ToString());
 
-                    return Error(
-                        "Platform fee configuration is not available. Contact support.",
-                        500);
+                    return Error("Platform fee configuration is not available. Contact support.", 500);
                 }
 
                 decimal platformFee;
 
-                if (platformSetting.FeeType.Equals(
-                        "percentage",
-                        StringComparison.OrdinalIgnoreCase))
+                if (platformSetting.FeeType.Equals("percentage", StringComparison.OrdinalIgnoreCase))
                 {
                     if (!platformSetting.FeePercentage.HasValue)
                         return Error("Platform fee percentage is not configured.", 500);
 
-                    platformFee = Math.Round(
-                        servicePrice.Value * platformSetting.FeePercentage.Value / 100m,
-                        2);
+                    platformFee = Math.Round(servicePrice * platformSetting.FeePercentage.Value / 100m, 2);
                 }
-                else if (platformSetting.FeeType.Equals(
-                             "amount",
-                             StringComparison.OrdinalIgnoreCase))
+                else if (platformSetting.FeeType.Equals("amount", StringComparison.OrdinalIgnoreCase))
                 {
                     if (!platformSetting.FeeAmount.HasValue)
                         return Error("Platform fee amount is not configured.", 500);
 
-                    platformFee = Math.Round(
-                        platformSetting.FeeAmount.Value,
-                        2);
+                    platformFee = Math.Round(platformSetting.FeeAmount.Value, 2);
                 }
                 else
                 {
                     return Error("Invalid platform fee configuration.", 500);
                 }
 
-                if (platformFee > servicePrice.Value)
-                {
-                    return Error(
-                        "Platform fee cannot be greater than the service price.",
-                        400);
-                }
+                if (platformFee > servicePrice)
+                    return Error("Platform fee cannot be greater than the service price.", 400);
 
-                var taxAmount = Math.Round(
-                    platformFee * platformSetting.GstRate / 100m,
-                    2
-                );
-
-                var grandTotal = servicePrice.Value + taxAmount;
-
-                decimal expertAmount = servicePrice.Value - platformFee;
+                var taxAmount = Math.Round(platformFee * platformSetting.GstRate / 100m, 2);
+                var grandTotal = servicePrice + taxAmount;
+                decimal expertAmount = servicePrice - platformFee;
 
                 string transferId;
                 string transferJson;
@@ -298,10 +267,10 @@ namespace ahello_backend.Controllers
                 catch (Exception ex)
                 {
                     await _logRepo.InsertAsync(
-                        null, digitalBookingId, "CREATE_HELD_TRANSFER", "ERROR",
-                        requestJson: System.Text.Json.JsonSerializer.Serialize(new { digitalBookingId, dto.RazorpayPaymentId, expertAccount.RazorpayAccountId, expertAmount }),
+                        null, dto.DigitalBookingId, "CREATE_HELD_TRANSFER", "ERROR",
+                        requestJson: System.Text.Json.JsonSerializer.Serialize(new { dto.DigitalBookingId, dto.RazorpayPaymentId, expertAccount.RazorpayAccountId, expertAmount }),
                         errorMessage: ex.Message,
-                        createdBy: bp.CreatedBy);
+                        createdBy: dto.CreatedBy.ToString());
 
                     return Error(
                         $"Payment verified but transfer to expert failed. Contact support with PaymentId {dto.RazorpayPaymentId}.",
@@ -313,19 +282,18 @@ namespace ahello_backend.Controllers
 
                 var verifyJson = System.Text.Json.JsonSerializer.Serialize(new
                 {
-                    digitalBookingId,
+                    dto.DigitalBookingId,
                     dto.RazorpayOrderId,
                     dto.RazorpayPaymentId,
                     dto.RazorpaySignature,
                     VerifiedAt = now
                 });
 
-                // 2. Insert digital book payment row referencing the new digitalBookingId
                 var payment = new DigitalBookPayment
                 {
-                    DigitalBookingId = digitalBookingId,
-                    UserId = bp.UserId,
-                    ClientId = bp.ClientId,
+                    DigitalBookingId = dto.DigitalBookingId,
+                    UserId = dto.UserId,
+                    ClientId = dto.ClientId,
                     RazorpayAccountId = expertAccount.RazorpayAccountId,
                     RazorpayOrderId = dto.RazorpayOrderId,
                     RazorpayPaymentId = dto.RazorpayPaymentId,
@@ -342,7 +310,7 @@ namespace ahello_backend.Controllers
                     TransferResponseJson = transferJson,
                     PaidAt = now,
                     HeldAt = now,
-                    CreatedBy = bp.CreatedBy
+                    CreatedBy = dto.CreatedBy.ToString()
                 };
 
                 int digitalBookPaymentId = await _digitalBookPaymentRepo.InsertAsync(payment);
@@ -350,10 +318,9 @@ namespace ahello_backend.Controllers
 
                 try
                 {
-                    var bookingRead = await _bookingRepo.GetByIdAsync(digitalBookingId);
-                    //await _invoiceService.CreateInvoiceFromVerifiedPaymentAsync(payment, bookingRead, bp.CreatedBy);
-                    var invoicePdf = await _invoiceService.DownloadInvoicePdfAsync(digitalBookingId);
-                    var invoice = await _invoiceService.GetInvoiceByBookingIdAsync(digitalBookingId);
+                    var bookingRead = await _bookingRepo.GetByIdAsync(dto.DigitalBookingId);
+                    var invoicePdf = await _invoiceService.DownloadInvoicePdfAsync(dto.DigitalBookingId);
+                    var invoice = await _invoiceService.GetInvoiceByBookingIdAsync(dto.DigitalBookingId);
 
                     await _emailRepository.SendBookingConfirmationEmailAsync(
                         bookingRead.ClientEmail,
@@ -366,24 +333,25 @@ namespace ahello_backend.Controllers
                 catch (Exception ex)
                 {
                     await _logRepo.InsertAsync(
-                        digitalBookPaymentId, digitalBookingId, "CREATE_INVOICE", "ERROR",
-                        errorMessage: ex.Message, createdBy: bp.CreatedBy);
+                        digitalBookPaymentId, dto.DigitalBookingId, "CREATE_INVOICE", "ERROR",
+                        errorMessage: ex.Message, createdBy: dto.CreatedBy.ToString());
                 }
+
                 await _logRepo.InsertAsync(
-                    digitalBookPaymentId, digitalBookingId, "VERIFY_PAYMENT", "SUCCESS",
+                    digitalBookPaymentId, dto.DigitalBookingId, "VERIFY_PAYMENT", "SUCCESS",
                     requestJson: System.Text.Json.JsonSerializer.Serialize(dto),
                     responseJson: verifyJson,
-                    createdBy: bp.CreatedBy);
+                    createdBy: dto.CreatedBy.ToString());
 
                 await _logRepo.InsertAsync(
-                    digitalBookPaymentId, digitalBookingId, "CREATE_HELD_TRANSFER", "SUCCESS",
+                    digitalBookPaymentId, dto.DigitalBookingId, "CREATE_HELD_TRANSFER", "SUCCESS",
                     responseJson: transferJson,
-                    createdBy: bp.CreatedBy);
+                    createdBy: dto.CreatedBy.ToString());
 
-                return Success("Payment verified, booking created, transfer held", new
+                return Success("Payment verified, transfer held", new
                 {
                     digitalBookPaymentId,
-                    digitalBookingId,
+                    digitalBookingId = dto.DigitalBookingId,
                     orderId = dto.RazorpayOrderId,
                     paymentId = dto.RazorpayPaymentId,
                     transferId,
@@ -393,18 +361,17 @@ namespace ahello_backend.Controllers
             catch (Exception ex)
             {
                 await _logRepo.InsertAsync(
-                    null, null, "VERIFY_PAYMENT", "ERROR",
+                    null, dto.DigitalBookingId, "VERIFY_PAYMENT", "ERROR",
                     requestJson: System.Text.Json.JsonSerializer.Serialize(dto),
                     errorMessage: ex.Message,
-                    createdBy: bp.CreatedBy);
+                    createdBy: dto.CreatedBy.ToString());
 
                 return Error(
-                    $"Payment captured but booking/escrow creation failed. Contact support with PaymentId {dto.RazorpayPaymentId}.",
+                    $"Payment captured but escrow creation failed. Contact support with PaymentId {dto.RazorpayPaymentId}.",
                     500,
                     new { razorpayError = ex.Message });
             }
         }
-
         // POST /api/DigitalBookPayment/release
         [HttpPost("release")]
         public async Task<IActionResult> Release([FromBody] DigitalBookReleaseDto dto)

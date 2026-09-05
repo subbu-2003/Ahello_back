@@ -50,7 +50,7 @@ namespace ahello_backend.Controllers
         [HttpPost("create-order")]
         public async Task<IActionResult> CreateOrder([FromBody] CreateWebinarOrderDto dto)
         {
-            if (dto.UserId <= 0 || dto.WebinarId <= 0 || dto.WebinarRegistrationId <= 0)
+            if (dto.UserId <= 0 || dto.ClientId <= 0 || dto.WebinarId <= 0 || dto.WebinarRegistrationId <= 0)
                 return Error("Valid webinar registration details are required");
 
             var webinarPrice = await _webinarPaymentRepo.GetWebinarPriceAsync(dto.WebinarId);
@@ -123,7 +123,6 @@ namespace ahello_backend.Controllers
                 return Error("Failed to create Razorpay order", 500, new { razorpayError = ex.Message });
             }
         }
-
         [HttpPost("verify-payment")]
         public async Task<IActionResult> VerifyPayment([FromBody] VerifyWebinarPaymentDto dto)
         {
