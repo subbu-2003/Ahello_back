@@ -19,7 +19,7 @@ namespace ahello_backend.Repositorys.Classes
             var query = @"
 INSERT INTO DigitalBookPayments
 (
-    DigitalBookingId,
+    DigitalBookId,
     UserId,
     ClientId,
     RazorpayAccountId,
@@ -44,7 +44,7 @@ INSERT INTO DigitalBookPayments
 )
 VALUES
 (
-    @DigitalBookingId,
+    @DigitalBookId,
     @UserId,
     @ClientId,
     @RazorpayAccountId,
@@ -75,56 +75,38 @@ SELECT LAST_INSERT_ID();";
             return await connection.ExecuteScalarAsync<int>(query, payment);
         }
 
-        public async Task<DigitalBookPayment?> GetByDigitalBookingIdAsync(int digitalBookingId)
+        public async Task<DigitalBookPayment?> GetByDigitalBookIdAsync(int DigitalBookId)
         {
             var query = @"
                 SELECT *
                 FROM DigitalBookPayments
-                WHERE DigitalBookingId = @DigitalBookingId
+                WHERE DigitalBookId = @DigitalBookId
                 LIMIT 1";
 
             using var connection = _db.GetConnection();
 
             return await connection.QuerySingleOrDefaultAsync<DigitalBookPayment>(
                 query,
-                new { DigitalBookingId = digitalBookingId });
+                new { DigitalBookId = DigitalBookId });
         }
 
-        public async Task<dynamic?> GetBookingPaymentInfoAsync(int digitalBookingId)
+        public async Task<dynamic?> GetDigitalBookPaymentInfoAsync(int digitalBookId)
         {
             var query = @"
         SELECT
-            b.DigitalBookingId,
+            b.DigitalBookId,
             b.UserId,
-            b.ClientId,
-            b.ServiceId,
-            s.Price
-        FROM digitalbookings b
-        INNER JOIN services s
-            ON s.ServiceId = b.ServiceId
-        WHERE b.DigitalBookingId = @DigitalBookingId
+            b.Title,
+            b.Price
+        FROM digitalbook b
+        WHERE b.DigitalBookId = @DigitalBookId
         LIMIT 1";
 
             using var connection = _db.GetConnection();
 
             return await connection.QuerySingleOrDefaultAsync<dynamic>(
                 query,
-                new { DigitalBookingId = digitalBookingId });
-        }
-
-        public async Task<string?> GetServiceNameAsync(int serviceId)
-        {
-            var query = @"
-        SELECT ServiceTitle
-        FROM services
-        WHERE ServiceId = @ServiceId
-        LIMIT 1";
-
-            using var connection = _db.GetConnection();
-
-            return await connection.QuerySingleOrDefaultAsync<string?>(
-                query,
-                new { ServiceId = serviceId });
+                new { DigitalBookId = digitalBookId });
         }
 
         public async Task UpdateAfterPaymentAsync(
@@ -254,21 +236,6 @@ SELECT LAST_INSERT_ID();";
             });
         }
 
-        public async Task<decimal?> GetServicePriceAsync(int serviceId)
-        {
-            var query = @"
-        SELECT Price
-        FROM services
-        WHERE ServiceId = @ServiceId
-        LIMIT 1";
-
-            using var connection = _db.GetConnection();
-
-            return await connection.QuerySingleOrDefaultAsync<decimal?>(
-                query,
-                new { ServiceId = serviceId });
-        }
-
         public async Task<(IEnumerable<DigitalBookPaymentDetails> Data, int TotalRecords)>
      GetDigitalBookPaymentDetailsByUserIdAsync(
          int userId,
@@ -296,7 +263,7 @@ SELECT LAST_INSERT_ID();";
             OR ep.RazorpayPaymentId LIKE @Search
             OR ep.RazorpayTransferId LIKE @Search
             OR ep.Status LIKE @Search
-            OR CAST(ep.DigitalBookingId AS CHAR) LIKE @Search
+            OR CAST(ep.DigitalBookId AS CHAR) LIKE @Search
             OR CAST(ep.DigitalBookPaymentId AS CHAR) LIKE @Search
         )");
 
@@ -328,8 +295,8 @@ SELECT LAST_INSERT_ID();";
                             whereConditions.Add("ep.RazorpayTransferId LIKE @Search");
                             break;
 
-                        case "digitalbookingid":
-                            whereConditions.Add("CAST(ep.DigitalBookingId AS CHAR) LIKE @Search");
+                        case "DigitalBookId":
+                            whereConditions.Add("CAST(ep.DigitalBookId AS CHAR) LIKE @Search");
                             break;
 
                         case "digitalbookpaymentid":
@@ -353,13 +320,13 @@ SELECT LAST_INSERT_ID();";
         SELECT COUNT(*)
         FROM digitalbookpayments ep
         INNER JOIN digitalbook b
-            ON b.DigitalBookId = ep.DigitalBookingId
+            ON b.DigitalBookId = ep.DigitalBookId
         WHERE {whereClause}";
 
             var dataQuery = $@"
     SELECT
         ep.DigitalBookPaymentId,
-        ep.DigitalBookingId,
+        ep.DigitalBookId,
         ep.UserId,
         ep.ClientId,
         b.DigitalBookId AS ServiceId,
@@ -385,7 +352,7 @@ SELECT LAST_INSERT_ID();";
         ep.CreatedAt
     FROM digitalbookpayments ep
     INNER JOIN digitalbook b
-        ON b.DigitalBookId = ep.DigitalBookingId
+        ON b.DigitalBookId = ep.DigitalBookId
     WHERE {whereClause}
     ORDER BY ep.CreatedAt DESC
     LIMIT @PageSize OFFSET @Offset";

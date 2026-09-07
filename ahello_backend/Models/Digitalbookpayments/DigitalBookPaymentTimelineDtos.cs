@@ -5,7 +5,7 @@ namespace ahello_backend.Models.Digitalbookpayments
     public class DigitalBookPaymentTimelineResponseDto
     {
         public int DigitalBookPaymentId { get; set; }
-        public int DigitalBookingId { get; set; }
+        public int DigitalBookId { get; set; }
         public int UserId { get; set; }
         public int ClientId { get; set; }
         public string? ServiceName { get; set; }
