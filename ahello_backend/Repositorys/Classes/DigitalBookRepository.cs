@@ -432,5 +432,36 @@ namespace ahello_backend.Repositorys.Classes
 
             return rows > 0;
         }
+        // GET PURCHASED (RELEASED) DIGITAL BOOKS BY CLIENT ID
+        public async Task<IEnumerable<dynamic>> GetPurchasedDigitalBooksByClientIdAsync(
+            int clientId)
+        {
+            var sql = @"
+        SELECT
+            ep.DigitalBookPaymentId,
+            ep.DigitalBookId,
+            b.Title,
+            b.Description,
+            b.PreviewImage,
+            b.PdfFile,
+            b.Price,
+            ep.TotalAmount,
+            ep.Currency,
+            ep.Status,
+            ep.PaidAt,
+            ep.ReleasedAt
+        FROM digitalbookpayments ep
+        INNER JOIN digitalbook b
+            ON b.DigitalBookId = ep.DigitalBookId
+        WHERE ep.ClientId = @ClientId
+          AND ep.Status = 'RELEASED'
+        ORDER BY ep.ReleasedAt DESC";
+
+            using var connection = _db.GetConnection();
+
+            return await connection.QueryAsync(
+                sql,
+                new { ClientId = clientId });
+        }
     }
 }

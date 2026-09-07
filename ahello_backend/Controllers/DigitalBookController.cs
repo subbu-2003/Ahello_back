@@ -9,13 +9,16 @@ namespace ahello_backend.Controllers
     public class DigitalBookController : ControllerBase
     {
         private readonly IDigitalBookService _service;
+        private readonly IDigitalBookPaymentService _paymentService;
         private readonly IWebHostEnvironment _environment;
 
         public DigitalBookController(
             IDigitalBookService service,
+            IDigitalBookPaymentService paymentService,
             IWebHostEnvironment environment)
         {
             _service = service;
+            _paymentService = paymentService;
             _environment = environment;
         }
 
@@ -548,5 +551,35 @@ namespace ahello_backend.Controllers
                 });
             }
         }
+        // GET: api/DigitalBook/purchased/5
+        [HttpGet("purchased/{clientId}")]
+        public async Task<IActionResult> GetPurchasedDigitalBooks(
+            int clientId)
+        {
+            try
+            {
+                if (clientId <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        message = "ClientId is required."
+                    });
+                }
+
+                var result =
+                    await _service.GetPurchasedDigitalBooksByClientIdAsync(
+                        clientId);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    message = ex.Message
+                });
+            }
+        }
+
     }
 }

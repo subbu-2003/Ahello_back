@@ -33,5 +33,6 @@ namespace ahello_backend.Services.Interfaces
         Task<bool> PublishAsync(
             int digitalBookId,
             int userId);
+        Task<IEnumerable<dynamic>> GetPurchasedDigitalBooksByClientIdAsync(int clientId);
     }
 }
