@@ -95,5 +95,10 @@ namespace ahello_backend.Services.Classes
                 digitalBookId,
                 userId);
         }
+        public async Task<IEnumerable<dynamic>> GetPurchasedDigitalBooksByClientIdAsync(
+        int clientId)
+        {
+            return await _repository.GetPurchasedDigitalBooksByClientIdAsync(clientId);
+        }
     }
 }

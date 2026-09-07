@@ -5,10 +5,9 @@ namespace ahello_backend.Repositorys.Interfaces
     public interface IDigitalBookPaymentRepository
     {
         Task<int> InsertAsync(DigitalBookPayment payment);
-        Task<DigitalBookPayment?> GetByDigitalBookingIdAsync(int digitalBookingId);
-        Task<dynamic?> GetBookingPaymentInfoAsync(int digitalBookingId);
-        Task<decimal?> GetServicePriceAsync(int serviceId);
-        Task<string?> GetServiceNameAsync(int serviceId);
+        Task<DigitalBookPayment?> GetByDigitalBookIdAsync(int digitalBookId);
+        Task<dynamic?> GetDigitalBookPaymentInfoAsync(int digitalBookId);
+
         Task<(IEnumerable<DigitalBookPaymentDetails> Data, int TotalRecords)>
             GetDigitalBookPaymentDetailsByUserIdAsync(
                 int userId,

@@ -30,5 +30,6 @@ namespace ahello_backend.Repositorys.Interfaces
 
         // USER
         Task<bool> PublishAsync(int digitalBookId, int userId);
+        Task<IEnumerable<dynamic>> GetPurchasedDigitalBooksByClientIdAsync(int clientId);
     }
 }

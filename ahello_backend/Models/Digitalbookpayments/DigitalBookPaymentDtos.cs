@@ -4,7 +4,7 @@
     {
         public int UserId { get; set; }
         public int ClientId { get; set; }
-        public int DigitalBookingId { get; set; }
+        public int DigitalBookId { get; set; }
         public int CreatedBy { get; set; }
     }
 
@@ -25,7 +25,7 @@
     {
         public int UserId { get; set; }
         public int ClientId { get; set; }
-        public int DigitalBookingId { get; set; }
+        public int DigitalBookId { get; set; }
         public int CreatedBy { get; set; }
 
         public string RazorpayOrderId { get; set; } = null!;
@@ -35,11 +35,11 @@
 
     public class DigitalBookReleaseDto
     {
-        public int DigitalBookingId { get; set; }
+        public int DigitalBookId { get; set; }
     }
 
     public class DigitalBookRefundDto
     {
-        public int DigitalBookingId { get; set; }
+        public int DigitalBookId { get; set; }
     }
 }

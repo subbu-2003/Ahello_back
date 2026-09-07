@@ -126,7 +126,7 @@ namespace ahello_backend.Services.Classes
             var dto = new DigitalBookPaymentTimelineResponseDto
             {
                 DigitalBookPaymentId = row.DigitalBookPaymentId,
-                DigitalBookingId = row.DigitalBookingId,
+                DigitalBookId = row.DigitalBookId,
                 UserId = row.UserId,
                 ClientId = row.ClientId,
                 ServiceName = row.ServiceTitle,

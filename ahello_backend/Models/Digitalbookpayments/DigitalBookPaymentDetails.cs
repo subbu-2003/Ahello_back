@@ -3,7 +3,7 @@
     public class DigitalBookPaymentDetails
     {
         public int DigitalBookPaymentId { get; set; }
-        public int DigitalBookingId { get; set; }
+        public int DigitalBookId { get; set; }
         public int UserId { get; set; }
         public int ClientId { get; set; }
         public int ServiceId { get; set; }
