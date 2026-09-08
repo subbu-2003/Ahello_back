@@ -33,5 +33,6 @@ namespace ahello_backend.Repositorys.Interfaces
             string status,
             string? failureReason = null);
         Task UpdateTransferResponseAsync(int digitalBookPaymentId, string transferJson);
+        Task<DigitalBookPayment?> GetByIdAsync(int digitalBookPaymentId);
     }
 }

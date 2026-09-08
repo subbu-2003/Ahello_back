@@ -621,14 +621,13 @@ namespace ahello_backend.Controllers
         public async Task<IActionResult> Release(
             [FromBody] DigitalBookReleaseDto dto)
         {
-            if (dto.DigitalBookId <= 0)
+            if (dto.DigitalBookPaymentId <= 0)
                 return Error(
-                    "Valid DigitalBookId is required");
+                    "Valid DigitalBookPaymentId is required");
 
             var payment =
                 await _digitalBookPaymentRepo
-                    .GetByDigitalBookIdAsync(
-                        dto.DigitalBookId);
+                    .GetByIdAsync(dto.DigitalBookPaymentId);
 
             if (payment == null)
                 return Error(
@@ -670,7 +669,7 @@ namespace ahello_backend.Controllers
 
                 await _logRepo.InsertAsync(
                     payment.DigitalBookPaymentId,
-                    dto.DigitalBookId,
+                    payment.DigitalBookId,
                     "RELEASE_TRANSFER",
                     "SUCCESS",
                     responseJson: releaseJson);
@@ -686,7 +685,7 @@ namespace ahello_backend.Controllers
             {
                 await _logRepo.InsertAsync(
                     payment.DigitalBookPaymentId,
-                    dto.DigitalBookId,
+                    payment.DigitalBookId,
                     "RELEASE_TRANSFER",
                     "ERROR",
                     errorMessage: ex.Message);

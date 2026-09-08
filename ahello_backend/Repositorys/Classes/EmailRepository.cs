@@ -349,5 +349,191 @@ namespace ahello_backend.Repositorys.Classes
             </body>
             </html>");
         }
+        public async Task SendDigitalBookApprovedEmailAsync(
+    string toEmail, string userName, string bookTitle)
+        {
+            await SendEmailAsync(toEmail, "Your Digital Book Has Been Approved - Ahllo", $@"
+        <html>
+        <body style='margin:0;padding:0;background:#ffffff;font-family:Arial,sans-serif;'>
+            <div style='max-width:560px;margin:40px auto;background:#ffffff;border-radius:16px;
+                        border:1px solid #e8edf2;overflow:hidden;'>
+
+                <!-- HEADER -->
+                <div style='background:#005B71;padding:32px;text-align:center;'>
+                    <h1 style='margin:0;color:#ffffff;font-size:24px;letter-spacing:0.5px;'>
+                        Digital Book Approved
+                    </h1>
+                </div>
+
+                <!-- BODY -->
+                <div style='padding:36px 40px;'>
+
+                    <p style='margin:0 0 8px;font-size:18px;font-weight:bold;color:#1a1a1a;'>
+                        Hello {userName},
+                    </p>
+
+                    <p style='margin:0 0 28px;font-size:15px;color:#555555;line-height:1.6;'>
+                        Great news! Your digital book has been reviewed and approved. You can now publish it and make it available to your audience.
+                    </p>
+
+                    <!-- CARD -->
+                    <div style='border:1px solid #e0e7ef;border-radius:12px;padding:24px;margin-bottom:28px;'>
+                        <p style='margin:0 0 6px;font-size:12px;text-transform:uppercase;
+                                  letter-spacing:1px;color:#999999;'>Book Title</p>
+                        <p style='margin:0;font-size:16px;font-weight:bold;color:#005B71;'>
+                            {bookTitle}
+                        </p>
+                    </div>
+
+                    <p style='margin:0;font-size:13px;color:#aaaaaa;line-height:1.6;'>
+                        Log in to your dashboard to publish it whenever you're ready.
+                    </p>
+                </div>
+
+                <!-- FOOTER -->
+                <div style='border-top:1px solid #f0f0f0;padding:18px;text-align:center;'>
+                    <p style='margin:0;font-size:12px;color:#bbbbbb;'>
+                        © 2026 Ahllo. All Rights Reserved.
+                    </p>
+                </div>
+
+            </div>
+        </body>
+        </html>");
+        }
+
+        public async Task SendDigitalBookRejectedEmailAsync(
+            string toEmail, string userName, string bookTitle, string rejectionReason)
+        {
+            await SendEmailAsync(toEmail, "Your Digital Book Was Not Approved - Ahllo", $@"
+        <html>
+        <body style='margin:0;padding:0;background:#ffffff;font-family:Arial,sans-serif;'>
+            <div style='max-width:560px;margin:40px auto;background:#ffffff;border-radius:16px;
+                        border:1px solid #e8edf2;overflow:hidden;'>
+
+                <!-- HEADER -->
+                <div style='background:#005B71;padding:32px;text-align:center;'>
+                    <h1 style='margin:0;color:#ffffff;font-size:24px;letter-spacing:0.5px;'>
+                        Digital Book Not Approved
+                    </h1>
+                </div>
+
+                <!-- BODY -->
+                <div style='padding:36px 40px;'>
+
+                    <p style='margin:0 0 8px;font-size:18px;font-weight:bold;color:#1a1a1a;'>
+                        Hello {userName},
+                    </p>
+
+                    <p style='margin:0 0 28px;font-size:15px;color:#555555;line-height:1.6;'>
+                        After review, your digital book submission was not approved. Please see the reason below and make the necessary changes before resubmitting.
+                    </p>
+
+                    <!-- CARD -->
+                    <div style='border:1px solid #e0e7ef;border-radius:12px;padding:24px;margin-bottom:28px;'>
+                        <p style='margin:0 0 6px;font-size:12px;text-transform:uppercase;
+                                  letter-spacing:1px;color:#999999;'>Book Title</p>
+                        <p style='margin:0 0 16px;font-size:16px;font-weight:bold;color:#005B71;'>
+                            {bookTitle}
+                        </p>
+
+                        <p style='margin:0 0 6px;font-size:12px;text-transform:uppercase;
+                                  letter-spacing:1px;color:#999999;'>Reason</p>
+                        <p style='margin:0;font-size:14px;color:#555555;line-height:1.6;'>
+                            {rejectionReason}
+                        </p>
+                    </div>
+
+                    <p style='margin:0;font-size:13px;color:#aaaaaa;line-height:1.6;'>
+                        If you did not expect this, feel free to reach out to support.
+                    </p>
+                </div>
+
+                <!-- FOOTER -->
+                <div style='border-top:1px solid #f0f0f0;padding:18px;text-align:center;'>
+                    <p style='margin:0;font-size:12px;color:#bbbbbb;'>
+                        © 2026 Ahllo. All Rights Reserved.
+                    </p>
+                </div>
+
+            </div>
+        </body>
+        </html>");
+        }
+        // EmailRepository.cs
+        public async Task SendDigitalBookPurchaseEmailAsync(
+            string toEmail,
+            string clientName,
+            string bookTitle,
+            decimal amount,
+            string currency,
+            byte[]? invoicePdf)
+        {
+            var body = $@"
+        <html>
+        <body style='margin:0;padding:0;background:#ffffff;font-family:Arial,sans-serif;'>
+            <div style='max-width:560px;margin:40px auto;background:#ffffff;border-radius:16px;
+                        border:1px solid #e8edf2;overflow:hidden;'>
+
+                <!-- HEADER -->
+                <div style='background:#005B71;padding:32px;text-align:center;'>
+                    <h1 style='margin:0;color:#ffffff;font-size:24px;letter-spacing:0.5px;'>
+                        Purchase Confirmed
+                    </h1>
+                </div>
+
+                <!-- BODY -->
+                <div style='padding:36px 40px;'>
+
+                    <p style='margin:0 0 8px;font-size:18px;font-weight:bold;color:#1a1a1a;'>
+                        Hello {clientName},
+                    </p>
+
+                    <p style='margin:0 0 28px;font-size:15px;color:#555555;line-height:1.6;'>
+                        Thank you for your purchase! Your payment was successful and the invoice is attached to this email.
+                    </p>
+
+                    <!-- CARD -->
+                    <div style='border:1px solid #e0e7ef;border-radius:12px;padding:24px;margin-bottom:28px;'>
+                        <p style='margin:0 0 6px;font-size:12px;text-transform:uppercase;
+                                  letter-spacing:1px;color:#999999;'>Book Title</p>
+                        <p style='margin:0 0 20px;font-size:16px;font-weight:bold;color:#005B71;'>
+                            {bookTitle}
+                        </p>
+
+                        <p style='margin:0 0 6px;font-size:12px;text-transform:uppercase;
+                                  letter-spacing:1px;color:#999999;'>Amount Paid</p>
+                        <p style='margin:0;font-size:16px;font-weight:bold;color:#1a1a1a;'>
+                            {currency} {amount:0.00}
+                        </p>
+                    </div>
+
+                    <p style='margin:0 0 8px;font-size:15px;color:#333333;line-height:1.6;'>
+                        You can access this book anytime from your account on our website — no need to keep this email.
+                    </p>
+
+                    <p style='margin:24px 0 0;font-size:13px;color:#aaaaaa;line-height:1.6;'>
+                        If you did not make this purchase, please contact our support team immediately.
+                    </p>
+                </div>
+
+                <!-- FOOTER -->
+                <div style='border-top:1px solid #f0f0f0;padding:18px;text-align:center;'>
+                    <p style='margin:0;font-size:12px;color:#bbbbbb;'>
+                        © 2026 Ahllo. All Rights Reserved.
+                    </p>
+                </div>
+
+            </div>
+        </body>
+        </html>";
+
+            await SendEmailAsync(
+                toEmail,
+                "Purchase Confirmed - " + bookTitle,
+                body,
+                invoicePdf,
+                $"Invoice-{bookTitle}.pdf");
+        }
     }
 }
