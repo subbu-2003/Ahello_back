@@ -13,6 +13,15 @@
     string meetingLink);
         Task SendRescheduleConfirmationEmailAsync(
     string toEmail, string clientName, string serviceName, string date, string time);
+        Task SendDigitalBookApprovedEmailAsync(string toEmail, string userName, string bookTitle);
+        Task SendDigitalBookRejectedEmailAsync(string toEmail, string userName, string bookTitle, string rejectionReason);
+        Task SendDigitalBookPurchaseEmailAsync(
+            string toEmail,
+            string clientName,
+            string bookTitle,
+            decimal amount,
+            string currency,
+            byte[]? invoicePdf);
     }
 }
 
