@@ -8,10 +8,12 @@ namespace ahello_backend.Repositorys.Classes
     public class DigitalBookRepository : IDigitalBookRepository
     {
         private readonly DbContext _db;
+        private readonly IEmailRepository _emailRepository;
 
-        public DigitalBookRepository(DbContext db)
+        public DigitalBookRepository(DbContext db, IEmailRepository emailRepository)
         {
             _db = db;
+            _emailRepository = emailRepository;
         }
 
         // GET ALL
@@ -53,6 +55,7 @@ namespace ahello_backend.Repositorys.Classes
                     db.PreviewImage,
                     db.PdfFile,
                     db.Status,
+db.ApprovalStatus,
                     db.Price,
                     db.IsActive,
                     db.CreatedBy,
@@ -155,7 +158,7 @@ namespace ahello_backend.Repositorys.Classes
             ON db.UserId = u.UserId
 
         WHERE u.Slug = @Slug
-          AND db.IsActive = 1
+          AND db.IsActive = 1 AND db.Status = 'Published'
 
         ORDER BY db.digitalbookId DESC";
 
@@ -400,6 +403,55 @@ namespace ahello_backend.Repositorys.Classes
                     ApprovalStatus = approvalStatus.ToString(),
                     RejectionReason = rejectionReason
                 });
+
+            if (rows > 0)
+            {
+                // Fetch book title + owner's email/name for the notification
+                var owner = await connection.QueryFirstOrDefaultAsync<dynamic>(@"
+            SELECT
+                db.Title,
+                u.Email,
+                u.FullName
+            FROM digitalbook db
+            INNER JOIN users u ON db.UserId = u.UserId
+            WHERE db.DigitalBookId = @DigitalBookId",
+                    new { DigitalBookId = digitalBookId });
+
+                if (owner != null)
+                {
+                    string toEmail = owner.Email;
+                    string userName = owner.FullName;
+                    string bookTitle = owner.Title;
+
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            if (approvalStatus == DigitalBookApprovalStatus.Approved)
+                            {
+                                await _emailRepository.SendDigitalBookApprovedEmailAsync(
+                                    toEmail, userName, bookTitle);
+
+                                Console.WriteLine(
+                                    $"[Email] Digital book approved - DigitalBookId:{digitalBookId}");
+                            }
+                            else if (approvalStatus == DigitalBookApprovalStatus.Rejected)
+                            {
+                                await _emailRepository.SendDigitalBookRejectedEmailAsync(
+                                    toEmail, userName, bookTitle, rejectionReason ?? "No reason provided.");
+
+                                Console.WriteLine(
+                                    $"[Email] Digital book rejected - DigitalBookId:{digitalBookId}");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine(
+                                $"[EmailError] Digital book approval status - DigitalBookId:{digitalBookId} - {ex.Message}");
+                        }
+                    });
+                }
+            }
 
             return rows > 0;
         }

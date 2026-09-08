@@ -35,7 +35,7 @@
 
     public class DigitalBookReleaseDto
     {
-        public int DigitalBookId { get; set; }
+        public int DigitalBookPaymentId { get; set; }
     }
 
     public class DigitalBookRefundDto

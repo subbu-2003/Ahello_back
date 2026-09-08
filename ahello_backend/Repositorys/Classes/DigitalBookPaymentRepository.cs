@@ -8,10 +8,12 @@ namespace ahello_backend.Repositorys.Classes
     public class DigitalBookPaymentRepository : IDigitalBookPaymentRepository
     {
         private readonly DbContext _db;
+        private readonly IEmailRepository _emailRepository;
 
-        public DigitalBookPaymentRepository(DbContext db)
+        public DigitalBookPaymentRepository(DbContext db, IEmailRepository emailRepository)
         {
             _db = db;
+            _emailRepository = emailRepository;
         }
 
         public async Task<int> InsertAsync(DigitalBookPayment payment)
@@ -109,6 +111,21 @@ SELECT LAST_INSERT_ID();";
                 new { DigitalBookId = digitalBookId });
         }
 
+        public async Task<DigitalBookPayment?> GetByIdAsync(int digitalBookPaymentId)
+        {
+            var query = @"
+        SELECT *
+        FROM DigitalBookPayments
+        WHERE DigitalBookPaymentId = @DigitalBookPaymentId
+        LIMIT 1";
+
+            using var connection = _db.GetConnection();
+
+            return await connection.QuerySingleOrDefaultAsync<DigitalBookPayment>(
+                query,
+                new { DigitalBookPaymentId = digitalBookPaymentId });
+        }
+
         public async Task UpdateAfterPaymentAsync(
             int digitalBookPaymentId,
             string paymentId,
@@ -139,7 +156,54 @@ SELECT LAST_INSERT_ID();";
                 TransferId = transferId,
                 TransferJson = transferJson
             });
-        }
+            var info = await connection.QueryFirstOrDefaultAsync<dynamic>(@"
+            SELECT
+                b.Title,
+                ep.TotalAmount,
+                ep.Currency,
+                u.Email,
+                u.FullName
+            FROM digitalbookpayments ep
+            INNER JOIN digitalbook b
+                ON b.DigitalBookId = ep.DigitalBookId
+            INNER JOIN users u
+                ON u.UserId = ep.ClientId
+            WHERE ep.DigitalBookPaymentId = @DigitalBookPaymentId",
+            new { DigitalBookPaymentId = digitalBookPaymentId });
+
+            if (info != null)
+            {
+                string toEmail = info.Email;
+                string clientName = info.FullName;
+                string bookTitle = info.Title;
+                decimal amount = info.TotalAmount;
+                string currency = info.Currency;
+
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        // TODO: generate the actual invoice PDF bytes here if/when an invoice service is wired in
+                        await _emailRepository.SendDigitalBookPurchaseEmailAsync(
+                            toEmail,
+                            clientName,
+                            bookTitle,
+                            amount,
+                            currency,
+                            null);
+
+                        Console.WriteLine(
+                            $"[Email] Digital book purchase confirmation sent - DigitalBookPaymentId:{digitalBookPaymentId}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(
+                            $"[EmailError] Digital book purchase confirmation - DigitalBookPaymentId:{digitalBookPaymentId} - {ex.Message}");
+                    }
+                });
+            }
+    
+    }
 
         public async Task UpdateReleaseAsync(
             int digitalBookPaymentId,
